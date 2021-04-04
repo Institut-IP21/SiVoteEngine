@@ -1,0 +1,59 @@
+<?php
+
+namespace App\BallotComponents\YesNo\v1;
+
+use Illuminate\Support\Facades\Validator;
+use App\BallotComponents\BallotComponentType;
+use App\Models\BallotComponent;
+use App\Models\Election;
+use Illuminate\Validation\Rule;
+
+class YesNo extends BallotComponentType
+{
+    public static $needsOptions = false;
+    public static $presetOptions = ['yes', 'no'];
+
+    public static $optionsValidator = [
+        'options' => 'in:yes,no'
+    ];
+
+    public static function calculateResults($votes, $component_id)
+    {
+        return array_reduce($votes, function ($runningTotal, $vote) use ($component_id) {
+            if (empty($vote['values'])) {
+                return $runningTotal;
+            }
+            $value = $vote['values'][$component_id];
+            $runningTotal[$value] = array_key_exists($value, $runningTotal) ? $runningTotal[$value] + 1 : 1;
+            return $runningTotal;
+        }, []);
+    }
+
+    public static function valuesToCsv($values, $component_id)
+    {
+        return $values[$component_id];
+    }
+
+    public static function getSubmissionValidator(BallotComponent $component, Election $election)
+    {
+        $id = $component->id;
+        $options = static::$presetOptions;
+        if ($election->abstainable) {
+            $options[] = 'abstain';
+        }
+        return [
+            $id => [
+                'required',
+                Rule::in($options)
+            ]
+        ];
+    }
+
+    public static function validateOptions($options)
+    {
+        $validator = Validator::make(['options' => $options], static::$optionsValidator);
+        $messages = $validator->errors();
+
+        return $messages->isEmpty();
+    }
+}
