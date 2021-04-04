@@ -64,13 +64,10 @@ return [
             'artisan:model:scan',
             'artisan:route:scan',
             'artisan:migrate',
-            'artisan:horizon:terminate',
         ],
 
         // Deployment is done and live
         'done' => [
-            'horizon:restart-staging',
-            'horizon:restart-prod',
         ],
 
         // Deployment succeeded.
@@ -102,7 +99,7 @@ return [
 
     'options' => [
         'application' => env('APP_NAME', 'Laravel'),
-        'repository' => 'git@github.com:Institut-IP21/evoting.git',
+        'repository' => 'git@github.com:Institut-IP21/evote-engine.git',
     ],
 
     /*
