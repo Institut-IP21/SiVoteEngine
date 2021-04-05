@@ -60,25 +60,27 @@ class ElectionApiController extends Controller
     {
         $params = $request->all();
         $settings = [
-            'title' => 'required|string|min:5',
-            'level' => 'integer|required',
-            'abstainable' => 'nullable|boolean',
-            'description' => 'string|min:10|nullable',
-            'title'       => 'required|string|min:5',
-            'abstainable' => 'nullable|boolean'
+            'title'         => 'required|string|min:5',
+            'level'         => 'integer|required',
+            'abstainable'   => 'nullable|boolean',
+            'description'   => 'string|min:10|nullable',
+            'title'         => 'required|string|min:5',
+            'abstainable'   => 'nullable|boolean',
         ];
 
         if ($errors = $this->findErrors($params, $settings)) {
             return $errors;
         }
 
-        $election = Election::create([
+        $election_params = [
             'title' => $params['title'],
             'level' => $params['level'],
             'owner' => $this->getOwner(),
             'abstainable' => $params['abstainable'] ?? true,
             'description' => $params['description'] ?? '',
-        ]);
+        ];
+
+        $election = Election::create($election_params);
 
         return (new ElectionResource($election))
             ->response()

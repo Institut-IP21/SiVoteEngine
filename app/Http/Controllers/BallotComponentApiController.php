@@ -26,9 +26,11 @@ class BallotComponentApiController extends Controller
      * @Get("/", as="component.list")
      * @Middleware("can:view,election")
      */
-    public function list(Request $request)
+    public function list(Election $election)
     {
-        return $this->ballotService->getComponentTree();
+        return [
+            'data' => $this->ballotService->getComponentTree()
+        ];
     }
     /**
      * @Post("/create", as="component.create")

@@ -36,7 +36,6 @@ class Election extends Model
 
     protected $casts = [
         'abstainable' => 'boolean',
-        // 'level' => 'integer'
     ];
 
     public function ballots()
