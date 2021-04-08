@@ -8,6 +8,6 @@
 @if ($election->abstainable)
     <div>
         <input type="radio" id="{{ $component->id }}--abstain" name="{{ $component->id }}" value="abstain">
-        <label for="{{ $component->id }}--abstain">Abstain</label>
+        <label for="{{ $component->id }}--abstain">{{ __('Abstain') }}</label>
     </div>
 @endif

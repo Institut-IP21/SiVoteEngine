@@ -3,13 +3,13 @@
 @section('title', 'Ballot')
 
 @section('body')
-<div class="container mx-auto">
-    <div class="max-w-md text-center mx-auto">
+<div id="app" class="container mx-auto">
+    <div class="max-w-screen-md text-center mx-auto">
         <h1 class="text-2xl">Ballot {{ $ballot->title }}</h1>
         <p>{{ $ballot->description }}</p>
     </div>
     @if ($ballot->components)
-    <div class="max-w-md mx-auto">
+    <div class="max-w-screen-md mx-auto">
         @foreach ($ballot->components as $component)
         <div class="mt-3 rounded overflow-hidden shadow mx-auto">
             <div class="px-6 py-4">

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\BallotComponents\BallotComponentType;
 use App\BallotComponents\FirstPassThePost\v1\FirstPassThePost;
+use App\BallotComponents\RankedChoice\v1\RankedChoice;
 use App\BallotComponents\YesNo\v1\YesNo;
 use App\Models\Ballot;
 use App\Models\Vote;
@@ -17,6 +18,9 @@ class BallotService
         ],
         'FirstPassThePost' => [
             'v1' => FirstPassThePost::class
+        ],
+        'RankedChoice' => [
+            'v1' => RankedChoice::class
         ]
     ];
 
@@ -71,9 +75,11 @@ class BallotService
     public function calculateResults(Ballot $ballot)
     {
         $votes = $ballot->cast_votes;
-        return array_reduce($ballot->components_array, function ($acc, $component) use ($votes) {
+        return $ballot->components()->get()->reduce(function ($acc, $component) use ($votes) {
             $componentClass = $this->getBallotComponentClassInstance($component['type'], $component['version'], $component['settings']);
-            $acc[$component->id] = $componentClass::calculateResults($votes, $component->id);
+            $acc[$component->id] = [
+                'results' => $componentClass::calculateResults($votes, $component)
+            ];
             $acc[$component->id] = array_merge($acc[$component->id], [
                 'title' => $component->title,
                 'description' => $component->description,

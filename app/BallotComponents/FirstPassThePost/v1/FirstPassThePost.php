@@ -13,7 +13,7 @@ class FirstPassThePost extends BallotComponentType
     public static $needsOptions = true;
 
     public static $optionsValidator = [
-        'options' => 'bail|required|array|min:1',
+        'options' => 'bail|required|array|min:2',
         'options.*' => 'bail|required|string|distinct|min:1'
     ];
 
@@ -27,11 +27,6 @@ class FirstPassThePost extends BallotComponentType
             $runningTotal[$value] = array_key_exists($value, $runningTotal) ? $runningTotal[$value] + 1 : 1;
             return $runningTotal;
         }, []);
-    }
-
-    public static function valuesToCsv($values, $component_id)
-    {
-        return $values[$component_id];
     }
 
     public static function getSubmissionValidator(BallotComponent $component, Election $election)

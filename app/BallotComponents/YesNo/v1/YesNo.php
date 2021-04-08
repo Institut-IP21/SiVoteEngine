@@ -29,11 +29,6 @@ class YesNo extends BallotComponentType
         }, []);
     }
 
-    public static function valuesToCsv($values, $component_id)
-    {
-        return $values[$component_id];
-    }
-
     public static function getSubmissionValidator(BallotComponent $component, Election $election)
     {
         $id = $component->id;
