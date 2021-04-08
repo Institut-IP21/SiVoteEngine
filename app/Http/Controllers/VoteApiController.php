@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Resources\Election as ElectionResource;
 use App\Models\Ballot;
 use App\Models\Election;
 use App\Models\Vote;
