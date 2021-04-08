@@ -8,7 +8,8 @@ module.exports = {
         extend: {},
         flex: {
             "1": "1 1 0%",
-            "2": "2 2 0%"
+            "2": "2 2 0%",
+            "3": "3 3 0%"
         },
         minWidth: {
             "0": "0",
@@ -26,4 +27,3 @@ module.exports = {
     },
     plugins: []
 };
-}

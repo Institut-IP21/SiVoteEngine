@@ -12,4 +12,8 @@
 .btn-blue:hover {
     @apply bg-blue-700;
 }
+.row,
+.d-flex {
+    display: flex;
+}
 @import "tailwindcss/utilities";

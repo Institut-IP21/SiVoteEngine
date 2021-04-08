@@ -5,7 +5,7 @@
             your choice. You may rank as few or as many as you wish.
         </p>
         <hr class="py-2" />
-        <p>
+        <p class="pb-2">
             You have ranked {{ selected.length }}, you may rank
             {{ rankees.length - selected.length }} more.
         </p>
@@ -14,9 +14,13 @@
             v-for="(option, i) of selected"
             :key="option.rank"
         >
-            <div class="border flex-1 py-2 px-4">{{ option.rank }}</div>
-            <div class="border flex-2 py-2 px-4">{{ option.name }}</div>
-            <div class="border flex-1 buttons d-flex">
+            <div class="rank border border-blue-300 rank flex-1 py-2 px-4">
+                {{ option.rank }}
+            </div>
+            <div class="border border-blue-300 flex-3 py-2 px-4">
+                {{ option.name }}
+            </div>
+            <div class="border border-blue-300 flex-1 buttons d-flex">
                 <button
                     type="button"
                     class="btn disabled:opacity-30"
@@ -42,16 +46,10 @@
             :key="option.rank"
             @click="select(option, i)"
         >
-            <div class="border flex-2 py-2 px-4">
+            <div class="border border-gray-400 flex-2 py-2 px-4">
                 {{ option.name }}
             </div>
         </div>
-        <!-- <input
-            type="hidden"
-            :name="component"
-            v-if="selected"
-            :value="selected.map(s => s.name).join(',')"
-        /> -->
         <input
             type="hidden"
             v-for="rankee in selected"
@@ -130,18 +128,7 @@ export default {
 };
 </script>
 <style lang="scss">
-.row,
-.d-flex {
-    display: flex;
-}
 .rank {
-    width: 30px;
-    height: 30px;
-    border: 1px solid black;
-}
-.name {
-    flex: 1;
-    height: 30px;
-    border: 1px solid black;
+    max-width: 30px;
 }
 </style>
