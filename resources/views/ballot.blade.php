@@ -3,7 +3,7 @@
 @section('title', 'Ballot')
 
 @section('body')
-    <div id="app" class="container mx-auto">
+    <div id="app" class="container mx-auto bg-gray-100">
         <div class="max-w-screen-md	text-center mx-auto">
             <h1 class="text-2xl">Ballot {{ $ballot->title }}</h1>
             <p>{{ $ballot->description }}</p>

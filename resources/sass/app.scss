@@ -16,4 +16,31 @@
 .d-flex {
     display: flex;
 }
+
+.radio {
+    font-size: 1.5rem;
+    color: var(--color);
+}
+.radio__label {
+    line-height: 1;
+}
+.radio__input {
+    display: flex;
+    input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+        &:checked + .radio__control {
+            background: currentColor;
+        }
+    }
+}
+.radio__control {
+    display: block;
+    width: 1em;
+    height: 1em;
+    border-radius: 50%;
+    border: 0.1em solid currentColor;
+}
+
 @import "tailwindcss/utilities";
