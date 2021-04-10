@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\URL;
 
 class Ballot extends JsonResource
 {
@@ -26,6 +27,11 @@ class Ballot extends JsonResource
             'description' => $this->description,
             'email_subject' => $this->email_subject,
             'email_template' => $this->email_template,
+            'result_url' => URL::temporarySignedRoute(
+                'ballot.result',
+                now()->addMinutes(15),
+                ['election' => $this->election_id, 'ballot' => $this->id]
+            ),
             'components' => BallotComponent::collection($this->components)->keyBy('id')
         ];
     }

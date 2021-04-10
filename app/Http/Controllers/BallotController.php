@@ -74,6 +74,7 @@ class BallotController extends Controller
 
     /**
      *  @Get("/{election}/ballot/{ballot}/result", as="ballot.result")
+     *  @Middleware("signed")
      */
     public function result(Election $election, Ballot $ballot, Request $request)
     {
@@ -82,6 +83,6 @@ class BallotController extends Controller
         }
         $results = $this->ballotService->calculateResults($ballot);
 
-        return view('ballot-status', ['election' => $election, 'ballot' => $ballot, 'results' => $results]);
+        return view('ballot-result', ['election' => $election, 'ballot' => $ballot, 'results' => $results]);
     }
 }

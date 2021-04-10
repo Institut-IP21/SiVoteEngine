@@ -62,6 +62,7 @@ class BallotApiController extends Controller
 
     /**
      *  @Get("/{ballot}/result", as="ballot.results")
+     *  @Middleware("can:view,election")
      */
     public function result(Election $election, Ballot $ballot, Request $request)
     {
@@ -74,6 +75,7 @@ class BallotApiController extends Controller
 
     /**
      *  @Get("/{ballot}/votes", as="ballot.votes")
+     *  @Middleware("can:view,election")
      */
     public function votes(Election $election, Ballot $ballot, Request $request)
     {
@@ -85,6 +87,7 @@ class BallotApiController extends Controller
 
     /**
      *  @Get("/{ballot}/votes.csv", as="ballot.votes.csv")
+     *  @Middleware("can:view,election")
      */
     public function votesCsv(Election $election, Ballot $ballot, Request $request)
     {

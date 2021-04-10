@@ -6,6 +6,7 @@ use App\Models\Election;
 use App\Models\ApiUser as User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Illuminate\Auth\Access\Response;
+use Illuminate\Http\Request;
 
 class ElectionPolicy
 {
@@ -54,8 +55,11 @@ class ElectionPolicy
      * @param  \App\Models\Election  $election
      * @return mixed
      */
-    public function update(User $user, Election $election)
+    public function update(Request $request, User $user, Election $election)
     {
+        if (! $request->hasValidSignature()) {
+            return Response::allow();
+        }
         return $user->owner === $election->owner
             ? Response::allow()
             : Response::deny('You do not own this.');

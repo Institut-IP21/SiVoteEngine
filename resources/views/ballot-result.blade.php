@@ -4,10 +4,19 @@
 
 @section('body')
     <div id="app" class="bg-gray-100">
-        <div class="max-w-screen-md text-center mx-auto mb-4">
-            <h1 class="text-2xl">Ballot {{ $ballot->title }}</h1>
-            <p>{{ $ballot->description }}</p>
+        <div class="pt-3 max-w-screen-md text-center mx-auto">
+            <div class="w-full rounded overflow-hidden shadow-2xl mx-auto bg-white">
+                <h1 class="text-2xl">Ballot {{ $ballot->title }}</h1>
+                @if ($ballot->description)
+                    <p class="mt-2">{{ $ballot->description }}</p>
+                @endif
+            </div>
         </div>
+        <div class="py-2"></div>
+        <div class="max-w-screen-md py-2 text-center rounded overflow-hidden shadow-2xl mx-auto bg-red-400 text-white">
+            This view will be available for 15 minutes. After that, you need a new link.
+        </div>
+        <div class="py-2"></div>
         @if ($ballot->components)
             <div class="max-w-screen-md mx-auto h-full flex flex-col">
                 @foreach ($ballot->components as $component)
