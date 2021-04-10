@@ -75,7 +75,6 @@ class BallotController extends Controller
 
     /**
      *  @Get("/{election}/ballot/{ballot}/result", as="ballot.result")
-     *  @Middleware("signed")
      */
     public function result(Election $election, Ballot $ballot, Request $request)
     {
