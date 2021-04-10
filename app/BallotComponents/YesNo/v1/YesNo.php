@@ -17,13 +17,13 @@ class YesNo extends BallotComponentType
         'options' => 'in:yes,no'
     ];
 
-    public static function calculateResults($votes, $component_id)
+    public static function calculateResults(array $votes, BallotComponent $component)
     {
-        return array_reduce($votes, function ($runningTotal, $vote) use ($component_id) {
+        return array_reduce($votes, function ($runningTotal, $vote) use ($component) {
             if (empty($vote['values'])) {
                 return $runningTotal;
             }
-            $value = $vote['values'][$component_id];
+            $value = $vote['values'][$component->id];
             $runningTotal[$value] = array_key_exists($value, $runningTotal) ? $runningTotal[$value] + 1 : 1;
             return $runningTotal;
         }, []);
