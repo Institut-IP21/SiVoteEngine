@@ -39,4 +39,10 @@ jobs:
       run: php artisan migrate:fresh
 
     - name: Execute tests
+      env:
+        DB_CONNECTION: sqlite
+        DB_DATABASE: database/database.sqlite
+        CACHE_DRIVER: array
+        SESSION_DRIVER: array
+        QUEUE_DRIVER: sync
       run: php artisan test
