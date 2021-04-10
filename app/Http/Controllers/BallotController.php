@@ -41,6 +41,7 @@ class BallotController extends Controller
 
     /**
      *  @Get("/{election}/ballot/{ballot}/preview", as="ballot.preview")
+     *  @Middleware("signed")
      */
     public function preview(Election $election, Ballot $ballot, Request $request)
     {

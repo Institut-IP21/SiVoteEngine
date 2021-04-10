@@ -32,6 +32,11 @@ class Ballot extends JsonResource
                 now()->addMinutes(15),
                 ['election' => $this->election_id, 'ballot' => $this->id]
             ),
+            'preview_url' => URL::temporarySignedRoute(
+                'ballot.preview',
+                now()->addMinutes(15),
+                ['election' => $this->election_id, 'ballot' => $this->id]
+            ),
             'components' => BallotComponent::collection($this->components)->keyBy('id')
         ];
     }
