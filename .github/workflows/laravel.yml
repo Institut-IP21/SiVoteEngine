@@ -6,7 +6,12 @@ jobs:
   laravel-tests:
 
     runs-on: ubuntu-latest
-
+    env:
+      DB_CONNECTION: sqlite
+      DB_DATABASE: database/database.sqlite
+      CACHE_DRIVER: array
+      SESSION_DRIVER: array
+      QUEUE_DRIVER: sync
     steps:
     - uses: actions/checkout@v2
     - name: Setup PHP version
@@ -30,19 +35,7 @@ jobs:
         yarn
         yarn production
     - name: Init DB
-      env:
-        DB_CONNECTION: sqlite
-        DB_DATABASE: database/database.sqlite
-        CACHE_DRIVER: array
-        SESSION_DRIVER: array
-        QUEUE_DRIVER: sync
       run: php artisan migrate:fresh
 
     - name: Execute tests
-      env:
-        DB_CONNECTION: sqlite
-        DB_DATABASE: database/database.sqlite
-        CACHE_DRIVER: array
-        SESSION_DRIVER: array
-        QUEUE_DRIVER: sync
       run: php artisan test
