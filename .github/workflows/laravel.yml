@@ -9,7 +9,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Setup PHP with pre-release PECL extension
+    - name: Setup PHP version
       uses: shivammathur/setup-php@v2
       with:
         php-version: '7.4'
@@ -29,11 +29,14 @@ jobs:
       run: |
         yarn
         yarn production
-    - name: Execute tests (Unit and Feature tests) via PHPUnit
+    - name: Init DB
       env:
         DB_CONNECTION: sqlite
         DB_DATABASE: database/database.sqlite
         CACHE_DRIVER: array
         SESSION_DRIVER: array
         QUEUE_DRIVER: sync
+      run: php artisan migrate:fresh
+
+    - name: Execute tests
       run: php artisan test
