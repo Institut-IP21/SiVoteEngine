@@ -16,7 +16,7 @@ class CreateElectionsTable extends Migration
         Schema::create('elections', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->string('title');
-            $table->text('description');
+            $table->text('description')->nullable();
             $table->integer('level')->default(1);
             $table->uuid('owner');
             $table->boolean('abstainable');

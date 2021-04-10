@@ -106,7 +106,7 @@ class ElectionApiController extends Controller
         $settings = [
             'title' => 'nullable|string|min:5',
             'abstainable' => 'nullable|boolean',
-            'description' => 'string|min:10',
+            'description' => 'nullable|string',
             'level' => 'integer'
         ];
 
