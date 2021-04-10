@@ -3,16 +3,16 @@
 @section('title', 'Ballot')
 
 @section('body')
-    <div id="app" class="container mx-auto bg-gray-100">
-        <div class="max-w-screen-md	text-center mx-auto">
+    <div id="app" class="bg-gray-100">
+        <div class="max-w-screen-md	text-center mx-auto mb-4">
             <h1 class="text-2xl">Ballot {{ $ballot->title }}</h1>
             <p>{{ $ballot->description }}</p>
         </div>
         @if ($ballot->components)
-            <form class="max-w-screen-md mx-auto"
+            <form class="max-w-screen-md mx-auto h-full flex flex-col"
                 action="/election/{{ $ballot->election->id }}/ballot/{{ $ballot->id }}" method="post">
                 @csrf
-                <div class="mt-3 rounded overflow-hidden shadow mx-auto">
+                <div class="w-full rounded overflow-hidden shadow-2xl mx-auto bg-white">
                     <div class="px-6 py-4">
                         <div class="mb-6 font-bold text-xl flex justify-between items-baseline">
                             <span> Glasovalna koda</span>
@@ -24,20 +24,23 @@
                     </div>
                 </div>
                 @foreach ($ballot->components as $component)
-                    <div class="mt-3 rounded overflow-hidden shadow mx-auto">
-                        <div class="px-6 py-4">
-                            <div class="mb-6 font-bold text-xl flex justify-between items-baseline">
+                    <div class="w-full rounded overflow-hidden shadow-2xl mx-auto bg-white">
+                        <div class="py-6">
+                            <div class="px-7 mb-6 pb-5 font-bold text-xl flex justify-between items-baseline border-b">
                                 <span>{{ $component->title }}</span>
                                 <span class="font-light text-base text-right">{{ $component->type }}<b
                                         class="text-blue-400">{{ $component->version }}</b></span>
                             </div>
-                            <p class="mb-6 text-justify">{{ $component->description }}</p>
-                            @include($component->form_template, ['component' => $component, 'election' => $election])
+                            <p class="px-7 mb-6 pb-5 border-b text-justify">{{ $component->description }}</p>
+                            <div class="px-7">
+                                @include($component->form_template, ['component' => $component, 'election' => $election])
+                            </div>
                         </div>
                     </div>
+                    <div class="py-6"></div>
                 @endforeach
-                <div class="mt-6 text-center mx-auto">
-                    <button type="submit" class="btn btn-blue">Submit</button>
+                <div class="my-6 text-center">
+                    <button type="submit" class="btn btn-blue w-full">Submit</button>
                 </div>
             </form>
         @else
