@@ -26,10 +26,10 @@ class RankedChoice extends BallotComponentType
      * Calculates one round of Ranked Choice elimination, and decides whether to do another,
      * or return the list of all rounds.
      *
-     * @param array $votes
+     * @param array $votes - The list of all votes cast for this component on a Ballot
      * @param BallotComponent $component
-     * @param array $rounds
-     * @param array $omit
+     * @param array $rounds - The elimination rounds, each containing one fewer options than the last
+     * @param array $omit - The options that have been eliminated in previous rounds
      * @return void
      */
     public static function runIteration($votes, $component, $rounds = [], $omit = [])
@@ -73,7 +73,7 @@ class RankedChoice extends BallotComponentType
 
         // Continue recursion if there are still more than 2 options
         if (count($state) > 2) {
-            // The current least voted for option is added to omit list.
+            // The current least voted for option is added to the omit list.
             // If there is a tie for last place, omit only the first match.
             $omitThisRound = array_keys($state, min($state))[0];
             array_push($omit, $omitThisRound);
