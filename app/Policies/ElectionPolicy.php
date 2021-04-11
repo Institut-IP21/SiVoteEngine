@@ -55,11 +55,8 @@ class ElectionPolicy
      * @param  \App\Models\Election  $election
      * @return mixed
      */
-    public function update(Request $request, User $user, Election $election)
+    public function update(User $user, Election $election)
     {
-        if (! $request->hasValidSignature()) {
-            return Response::allow();
-        }
         return $user->owner === $election->owner
             ? Response::allow()
             : Response::deny('You do not own this.');
