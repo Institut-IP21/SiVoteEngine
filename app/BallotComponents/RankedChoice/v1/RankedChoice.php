@@ -75,15 +75,29 @@ class RankedChoice extends BallotComponentType
         if (count($state) > 2) {
             // The current least voted for option is added to the omit list.
             // If there is a tie for last place, omit only the first match.
-            $omitThisRound = array_keys($state, min($state))[0];
-            array_push($omit, $omitThisRound);
-            $state = self::annotateStateForOmission($state, $omitThisRound);
-            array_push($rounds, $state);
-            return self::runIteration($votes, $component, $rounds, $omit);
+            $omitees = array_keys($state, min($state));
+            if (count($omitees) > 1) {
+                $splits = [
+                    '_state' => $state,
+                    'splitElimination' => []
+                ];
+                foreach ($omitees as $omitee) {
+                    $splitOmit = [...$omit, $omitee];
+                    $splits['splitElimination'][$omitee] = [
+                        'result' => self::runIteration($votes, $component, [], $splitOmit)
+                    ];
+                }
+                return [...$rounds, $splits];
+            }
+            $omitee = array_pop($omitees);
+            $state = self::annotateStateForOmission($state, $omit, $omitee);
+            $nextOmit = [...$omit, $omitee];
+            $rounds = [...$rounds, $state];
+            return self::runIteration($votes, $component, $rounds, $nextOmit);
         }
 
         $state = self::annotateStateForVictory($state);
-        array_push($rounds, $state);
+        $rounds = [...$rounds, $state];
 
         return $rounds;
     }
@@ -122,12 +136,18 @@ class RankedChoice extends BallotComponentType
 
     public static function annotateStateForVictory($state)
     {
-        $state['winner'] = array_keys($state, max($state))[0];
+        $winners = array_keys($state, max($state));
+        if (count($winners) > 1) {
+            $state['winner'] = 'tie';
+        } else {
+            $state['winner'] = array_pop($winners);
+        }
         return $state;
     }
-    public static function annotateStateForOmission($state, $omit)
+    public static function annotateStateForOmission($state, $omit, $omitee)
     {
-        $state['eliminated'] = $omit;
+        $state['eliminated'] = $omitee;
+        $state['eliminated_previously'] = $omit;
         return $state;
     }
 
