@@ -43,4 +43,9 @@
     border: 0.1em solid currentColor;
 }
 
+.round_state {
+    max-width: 200px;
+    min-width: 185px;
+}
+
 @import "tailwindcss/utilities";

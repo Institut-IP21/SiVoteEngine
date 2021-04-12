@@ -1,9 +1,10 @@
 module.exports = {
+    mode: "jit",
     future: {
         // removeDeprecatedGapUtilities: true,
         // purgeLayersByDefault: true,
     },
-    purge: [],
+    purge: ["**/*.blade.php"],
     theme: {
         extend: {},
         flex: {

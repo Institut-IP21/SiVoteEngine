@@ -19,7 +19,11 @@ class RankedChoice extends BallotComponentType
 
     public static function calculateResults($votes, $component)
     {
-        return self::runIteration($votes, $component);
+        $rounds = self::runIteration($votes, $component);
+        return [
+            'rounds' => $rounds,
+            'result' => self::annotateFinalState($rounds)
+        ];
     }
 
     /**
@@ -83,9 +87,7 @@ class RankedChoice extends BallotComponentType
                 ];
                 foreach ($omitees as $omitee) {
                     $splitOmit = [...$omit, $omitee];
-                    $splits['splitElimination'][$omitee] = [
-                        'result' => self::runIteration($votes, $component, [], $splitOmit)
-                    ];
+                    $splits['splitElimination'][$omitee] = self::runIteration($votes, $component, [], $splitOmit);
                 }
                 return [...$rounds, $splits];
             }
@@ -144,11 +146,28 @@ class RankedChoice extends BallotComponentType
         }
         return $state;
     }
+
     public static function annotateStateForOmission($state, $omit, $omitee)
     {
         $state['eliminated'] = $omitee;
         $state['eliminated_previously'] = $omit;
         return $state;
+    }
+
+    public static function annotateFinalState($rounds)
+    {
+        $winners = [];
+        array_walk_recursive($rounds, function ($i, $el) use (&$winners) {
+            if ($el === 'winner') {
+                $winners[] = $i;
+            }
+        });
+        $unique_winners = array_unique($winners);
+        return [
+            'winners' => $unique_winners,
+            'conclussive' => count($unique_winners) === 1,
+            'conclussive_winner' => array_pop($unique_winners)
+        ];
     }
 
     public static function valuesToCsv($values, $component_id)
