@@ -8,11 +8,9 @@
         {{ implode(', ', $results[$component->id]['results']['result']['winners']) }}.
     </div>
 @endif
-<div class="-mx-6 d-flex justify-center flex-wrap overflow-x-scroll">
+<div class="-mx-6 flex justify-start overflow-x-scroll">
     @foreach ($results[$component->id]['results']['rounds'] as $i => $round)
-        <div class="round">
-            @include($component->component_path . '/round', [ 'round' => $round, 'component' => $component, 'i' => $i,
-            'round_prefix' => '' ])
-        </div>
+        @include($component->component_path . '/round', [ 'round' => $round, 'component' => $component, 'i' => $i,
+        'round_prefix' => '' ])
     @endforeach
 </div>

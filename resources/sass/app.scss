@@ -48,4 +48,9 @@
     min-width: 185px;
 }
 
+.tie-header {
+    writing-mode: vertical-lr;
+    transform: rotate(180deg);
+}
+
 @import "tailwindcss/utilities";
