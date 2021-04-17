@@ -113,23 +113,23 @@ return [
 
     'hosts' => [
         'staging' => [
-            "hostname" => "peticije.si",
-            'deploy_path' => '/var/www/engine.stage.eglasovanje.si',
+            "hostname" => "evoteapp",
+            'deploy_path' => '/var/www/engine.eglasovanje.si',
             "stage" => "staging",
             'http_user' => "http",
             'shared_files' => ['.env', 'etc/nginx.conf'],
             'shared_dirs' => ["storage"],
             'user' => 'deploy',
         ],
-        // 'prod' => [
-        //     "hostname" => "peticije.si",
-        //     "stage" => "production",
-        //     'deploy_path' => '/var/www/peticije.si',
-        //     'user' => 'deploy',
-        //     'http_user' => "http",
-        //     'shared_files' => ['.env', 'etc/nginx.conf'],
-        //     'shared_dirs' => ["storage"]
-        // ],
+        'production' => [
+            "hostname" => "evoteapp",
+            'deploy_path' => '/var/www/engine.eglasovanje.si',
+            "stage" => "production",
+            'http_user' => "http",
+            'shared_files' => ['.env', 'etc/nginx.conf'],
+            'shared_dirs' => ["storage"],
+            'user' => 'deploy',
+        ],
     ],
 
     /*
