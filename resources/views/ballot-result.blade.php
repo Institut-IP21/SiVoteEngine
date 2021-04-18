@@ -3,7 +3,7 @@
 @section('title', 'Ballot Results')
 
 @section('body')
-    <div id="app" class="bg-gray-100">
+    <div id="app" class="min-h-screen bg-gray-100">
         <div class="py-2"></div>
         <div class="max-w-screen-md text-center mx-auto">
             <div class="w-full py-3 rounded overflow-hidden shadow-2xl mx-auto bg-white">
@@ -21,8 +21,10 @@
                         <div class="py-6">
                             <div class="px-7 mb-6 pb-5 font-bold text-xl flex justify-between items-baseline border-b">
                                 <span>{{ $component->title }}</span>
-                                <span class="font-light text-base text-right">{{ $component->type }}<b
-                                        class="text-blue-400">{{ $component->version }}</b></span>
+                                <span class="font-light text-base text-right">
+                                    {{ $component->type }}
+                                    <b class="text-blue-400">{{ $component->version }}</b>
+                                </span>
                             </div>
                             <p class="px-7 mb-6 pb-5 border-b text-justify">{{ $component->description }}</p>
                             <div class="px-7">
