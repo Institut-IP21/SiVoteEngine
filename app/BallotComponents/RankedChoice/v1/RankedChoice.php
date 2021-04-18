@@ -17,6 +17,15 @@ class RankedChoice extends BallotComponentType
         'options.*' => 'bail|required|string|distinct|min:1'
     ];
 
+    public static function strings()
+    {
+        return [
+            'name' => __('components.rankedchoice.name'),
+            'description' => __('components.rankedchoice.description'),
+        ];
+    }
+
+
     public static function calculateResults($votes, $component)
     {
         return self::runIteration($votes, $component);

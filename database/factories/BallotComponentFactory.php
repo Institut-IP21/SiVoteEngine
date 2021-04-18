@@ -24,7 +24,7 @@ class BallotComponentFactory extends Factory
         return [
             'title' => $this->faker->sentence(5),
             'description' => $this->faker->paragraph(1),
-            'type' => 'FirstPassThePost',
+            'type' => 'FirstPastThePost',
             'version' => 'v1',
             'options' => [$this->faker->name(), $this->faker->name(), $this->faker->name()],
         ];

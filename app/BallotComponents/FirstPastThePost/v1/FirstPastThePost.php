@@ -1,15 +1,14 @@
 <?php
 
-namespace App\BallotComponents\FirstPassThePost\v1;
+namespace App\BallotComponents\FirstPastThePost\v1;
 
 use Illuminate\Support\Facades\Validator;
 use App\BallotComponents\BallotComponentType;
 use App\Models\BallotComponent;
 use App\Models\Election;
 use Illuminate\Validation\Rule;
-use phpDocumentor\Reflection\Types\Self_;
 
-class FirstPassThePost extends BallotComponentType
+class FirstPastThePost extends BallotComponentType
 {
     public static $needsOptions = true;
 
@@ -17,6 +16,14 @@ class FirstPassThePost extends BallotComponentType
         'options' => 'bail|required|array|min:2',
         'options.*' => 'bail|required|string|distinct|min:1'
     ];
+
+    public static function strings()
+    {
+        return [
+            'name' => __('components.fptp.name'),
+            'description' => __('components.fptp.description'),
+        ];
+    }
 
     public static function calculateResults(array $votes, BallotComponent $component)
     {

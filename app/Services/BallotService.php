@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\BallotComponents\BallotComponentType;
-use App\BallotComponents\FirstPassThePost\v1\FirstPassThePost;
+use App\BallotComponents\FirstPastThePost\v1\FirstPastThePost;
 use App\BallotComponents\RankedChoice\v1\RankedChoice;
 use App\BallotComponents\YesNo\v1\YesNo;
 use App\Models\Ballot;
@@ -16,8 +16,8 @@ class BallotService
         'YesNo' => [
             'v1' => YesNo::class
         ],
-        'FirstPassThePost' => [
-            'v1' => FirstPassThePost::class
+        'FirstPastThePost' => [
+            'v1' => FirstPastThePost::class
         ],
         'RankedChoice' => [
             'v1' => RankedChoice::class
@@ -32,6 +32,7 @@ class BallotService
             foreach ($versions as $version => $class) {
                 $tree[$type][$version] = [
                     'needsOptions' => $class::$needsOptions,
+                    'strings' => $class::strings()
                 ];
             }
         }

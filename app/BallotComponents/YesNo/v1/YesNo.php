@@ -17,6 +17,14 @@ class YesNo extends BallotComponentType
         'options' => 'in:yes,no'
     ];
 
+    public static function strings()
+    {
+        return [
+            'name' => __('components.yesno.name'),
+            'description' => __('components.yesno.description'),
+        ];
+    }
+
     public static function calculateResults(array $votes, BallotComponent $component)
     {
         return array_reduce($votes, function ($runningTotal, $vote) use ($component) {
