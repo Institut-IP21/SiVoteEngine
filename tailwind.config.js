@@ -1,9 +1,14 @@
 module.exports = {
+    mode: 'jit',
     future: {
         // removeDeprecatedGapUtilities: true,
         // purgeLayersByDefault: true,
     },
-    purge: [],
+    purge: [
+        "./resources/views/**/*.blade.php",
+        "./app/BallotComponents/**/*.blade.php",
+        "./app/BallotComponents/**/*.vue"
+    ],
     theme: {
         extend: {},
         flex: {
