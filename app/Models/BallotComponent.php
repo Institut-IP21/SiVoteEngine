@@ -40,6 +40,11 @@ class BallotComponent extends Model
         return Str::slug($this->title);
     }
 
+    public function getComponentPathAttribute()
+    {
+        return $this->type . '/' . $this->version;
+    }
+
     public function getFormTemplateAttribute()
     {
         return $this->type . '/' . $this->version . '/form';

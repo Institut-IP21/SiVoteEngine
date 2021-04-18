@@ -43,4 +43,14 @@
     border: 0.1em solid currentColor;
 }
 
+.round_state {
+    max-width: 200px;
+    min-width: 185px;
+}
+
+.tie-header {
+    writing-mode: vertical-lr;
+    transform: rotate(180deg);
+}
+
 @import "tailwindcss/utilities";

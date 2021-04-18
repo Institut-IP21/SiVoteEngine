@@ -1,5 +1,5 @@
 module.exports = {
-    mode: 'jit',
+    mode: "jit",
     future: {
         // removeDeprecatedGapUtilities: true,
         // purgeLayersByDefault: true,
