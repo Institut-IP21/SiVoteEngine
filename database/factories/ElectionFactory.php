@@ -24,12 +24,21 @@ class ElectionFactory extends Factory
     {
         return [
             'id' => $this->faker->uuid(),
-            'title' => $this->faker->name(),
+            'title' => $this->faker->bs(),
             'description' => $this->faker->paragraph(1),
             'owner' => $this->faker->uuid(),
             'created_at' => $this->faker->dateTime(),
             'updated_at' => null,
-            'abstainable' => true,
+            'abstainable' => false,
         ];
+    }
+
+    public function abstainable()
+    {
+        return $this->state(function (array $attributes) {
+            return [
+            'abstainable' => 'true',
+        ];
+        });
     }
 }
