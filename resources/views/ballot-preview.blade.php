@@ -6,7 +6,7 @@
     <div id="app" class="min-h-screen bg-gray-100">
         <div class="py-2"></div>
         <div class="max-w-screen-md py-2 text-center rounded overflow-hidden shadow-2xl mx-auto bg-red-400 text-white">
-            This view will be available for 15 minutes. After that, you need a new link.
+            {{ __('ballot.preview.warning') }}
         </div>
         <div class="py-2"></div>
         <div class="max-w-screen-md text-center mx-auto">

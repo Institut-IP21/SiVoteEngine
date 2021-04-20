@@ -6,7 +6,7 @@
                 value="{{ $option }}" />
             <span class="radio__control mr-3"></span>
         </span>
-        <span class="radio__label">{{ $option }}</span>
+        <span class="radio__label">{{ __($option) }}</span>
     </label>
 @endforeach
 @if ($election->abstainable)
