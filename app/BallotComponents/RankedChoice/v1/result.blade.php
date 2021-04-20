@@ -1,6 +1,6 @@
 @if ($results[$component->id]['results']['result']['conclussive'])
     <div class="d-block text-center bg-green-200 p-3">
-        THE WINNER IS {{ $results[$component->id]['results']['result']['conclussive_winner'] }}
+        The winner is {{ $results[$component->id]['results']['result']['conclussive_winner'] }}
     </div>
 @else
     <div class="d-block text-center bg-green-200 p-3">

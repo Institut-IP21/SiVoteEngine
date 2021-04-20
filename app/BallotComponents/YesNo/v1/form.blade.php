@@ -16,6 +16,6 @@
             <input type="radio" id="{{ $component->id }}--abstain" name="{{ $component->id }}" value="abstain" />
             <span class="radio__control mr-3"></span>
         </span>
-        <span class="radio__label">Abstain</span>
+        <span class="radio__label">{{ __('Abstain') }}</span>
     </label>
 @endif
