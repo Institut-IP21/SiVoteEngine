@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\BallotComponents\ApprovalVote\v1\ApprovalVote;
 use App\BallotComponents\BallotComponentType;
 use App\BallotComponents\FirstPastThePost\v1\FirstPastThePost;
 use App\BallotComponents\RankedChoice\v1\RankedChoice;
@@ -21,6 +22,9 @@ class BallotService
         ],
         'RankedChoice' => [
             'v1' => RankedChoice::class
+        ],
+        'ApprovalVote' => [
+            'v1' => ApprovalVote::class
         ]
     ];
 

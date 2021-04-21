@@ -12,5 +12,9 @@ return [
     'rankedchoice' => [
         'name' => 'Ranked choice question',
         'description' => 'Voters rank multiple options in order of their preference.'
+    ],
+    'approval' => [
+        'name' => 'Approval vote question',
+        'description' => 'Voters approve of any number of options from a list.'
     ]
 ];
