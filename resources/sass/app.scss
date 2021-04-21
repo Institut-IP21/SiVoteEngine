@@ -43,6 +43,31 @@
     border: 0.1em solid currentColor;
 }
 
+.checkbox {
+    font-size: 1.5rem;
+    color: var(--color);
+}
+.checkbox__label {
+    line-height: 1;
+}
+.checkbox__input {
+    display: flex;
+    input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+        &:checked + .checkbox__control {
+            background: currentColor;
+        }
+    }
+}
+.checkbox__control {
+    display: block;
+    width: 1em;
+    height: 1em;
+    border: 0.1em solid currentColor;
+}
+
 .round_state {
     max-width: 200px;
     min-width: 185px;

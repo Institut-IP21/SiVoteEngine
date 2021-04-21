@@ -14,5 +14,9 @@ return [
     'rankedchoice' => [
         'name' => 'Preferenčno vprašanje',
         'description' => 'Volivci seznam možnosti uredijo po vrsti glede na preferenco.'
+    ],
+    'approval' => [
+        'name' => 'Approval vote',
+        'description' => 'Volivci označijo, katere izmed možnosti na seznamu podpirajo.'
     ]
 ];
