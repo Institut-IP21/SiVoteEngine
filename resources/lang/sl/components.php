@@ -1,9 +1,13 @@
 <?php
 
 return [
+    'option' => 'Vrednost',
+    'votes' => 'Število glasov',
+    'oftotal' => 'Delež(%)',
     'yesno' => [
         'yes' => 'Da',
         'no' => 'Ne',
+        'abstain' => 'Vzdržan',
         'name' => 'Da/Ne vprašanje',
         'description' => 'Volivci izrazijo bodisi podporo bodisi nasprotovanje dani postavki.'
     ],
@@ -17,6 +21,7 @@ return [
     ],
     'approval' => [
         'name' => 'Approval vote',
-        'description' => 'Volivci označijo, katere izmed možnosti na seznamu podpirajo.'
+        'description' => 'Volivci označijo, katere izmed možnosti na seznamu podpirajo.',
+        'oftotal' => 'Podpora(%)'
     ]
 ];

@@ -31,10 +31,6 @@
                         <div class="py-6">
                             <div class="px-7 mb-6 pb-5 font-bold text-xl flex justify-between items-baseline border-b">
                                 <span>{{ $component->title }}</span>
-                                <span class="font-light text-base text-right">
-                                    {{ $component->type }}
-                                    <b class="text-blue-400">{{ $component->version }}</b>
-                                </span>
                             </div>
                             <p class="px-7 mb-6 pb-5 border-b text-justify">{{ $component->description }}</p>
                             <div class="px-7">

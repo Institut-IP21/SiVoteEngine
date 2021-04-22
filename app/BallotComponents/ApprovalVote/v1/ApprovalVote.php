@@ -39,6 +39,9 @@ class ApprovalVote extends BallotComponentType
             if (empty($vote['values'])) {
                 return $runningTotal;
             }
+            if (!array_key_exists($component->id, $vote['values'])) {
+                return $runningTotal;
+            }
             $approved_options = $vote['values'][$component->id];
             foreach ($approved_options as $approved_option) {
                 $runningTotal[$approved_option] = array_key_exists($approved_option, $runningTotal) ? $runningTotal[$approved_option] + 1 : 1;

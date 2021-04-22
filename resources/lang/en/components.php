@@ -1,9 +1,13 @@
 <?php
 
 return [
+    'option' => 'Option',
+    'votes' => 'Votes',
+    'oftotal' => 'Share(%)',
     'yesno' => [
         'yes' => 'Yes',
         'no' => 'No',
+        'abstain' => 'Abstain',
         'name' => 'Yes/No question',
         'description' => 'Voters choose whether they support or oppose a single item.'
     ],
@@ -17,6 +21,7 @@ return [
     ],
     'approval' => [
         'name' => 'Approval vote question',
-        'description' => 'Voters approve of any number of options from a list.'
+        'description' => 'Voters approve of any number of options from a list.',
+        'oftotal' => 'Approval(%)'
     ]
 ];
