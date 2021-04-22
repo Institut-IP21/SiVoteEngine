@@ -15,4 +15,9 @@ class ApiUser extends Authenticatable
     protected $fillable = [
         'owner',
     ];
+
+    public function personalization()
+    {
+        return $this->hasOne(Personalization::class, 'owner', 'owner');
+    }
 }
