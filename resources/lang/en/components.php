@@ -2,6 +2,8 @@
 
 return [
     'yesno' => [
+        'yes' => 'Yes',
+        'no' => 'No',
         'name' => 'Yes/No question',
         'description' => 'Voters choose whether they support or oppose a single item.'
     ],

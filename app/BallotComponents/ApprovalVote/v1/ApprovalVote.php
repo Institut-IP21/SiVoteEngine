@@ -27,7 +27,10 @@ class ApprovalVote extends BallotComponentType
 
     public static function valuesToCsv($values, $component_id)
     {
-        return implode(', ', $values[$component_id]);
+        if (array_key_exists($component_id, $values)) {
+            return implode(', ', $values[$component_id]);
+        }
+        return '';
     }
 
     public static function calculateResults(array $votes, BallotComponent $component)

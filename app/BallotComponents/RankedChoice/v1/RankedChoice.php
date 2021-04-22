@@ -181,7 +181,10 @@ class RankedChoice extends BallotComponentType
 
     public static function valuesToCsv($values, $component_id)
     {
-        return implode(', ', $values[$component_id]);
+        if (array_key_exists($component_id, $values)) {
+            return implode(', ', $values[$component_id]);
+        }
+        return '';
     }
 
     public static function getSubmissionValidator(BallotComponent $component, Election $election)

@@ -67,7 +67,7 @@ class BallotApiController extends Controller
     public function result(Election $election, Ballot $ballot, Request $request)
     {
         if (!$ballot->finished) {
-            return response('Ballot results not available yet', 403);
+            return response(__('ballot.result.not_yet'), 403);
         }
         $results = $this->ballotService->calculateResults($ballot);
         return $results;
@@ -80,7 +80,7 @@ class BallotApiController extends Controller
     public function votes(Election $election, Ballot $ballot, Request $request)
     {
         if (!$ballot->finished) {
-            return response('Ballot results not available yet', 400);
+            return response(__('ballot.result.not_yet'), 400);
         }
         return new BallotComplete($ballot);
     }
@@ -92,7 +92,7 @@ class BallotApiController extends Controller
     public function votesCsv(Election $election, Ballot $ballot, Request $request)
     {
         if (!$ballot->finished) {
-            return response('Ballot results not available yet', 400);
+            return response(__('ballot.result.not_yet'), 400);
         }
         $csv = $this->ballotService->resultsCsv($ballot);
         return response(['data' => $csv], 200);

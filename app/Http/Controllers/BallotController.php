@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Ballot;
 use App\Models\Election;
+use App\Models\Personalization;
 use App\Models\Vote;
 use App\Services\BallotService;
 use Illuminate\Http\Request;
@@ -36,7 +37,8 @@ class BallotController extends Controller
             return view('404');
         }
 
-        return view('ballot', ['election' => $election, 'ballot' => $ballot, 'code' => $code]);
+        $pers = Personalization::where('owner', $election->owner)->first();
+        return view('ballot', ['election' => $election, 'ballot' => $ballot, 'code' => $code, 'pers' => $pers]);
     }
 
     /**
@@ -45,7 +47,8 @@ class BallotController extends Controller
      */
     public function preview(Election $election, Ballot $ballot, Request $request)
     {
-        return view('ballot-preview', ['election' => $election, 'ballot' => $ballot]);
+        $pers = Personalization::where('owner', $election->owner)->first();
+        return view('ballot-preview', ['election' => $election, 'ballot' => $ballot, 'pers' => $pers]);
     }
 
     /**
@@ -70,7 +73,8 @@ class BallotController extends Controller
         $vote->values = $values;
         $vote->save();
 
-        return view('voted', ['election' => $election, 'ballot' => $ballot, 'vote' => $vote]);
+        $pers = Personalization::where('owner', $election->owner)->first();
+        return view('voted', ['election' => $election, 'ballot' => $ballot, 'vote' => $vote, 'pers' => $pers]);
     }
 
     /**
@@ -79,10 +83,11 @@ class BallotController extends Controller
     public function result(Election $election, Ballot $ballot, Request $request)
     {
         if (!$ballot->finished) {
-            return response('Ballot results not available yet', 403);
+            return response(__('ballot.result.not_yet'), 403);
         }
         $results = $this->ballotService->calculateResults($ballot);
+        $pers = Personalization::where('owner', $election->owner)->first();
 
-        return view('ballot-result', ['election' => $election, 'ballot' => $ballot, 'results' => $results]);
+        return view('ballot-result', ['election' => $election, 'ballot' => $ballot, 'results' => $results, 'pers' => $pers]);
     }
 }
