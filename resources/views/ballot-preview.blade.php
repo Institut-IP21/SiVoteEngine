@@ -8,7 +8,7 @@
         <div class="max-w-screen-md py-2 text-center rounded overflow-hidden shadow-md mx-auto bg-red-400 text-white">
             {{ __('ballot.preview.warning') }}
         </div>
-        @if ($pers->photo_url)
+        @if ($pers && $pers->photo_url)
             <div class="py-2"></div>
             <div class="flex justify-center">
                 <img src="{{ $pers->photo_url }}" alt="">

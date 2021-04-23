@@ -13,6 +13,12 @@
                 @endif
             </div>
         </div>
+        @if ($pers && $pers->photo_url)
+            <div class="py-2"></div>
+            <div class="flex justify-center">
+                <img src="{{ $pers->photo_url }}" alt="">
+            </div>
+        @endif
         <div class="py-6"></div>
         @if ($ballot->components)
             <div class="max-w-screen-md mx-auto h-full flex flex-col">

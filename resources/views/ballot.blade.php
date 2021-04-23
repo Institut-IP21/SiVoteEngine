@@ -14,7 +14,7 @@
             </div>
         </div>
         <div class="py-2"></div>
-        @if ($pers->photo_url)
+        @if ($pers && $pers->photo_url)
             <div class="flex justify-center">
                 <img src="{{ $pers->photo_url }}" alt="">
             </div>

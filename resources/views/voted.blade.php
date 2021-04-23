@@ -9,7 +9,7 @@
                 <h1 class="text-2xl">{{ __('ballot.vote.registered') }}</h1>
                 <p class="mt-2">{{ $ballot->description }}</p>
             </div>
-            @if ($pers->photo_url)
+            @if ($pers && $pers->photo_url)
                 <div class="py-2"></div>
                 <div class="flex justify-center">
                     <img src="{{ $pers->photo_url }}" alt="">
