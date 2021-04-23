@@ -3,7 +3,7 @@
 @section('title', 'Ballot')
 
 @section('body')
-    <div id="app" class="bg-gray-100">
+    <div id="app" class="bg-gray-100 min-h-screen">
         <div class="py-2"></div>
         <div class="max-w-screen-md text-center mx-auto">
             <div class="w-full py-3 rounded overflow-hidden shadow-md mx-auto bg-white">
