@@ -59,7 +59,7 @@ class BallotController extends Controller
      */
     public function vote(Election $election, Ballot $ballot, Request $request)
     {
-        $code = $request->query('code');
+        $code = $request->input('code');
         $vote = Vote::find($code);
 
         if (!$vote || !$vote->ballot->id === $ballot->id) {
