@@ -26,17 +26,20 @@ class BallotController extends Controller
     /**
      *  @Get("/{election}/ballot/{ballot}", as="ballot.show")
      */
-    public function single(Election $election, Ballot $ballot, Request $request)
+    public function view(Election $election, Ballot $ballot, Request $request)
     {
         $code = $request->query('code');
-        $settings = ['code' => 'required|uuid|exists:App\Models\Vote,id'];
-        $validator = Validator::make(['code' => $code], $settings);
-        $errors = $validator->errors();
+        $vote = Vote::find($code);
 
-        if (!$errors->isEmpty()) {
-            return view('404');
+        if (!$vote || !$vote->ballot->id === $ballot->id) {
+            return view('404', ['code' => 404]);
         }
 
+        if (!$ballot->active) {
+            return view('ballot-expired', ['code' => 404]);
+        }
+
+        $code = $request->query('code');
         $pers = Personalization::where('owner', $election->owner)->first();
         return view('ballot', ['election' => $election, 'ballot' => $ballot, 'code' => $code, 'pers' => $pers]);
     }
@@ -56,6 +59,17 @@ class BallotController extends Controller
      */
     public function vote(Election $election, Ballot $ballot, Request $request)
     {
+        $code = $request->query('code');
+        $vote = Vote::find($code);
+
+        if (!$vote || !$vote->ballot->id === $ballot->id) {
+            return view('404', ['code' => 404]);
+        }
+
+        if (!$ballot->active) {
+            return view('ballot-expired', ['code' => 404]);
+        }
+
         $settings = array_merge([
             'code' => 'required|uuid|exists:App\Models\Vote,id',
         ], $this->ballotService->getSubmissionValidators($ballot));
