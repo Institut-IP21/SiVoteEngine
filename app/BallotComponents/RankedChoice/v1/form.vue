@@ -63,8 +63,16 @@ export default {
             this.rankees = newState;
         },
         remove(option, i) {
-            const index = _.indexOf(this.rankees, option);
-            this.rankees[index].rank = undefined;
+            const newState = this.rankees.slice();
+            const index = _.indexOf(newState, option);
+            const rank = newState[index].rank;
+            for (const rankee of newState) {
+                if (rankee.rank > rank) {
+                    rankee.rank -= 1;
+                }
+            }
+            newState[index].rank = undefined;
+            this.rankees = newState;
         }
     }
 };
