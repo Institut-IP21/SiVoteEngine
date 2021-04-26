@@ -21,7 +21,7 @@ class Election extends Model
     protected $cascadeDeletes = ['ballots'];
 
     protected $attributes = [
-        'abstainable' => true,
+        'abstainable' => false,
         'description' => '',
         'level' => 1,
     ];
