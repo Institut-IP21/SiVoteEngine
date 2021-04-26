@@ -63,7 +63,7 @@ class ElectionApiController extends Controller
             'title'         => 'required|string|min:5',
             'level'         => 'integer|required',
             'abstainable'   => 'nullable|boolean',
-            'description'   => 'string|min:10|nullable',
+            'description'   => 'nullable|string',
             'title'         => 'required|string|min:5',
             'abstainable'   => 'nullable|boolean',
         ];
