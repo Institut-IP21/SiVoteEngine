@@ -23,5 +23,8 @@ return [
         'name' => 'Approval vote',
         'description' => 'Volivci označijo, katere izmed možnosti na seznamu podpirajo.',
         'oftotal' => 'Podpora(%)'
+    ],
+    'created' => [
+        'success' => 'Component created.'
     ]
 ];
