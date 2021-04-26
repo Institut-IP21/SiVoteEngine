@@ -17,7 +17,11 @@ return [
     ],
     'rankedchoice' => [
         'name' => 'Ranked choice question',
-        'description' => 'Voters rank multiple options in order of their preference.'
+        'description' => 'Voters rank multiple options in order of their preference.',
+        'intro' => 'There are :options options. Rank the options in order of your choice. You may rank as few or as many as you wish.',
+        'state' => 'You have ranked {{ selected.length }}, you may rank {{ rankees.length - selected.length }} more.',
+        'UP' => 'UP',
+        'DOWN' => 'DOWN'
     ],
     'approval' => [
         'name' => 'Approval vote question',

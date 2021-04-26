@@ -17,7 +17,11 @@ return [
     ],
     'rankedchoice' => [
         'name' => 'Preferenčno vprašanje',
-        'description' => 'Volivci seznam možnosti uredijo po vrsti glede na preferenco.'
+        'description' => 'Volivci seznam možnosti uredijo po vrsti glede na preferenco.',
+        'intro' => 'Pred vami je :options opcij. Razvrstite jih po vrsti od najboljše do najslabše. Razvrstite lahko kolikor opcij želite.',
+        'state' => 'Do sedaj ste razvrstili {{ selected.length }} opcij, lahko jih še {{ rankees.length - selected.length }}.',
+        'UP' => 'GOR',
+        'DOWN' => 'DOL'
     ],
     'approval' => [
         'name' => 'Approval vote',
