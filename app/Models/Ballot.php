@@ -44,7 +44,7 @@ class Ballot extends Model
 
     public function components()
     {
-        return $this->hasMany(BallotComponent::class);
+        return $this->hasMany(BallotComponent::class)->orderBy('order');
     }
 
     public function getComponentsAttribute()

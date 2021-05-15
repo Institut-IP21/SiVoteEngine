@@ -19,6 +19,7 @@ class BallotComponent extends Model
         'title',
         'description',
         'type',
+        'order',
         'version',
         'options',
         'ballot_id',
@@ -26,6 +27,7 @@ class BallotComponent extends Model
 
     protected $casts = [
         'options' => 'array',
+        'order' => 'integer',
     ];
 
     protected $appends = ['slug'];

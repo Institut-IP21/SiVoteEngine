@@ -42,6 +42,7 @@ class BallotComponentApiController extends Controller
         $settings = [
             'title' => 'required|string|min:5',
             'description' => 'nullable|string|min:5',
+            'order' => 'nullable|integer',
             'type' => [
                 'required',
                 'string',
@@ -87,6 +88,7 @@ class BallotComponentApiController extends Controller
             'title' => $params['title'],
             'type' => $params['type'],
             'version' => $params['version'],
+            'order' => $params['order'] ?? 0,
             'options' => $options,
         ]);
 
@@ -112,6 +114,7 @@ class BallotComponentApiController extends Controller
         $settings = [
             'title' => 'bail|required|string|min:5',
             'description' => 'nullable|string|min:5',
+            'order' => 'nullable|integer',
             'type' => [
                 'bail',
                 'required',
@@ -155,6 +158,10 @@ class BallotComponentApiController extends Controller
 
         if ($params['type']) {
             $component->type = $params['type'];
+        }
+
+        if (array_key_exists('order', $params)) {
+            $component->order = $params['order'];
         }
 
         if ($params['version']) {
