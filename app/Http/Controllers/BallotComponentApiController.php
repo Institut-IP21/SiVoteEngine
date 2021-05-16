@@ -40,8 +40,8 @@ class BallotComponentApiController extends Controller
     {
         $params = $request->all();
         $settings = [
-            'title' => 'required|string|min:5',
-            'description' => 'nullable|string|min:5',
+            'title' => 'required|string|min:1',
+            'description' => 'nullable|string|min:1',
             'order' => 'nullable|integer',
             'type' => [
                 'required',
@@ -112,8 +112,8 @@ class BallotComponentApiController extends Controller
     {
         $params = $request->all();
         $settings = [
-            'title' => 'bail|required|string|min:5',
-            'description' => 'nullable|string|min:5',
+            'title' => 'bail|required|string|min:1',
+            'description' => 'nullable|string|min:1',
             'order' => 'nullable|integer',
             'type' => [
                 'bail',
