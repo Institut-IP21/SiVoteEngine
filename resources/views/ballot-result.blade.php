@@ -7,7 +7,7 @@
         <div class="py-2"></div>
         <div class="max-w-screen-md text-center mx-auto">
             <div class="w-full py-3 rounded overflow-hidden shadow-md mx-auto bg-white">
-                <h1 class="text-2xl border-b pb-3">Ballot {{ $ballot->title }}</h1>
+                <h1 class="text-2xl border-b pb-3">{{ $ballot->title }}</h1>
                 @if ($ballot->description)
                     <p class="mt-2">{{ $ballot->description }}</p>
                 @endif
@@ -28,7 +28,9 @@
                             <div class="px-7 mb-6 pb-5 font-bold text-xl flex justify-between items-baseline border-b">
                                 <span>{{ $component->title }}</span>
                             </div>
-                            <p class="px-7 mb-6 pb-5 border-b text-justify">{{ $component->description }}</p>
+                            @if ($component->description)
+                                <p class="px-7 mb-6 pb-5 border-b text-justify">{{ $component->description }}</p>
+                            @endif
                             <div class="px-7">
                                 @include($component->result_template, ['component' => $component, 'election' => $election])
                             </div>
@@ -38,7 +40,7 @@
                 @endforeach
             </div>
         @else
-            <span>No components!</span>
+            <span class="mx-auto">No components!</span>
         @endif
     </div>
 @endsection

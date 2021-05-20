@@ -3,6 +3,9 @@
 return [
     'option' => 'Option',
     'votes' => 'Votes',
+    'winner' => 'Winner',
+    'eliminated' => 'Eliminated',
+    'tie' => 'Tie',
     'oftotal' => 'Share(%)',
     'yesno' => [
         'yes' => 'Yes',
@@ -21,7 +24,11 @@ return [
         'intro' => 'There are :options options. Rank the options in order of your choice. You may rank as few or as many as you wish.',
         'state' => 'You have ranked {{ selected.length }}, you may rank {{ rankees.length - selected.length }} more.',
         'UP' => 'UP',
-        'DOWN' => 'DOWN'
+        'DOWN' => 'DOWN',
+        'round' => 'Round',
+        'winner_is' => 'The winner is',
+        'no_winner' => 'There is no conclussive winner, the possible outcomes are',
+        'tie_elimination' => 'Tie - eliminating'
     ],
     'approval' => [
         'name' => 'Approval vote question',

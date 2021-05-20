@@ -3,6 +3,9 @@
 return [
     'option' => 'Vrednost',
     'votes' => 'Število glasov',
+    'winner' => 'Zmagovalec',
+    'eliminated' => 'Eliminiran',
+    'tie' => 'Izenačen',
     'oftotal' => 'Delež(%)',
     'yesno' => [
         'yes' => 'Da',
@@ -21,7 +24,11 @@ return [
         'intro' => 'Pred vami je :options opcij. Razvrstite jih po vrsti od najboljše do najslabše. Razvrstite lahko kolikor opcij želite.',
         'state' => 'Do sedaj ste razvrstili {{ selected.length }} opcij, lahko jih še {{ rankees.length - selected.length }}.',
         'UP' => 'GOR',
-        'DOWN' => 'DOL'
+        'DOWN' => 'DOL',
+        'round' => 'Runda',
+        'winner_is' => 'Zmagovalec je',
+        'no_winner' => 'Zmagovalca ni mogoče določiti, možni zmagovalci so',
+        'tie_elimination' => 'Izenačeno - eliminiran'
     ],
     'approval' => [
         'name' => 'Approval vote',
