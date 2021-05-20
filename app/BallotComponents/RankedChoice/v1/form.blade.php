@@ -30,7 +30,7 @@
                     }">
                     <i>{{ __('components.rankedchoice.DOWN') }}</i>
                 </button>
-                <button class="btn border-l bg-red-100 hover:bg-red-200" @click="remove(option, i)">
+                <button class="btn border-l bg-red-200 text-red-600 hover:text-white hover:bg-red-600 rounded-none" @click="remove(option, i)">
                     <i>X</i>
                 </button>
             </div>
