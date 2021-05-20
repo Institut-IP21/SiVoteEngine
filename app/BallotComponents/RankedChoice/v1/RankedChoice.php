@@ -49,12 +49,15 @@ class RankedChoice extends BallotComponentType
     {
         // Only loop over non-omited options
         $options = array_diff($component->options, $omit);
-
         // Preset all the options to value 0
         $state = array_reduce($options, function ($acc, $option) {
             $acc[$option] = 0;
             return $acc;
         }, []);
+
+        $number_of_votes_cast = collect($votes)->countBy(function ($vote) {
+            return !empty($vote['values']);
+        })->first();
 
         $state = array_reduce($votes, function ($runningTotal, $vote) use ($component, $omit) {
             // Skip the votes that were never cast
@@ -80,16 +83,25 @@ class RankedChoice extends BallotComponentType
                 return $runningTotal;
             }
 
-            $runningTotal[$first] = $runningTotal[$first] + 1;
+            $runningTotal[$first] += 1;
             return $runningTotal;
         }, $state);
 
-        // Continue recursion if there are still more than 2 options
-        if (count($state) > 2) {
+        $current_winner_has_majority = max($state) >= $number_of_votes_cast / 2 + 1;
+
+        // Continue running elimination rounds if there are still more than 2 options, and none of the options have a majority.
+        if (count($state) > 2 && !$current_winner_has_majority) {
             // The current least voted for option is added to the omit list.
-            // If there is a tie for last place, omit only the first match.
+            // If there is a tie for last place, we run through both scenarios of eliminating those.
             $omitees = array_keys($state, min($state));
             if (count($omitees) > 1) {
+                // The special case is for options that got 0 votes, where we choose to eliminate them all.
+                if (min($state) === 0) {
+                    $state = self::annotateStateForOmission($state, $omit, $omitees);
+                    $nextOmit = [...$omit, ...$omitees];
+                    $rounds = [...$rounds, $state];
+                    return self::runIteration($votes, $component, $rounds, $nextOmit);
+                }
                 $splits = [
                     '_state' => $state,
                     'splitElimination' => []
@@ -158,7 +170,7 @@ class RankedChoice extends BallotComponentType
 
     public static function annotateStateForOmission($state, $omit, $omitee)
     {
-        $state['eliminated'] = $omitee;
+        $state['eliminated'] = is_array($omitee) ? implode(', ', $omitee) : $omitee;
         $state['eliminated_previously'] = $omit;
         return $state;
     }
