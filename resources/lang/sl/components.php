@@ -6,7 +6,7 @@ return [
     'winner' => 'Zmagovalec',
     'eliminated' => 'Eliminiran',
     'tie' => 'Izenačen',
-    'oftotal' => 'Delež(%)',
+    'oftotal' => 'Delež (%)',
     'yesno' => [
         'yes' => 'Da',
         'no' => 'Ne',
@@ -33,7 +33,7 @@ return [
     'approval' => [
         'name' => 'Approval vote',
         'description' => 'Volivci označijo, katere izmed možnosti na seznamu podpirajo.',
-        'oftotal' => 'Podpora(%)'
+        'oftotal' => 'Podpora (%)'
     ],
     'created' => [
         'success' => 'Component created.'

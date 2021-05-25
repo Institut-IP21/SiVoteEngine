@@ -6,7 +6,7 @@ return [
     'winner' => 'Winner',
     'eliminated' => 'Eliminated',
     'tie' => 'Tie',
-    'oftotal' => 'Share(%)',
+    'oftotal' => 'Share (%)',
     'yesno' => [
         'yes' => 'Yes',
         'no' => 'No',
@@ -33,6 +33,6 @@ return [
     'approval' => [
         'name' => 'Approval vote question',
         'description' => 'Voters approve of any number of options from a list.',
-        'oftotal' => 'Approval(%)'
+        'oftotal' => 'Approval (%)'
     ]
 ];
