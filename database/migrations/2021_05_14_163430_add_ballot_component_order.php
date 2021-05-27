@@ -26,7 +26,7 @@ class AddBallotComponentOrder extends Migration
     public function down()
     {
         Schema::table('ballot_components', function (Blueprint $table) {
-            $table->dropColumn('order')->nullable(false)->change();
+            $table->dropColumn('order');
         });
     }
 }
