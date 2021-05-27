@@ -1,0 +1,81 @@
+@import "tailwindcss/base";
+
+@import "tailwindcss/components";
+
+// BUTTONS
+.btn {
+    @apply font-bold py-2 px-4 rounded;
+}
+.btn-blue {
+    @apply bg-blue-500 text-white;
+}
+.btn-blue:hover {
+    @apply bg-blue-700;
+}
+.row,
+.d-flex {
+    display: flex;
+}
+
+.radio {
+    font-size: 1.5rem;
+    color: var(--color);
+}
+.radio__label {
+    line-height: 1;
+}
+.radio__input {
+    display: flex;
+    input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+        &:checked + .radio__control {
+            background: currentColor;
+        }
+    }
+}
+.radio__control {
+    display: block;
+    width: 1em;
+    height: 1em;
+    border-radius: 50%;
+    border: 0.1em solid currentColor;
+}
+
+.checkbox {
+    font-size: 1.5rem;
+    color: var(--color);
+}
+.checkbox__label {
+    line-height: 1;
+}
+.checkbox__input {
+    display: flex;
+    input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+        &:checked + .checkbox__control {
+            background: currentColor;
+        }
+    }
+}
+.checkbox__control {
+    display: block;
+    width: 1em;
+    height: 1em;
+    border: 0.1em solid currentColor;
+}
+
+.round_state {
+    max-width: 200px;
+    min-width: 185px;
+}
+
+.tie-header {
+    writing-mode: vertical-lr;
+    transform: rotate(180deg);
+}
+
+@import "tailwindcss/utilities";

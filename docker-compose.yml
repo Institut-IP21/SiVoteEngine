@@ -1,0 +1,84 @@
+version: '3'
+services:
+
+  #PHP Service
+  evote_app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - DOCKER_USER_ID=${DOCKER_USER_ID}
+    image: digitalocean.com/php
+    container_name: evote_app
+    tty: true
+    restart: unless-stopped
+    environment:
+      SERVICE_NAME: app
+      SERVICE_TAGS: dev
+    working_dir: /var/www
+    volumes:
+      - ./:/var/www
+      - ./docker-env/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+    expose:
+      - 9000
+    links:
+      - evote_db
+      - evote_redis
+      - evote_mailhog
+
+  #Nginx Service
+  evote_webserver:
+    image: nginx:alpine
+    container_name: evote_webserver
+    tty: true
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT}:80"
+      - "${HTTPS_PORT}:443"
+    volumes:
+      - ./:/var/www
+      - ./docker-env/nginx/conf.d/app.dev.conf:/etc/nginx/conf.d/app.dev.conf
+	links:
+      - evote_app
+
+  #MySQL Service
+  evote_db:
+    image: mysql:8
+    container_name: ${DB_HOST}
+    restart: unless-stopped
+    tty: true
+    expose:
+      - "${DB_PORT}"
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      SERVICE_TAGS: dev
+      SERVICE_NAME: mysql
+    volumes:
+      - dbdata:/var/lib/mysql-files/
+      - ./docker-env/mysql/my.cnf:/etc/mysql/my.cnf
+
+  evote_redis:
+    image: "redis:alpine"
+    container_name: ${REDIS_HOST}
+    restart: unless-stopped
+    expose:
+      - "${REDIS_PORT}"
+    volumes:
+     - redisdata:/data
+
+  evote_mailhog:
+    image: mailhog/mailhog:latest
+    container_name: evote_mailhog
+    restart: unless-stopped
+    expose:
+      - "1025"
+    ports:
+      - "8025:8025"
+
+#Volumes
+volumes:
+  dbdata:
+    driver: local
+  redisdata:
+    driver: local
