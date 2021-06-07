@@ -51,7 +51,7 @@ class BallotComponentCrudTest extends TestCase
         $req->deleteJson("/api/election/$e->id/ballot/$b->id/component/$c->id")->assertForbidden()->assertJson($owner_error);
     }
 
-    public function test_get_component()
+    public function test_get_component_success()
     {
         $owner = Uuid::uuid();
         $req = $this->withHeaders(['Authorization' => '123123123', 'Owner' => $owner]);

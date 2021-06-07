@@ -85,7 +85,7 @@ class ElectionCrudTest extends TestCase
     public function test_create_election_success()
     {
         $owner = UUID::uuid();
-        $res = $this->withHeaders(['Authorization' => '123123123', 'Owner' => $owner])
+        $this->withHeaders(['Authorization' => '123123123', 'Owner' => $owner])
             ->postJson("/api/election/create", [
                 'title' => 'My test Election',
                 'abstainable' => true,
