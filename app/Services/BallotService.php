@@ -36,6 +36,7 @@ class BallotService
             foreach ($versions as $version => $class) {
                 $tree[$type][$version] = [
                     'needsOptions' => $class::$needsOptions,
+                    'optionsValidators' => $class::$optionsValidator,
                     'strings' => $class::strings()
                 ];
             }
