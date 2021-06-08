@@ -22,6 +22,7 @@ class BallotComponentFactory extends Factory
     public function definition()
     {
         return [
+            'id' => $this->faker->uuid(),
             'title' => $this->faker->sentence(5),
             'description' => $this->faker->paragraph(1),
             'type' => 'FirstPastThePost',
