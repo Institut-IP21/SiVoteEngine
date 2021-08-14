@@ -64,8 +64,6 @@ class ElectionApiController extends Controller
             'level'         => 'integer|required',
             'abstainable'   => 'nullable|boolean',
             'description'   => 'nullable|string',
-            'title'         => 'required|string|min:5',
-            'abstainable'   => 'nullable|boolean',
         ];
 
         if ($errors = $this->findErrors($params, $settings)) {
