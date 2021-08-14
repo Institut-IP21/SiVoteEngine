@@ -27,7 +27,7 @@ class FirstPastThePost extends BallotComponentType
 
     public static function calculateResults(array $votes, BallotComponent $component)
     {
-        return array_reduce($votes, function ($runningTotal, $vote) use ($component) {
+        $result = array_reduce($votes, function ($runningTotal, $vote) use ($component) {
             if (empty($vote['values'])) {
                 return $runningTotal;
             }
@@ -35,6 +35,24 @@ class FirstPastThePost extends BallotComponentType
             $runningTotal[$value] = array_key_exists($value, $runningTotal) ? $runningTotal[$value] + 1 : 1;
             return $runningTotal;
         }, []);
+
+        return self::annotateStateForVictory($result);
+    }
+
+    public static function annotateStateForVictory($state)
+    {
+        $winners = array_keys($state, max($state));
+        if (count($winners) > 1) {
+            $winner = 'tie';
+        } else {
+            $winner = $winners[0];
+        }
+        return [
+            'state' => $state,
+            'total_votes' => array_sum($state),
+            'winner' => $winner,
+            'winners' => $winners
+        ];
     }
 
     public static function getSubmissionValidator(BallotComponent $component, Election $election)
