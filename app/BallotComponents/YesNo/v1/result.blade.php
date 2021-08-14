@@ -18,6 +18,6 @@ $result = $results[$component->id]['results'];
 @endforeach
 @if ($result['winner'] === 'tie')
     <div class="p-4 text-center block mt-6 bg-yellow-200">
-        IT'S A TIE
+        {{ __('components.yesno.tie') }}
     </div>
 @endif

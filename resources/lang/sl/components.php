@@ -12,10 +12,13 @@ return [
         'no' => 'Ne',
         'abstain' => 'Vzdržan',
         'name' => 'Da/Ne vprašanje',
+        'tie' => 'Izid je neodločen.',
         'description' => 'Volivci izrazijo bodisi podporo bodisi nasprotovanje dani postavki.'
     ],
     'fptp' => [
         'name' => 'First past the post / Plurality vprašanje',
+        'abstain' => 'Vzdržan',
+        'tie' => 'Izid je neodločen. Isto število glasov so prejeli: ',
         'description' => 'Volivci izberejo natančno eno možnost iz seznama.'
     ],
     'rankedchoice' => [
