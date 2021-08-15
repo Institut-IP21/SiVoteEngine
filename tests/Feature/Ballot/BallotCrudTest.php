@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature;
+namespace Tests\Feature\Ballot;
 
 use App\Models\Election;
 use Tests\TestCase;

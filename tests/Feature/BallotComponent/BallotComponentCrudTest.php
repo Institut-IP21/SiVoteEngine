@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature;
+namespace Tests\Feature\BallotComponent;
 
 use App\Models\Ballot;
 use App\Models\BallotComponent;

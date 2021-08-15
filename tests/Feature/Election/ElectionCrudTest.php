@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature;
+namespace Tests\Feature\Election;
 
 use App\Models\Election;
 use Faker\Provider\Uuid;

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\BallotComponents\YesNo\v1;
+namespace App\BallotComponents\RankedChoice\v1;
 
 use App\BallotComponents\RankedChoice\v1\RankedChoice;
 use App\Models\Ballot;
