@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\Election;
-use Faker\Provider\Uuid;
 use Tests\TestCase;
 
 class BallotCrudTest extends TestCase

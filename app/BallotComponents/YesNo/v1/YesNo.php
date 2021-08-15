@@ -41,6 +41,14 @@ class YesNo extends BallotComponentType
 
     public static function annotateStateForVictory($state)
     {
+        if (count($state) === 0) {
+            return [
+                'state' => $state,
+                'total_votes' => 0,
+                'winner' => null,
+                'winners' => null
+            ];
+        }
         $winners = array_keys($state, max($state));
         if (count($winners) > 1) {
             $winner = 'tie';

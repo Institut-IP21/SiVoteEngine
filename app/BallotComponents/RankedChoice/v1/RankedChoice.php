@@ -7,6 +7,7 @@ use App\BallotComponents\BallotComponentType;
 use App\Models\BallotComponent;
 use App\Models\Election;
 use Illuminate\Validation\Rule;
+use phpDocumentor\Reflection\Types\Null_;
 
 class RankedChoice extends BallotComponentType
 {
@@ -28,6 +29,16 @@ class RankedChoice extends BallotComponentType
 
     public static function calculateResults($votes, $component)
     {
+        if (count($votes) === 0) {
+            return [
+                'rounds' => [],
+                'result' => [
+                    'winners' => [],
+                    'conclussive' => null,
+                    'conclussive_winner' => null
+                ]
+            ];
+        }
         $rounds = self::runIteration($votes, $component);
         return [
             'rounds' => $rounds,

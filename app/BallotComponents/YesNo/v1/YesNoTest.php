@@ -59,6 +59,6 @@ class YesNoTest extends TestCase
         $countNo = 30 - $countYes;
         $results = YesNo::calculateResults($votes->values()->all(), $component);
 
-        assertEquals([ 'yes' => $countYes, 'no' => $countNo ], $results);
+        assertEquals([ 'yes' => $countYes, 'no' => $countNo ], $results['state']);
     }
 }

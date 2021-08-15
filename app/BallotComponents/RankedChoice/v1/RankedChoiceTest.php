@@ -7,12 +7,10 @@ use App\Models\Ballot;
 use App\Models\BallotComponent;
 use App\Models\Election;
 use App\Models\Vote;
-use Illuminate\Support\Arr;
 use Illuminate\Validation\Rule;
 use Tests\TestCase;
 
 use function PHPUnit\Framework\assertEquals;
-use function PHPUnit\Framework\assertJson;
 
 class RankedChoiceTest extends TestCase
 {
