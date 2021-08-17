@@ -9,6 +9,7 @@
     "license": "MIT",
     "require": {
         "php": "^7.3|^8.0",
+        "brianium/paratest": "^6.3",
         "deployer/deployer": "^7.0",
         "doctrine/dbal": "2.*",
         "dyrynda/laravel-cascade-soft-deletes": "^4.1",
@@ -20,7 +21,7 @@
         "laravel/tinker": "^2.5",
         "laravelcollective/annotations": "^8.0",
         "league/csv": "^9.6",
-        "brianium/paratest": "^6.3"
+        "vlucas/phpdotenv": "^5.3"
     },
     "require-dev": {
         "deployer/recipes": "^6.2",

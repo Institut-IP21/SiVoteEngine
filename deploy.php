@@ -2,25 +2,27 @@
 
 namespace Deployer;
 
+$env = \Dotenv\Dotenv::createImmutable(__DIR__)->load();
+
 require 'recipe/laravel.php';
 require 'recipe/yarn.php';
 require 'contrib/php-fpm.php';
 require 'contrib/npm.php';
 
 set('application', 'SiVoteEngine');
-set('repository', 'git@github.com:Institut-IP21/evote-engine.git');
+set('repository', 'git@github.com:Institut-IP21/SiVoteEngine');
 set('php_fpm_version', '7.4');
 
 host('staging')
     ->set('labels', ['stage' => 'staging'])
     ->set('hostname', function () {
-        return getenv('DEPLOY_HOSTNAME_STAGING');
+        return env('DEPLOY_HOSTNAME_STAGING');
     })
     ->set('remote_user', function () {
-        return getenv('DEPLOY_USER_STAGING');
+        return env('DEPLOY_USER_STAGING');
     })
     ->set('deploy_path', function () {
-        return getenv('DEPLOY_DIRECTORY_STAGING');
+        return env('DEPLOY_DIRECTORY_STAGING');
     })
     ->set('shared_files', ['.env', 'etc/nginx.conf'])
     ->set('shared_dirs', ['storage']);
@@ -28,15 +30,20 @@ host('staging')
 task('deploy', [
     'deploy:prepare',
     'deploy:vendors',
+    'yarn',
+    'yarn:production',
     'artisan:storage:link',
     'artisan:optimize',
     'artisan:model:scan',
     'artisan:route:scan',
     'artisan:migrate',
-    'yarn:install',
-    'yarn:production',
     'deploy:publish',
 ]);
+
+task('yarn', function () {
+    cd('{{release_or_current_path}}');
+    run('yarn');
+});
 
 task('yarn:production', function () {
     cd('{{release_or_current_path}}');
