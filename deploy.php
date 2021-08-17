@@ -27,6 +27,20 @@ host('staging')
     ->set('shared_files', ['.env', 'etc/nginx.conf'])
     ->set('shared_dirs', ['storage']);
 
+host('production')
+    ->set('labels', ['stage' => 'production'])
+    ->set('hostname', function () {
+        return env('DEPLOY_HOSTNAME_PRODUCTION');
+    })
+    ->set('remote_user', function () {
+        return env('DEPLOY_USER_PRODUCTION');
+    })
+    ->set('deploy_path', function () {
+        return env('DEPLOY_DIRECTORY_PRODUCTION');
+    })
+    ->set('shared_files', ['.env', 'etc/nginx.conf'])
+    ->set('shared_dirs', ['storage']);
+
 task('deploy', [
     'deploy:prepare',
     'deploy:vendors',
