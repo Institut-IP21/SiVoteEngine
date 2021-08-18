@@ -41,7 +41,9 @@
                             <div class="px-7 mb-6 pb-5 font-bold text-xl flex justify-between items-baseline border-b">
                                 <span>{{ $component->title }}</span>
                             </div>
+                            @if ($component->description)
                             <p class="px-7 mb-6 pb-5 border-b text-justify">{{ $component->description }}</p>
+                            @endif
                             <div class="px-7">
                                 @include($component->form_template, ['component' => $component, 'election' => $election])
                             </div>
@@ -50,7 +52,7 @@
                     <div class="py-6"></div>
                 @endforeach
                 <div class="my-6 text-center">
-                    <button type="submit" class="btn btn-blue w-full">Submit</button>
+                    <button type="submit" class="btn btn-blue w-full">Oddaj glas</button>
                 </div>
             </form>
         @else
