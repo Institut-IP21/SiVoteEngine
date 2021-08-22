@@ -47,10 +47,8 @@ task('deploy', [
     'yarn',
     'yarn:production',
     'artisan:storage:link',
-    'artisan:optimize',
-    'artisan:model:scan',
-    'artisan:route:scan',
     'artisan:migrate',
+    'artisan:evote:cache',
     'deploy:publish',
 ]);
 
@@ -64,14 +62,9 @@ task('yarn:production', function () {
     run('yarn production');
 });
 
-task('artisan:model:scan', function () {
+task('artisan:evote:cache', function () {
     cd('{{release_or_current_path}}');
-    echo run('php artisan model:scan');
-});
-
-task('artisan:route:scan', function () {
-    cd('{{release_or_current_path}}');
-    echo run('php artisan route:scan');
+    echo run('php artisan evote:cache');
 });
 
 after('deploy:failed', 'deploy:unlock');
