@@ -39,6 +39,6 @@ class ElectionList extends Command
     public function handle()
     {
         $elections = Election::all();
-        $this->table(['ID', 'Title', 'Deleted At', 'Created At', 'Updated At'], $elections);
+        $this->table(['ID', 'Title', 'Description', 'Level', 'Owner', 'Abstainable', 'Deleted At', 'Created At', 'Updated At'], $elections);
     }
 }
