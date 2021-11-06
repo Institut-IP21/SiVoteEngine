@@ -47,6 +47,11 @@ class Ballot extends Model
         return $this->hasMany(BallotComponent::class)->orderBy('order');
     }
 
+    public function getModeAttribute()
+    {
+        return $this->election->mode;
+    }
+
     public function getComponentsAttribute()
     {
         return $this->components()->get()->all();

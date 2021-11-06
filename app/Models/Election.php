@@ -15,6 +15,10 @@ class Election extends Model
     use SoftDeletes, CascadeSoftDeletes;
     use Uuid;
 
+    const MODE_BASIC = 'basic';
+    const MODE_SESSION = 'session';
+    const MODES = [self::MODE_BASIC, self::MODE_SESSION];
+
     protected $keyType = 'string';
     public $incrementing = false;
 
@@ -31,12 +35,22 @@ class Election extends Model
         'title',
         'description',
         'level',
-        'abstainable'
+        'abstainable',
+        'mode'
     ];
 
     protected $casts = [
         'abstainable' => 'boolean',
     ];
+
+    public function setModeAttribute($value)
+    {
+        if (!is_null($this->mode)) {
+            throw new \Exception('Cannot change mode of an election');
+        }
+
+        $this->mode = $value;
+    }
 
     public function ballots()
     {

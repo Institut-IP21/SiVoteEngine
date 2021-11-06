@@ -28,6 +28,10 @@ class BallotController extends Controller
      */
     public function view(Election $election, Ballot $ballot, Request $request)
     {
+        if ($election->mode === Election::MODE_SESSION) {
+            throw new \Exception("Can not view SESSION elections this way ");
+        }
+
         $code = $request->query('code');
         $vote = Vote::find($code);
 
@@ -59,6 +63,10 @@ class BallotController extends Controller
      */
     public function vote(Election $election, Ballot $ballot, Request $request)
     {
+        if ($election->mode === Election::MODE_SESSION) {
+            throw new \Exception("Can not view SESSION elections this way ");
+        }
+
         $code = $request->input('code');
         $vote = Vote::find($code);
 
@@ -96,6 +104,10 @@ class BallotController extends Controller
      */
     public function result(Election $election, Ballot $ballot, Request $request)
     {
+        if ($election->mode === Election::MODE_SESSION) {
+            throw new \Exception("Can not view SESSION elections this way ");
+        }
+
         if (!$ballot->finished) {
             return response(__('ballot.result.not_yet'), 403);
         }

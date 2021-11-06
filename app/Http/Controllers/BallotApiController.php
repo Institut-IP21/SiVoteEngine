@@ -52,6 +52,27 @@ class BallotApiController extends Controller
     }
 
     /**
+     * @Post("/create/session", as="ballot.create.session")
+     * @Middleware("can:update,election")
+     */
+    public function createForSessionElection(Election $election)
+    {
+        if ($election->mode !== Election::MODE_SESSION) {
+            return $this->basicResponse(400, ['error' => 'Can only use for elections with mode SESSION.']);
+        }
+
+        $election = Ballot::create([
+            'election_id' => $election->id,
+            'description' =>  '',
+            'email_template' =>  '',
+            'email_subject' => '',
+            'title' => 'SESSION BALLOT for ELECTION ' . $election->id
+        ]);
+
+        return new BallotResource($election);
+    }
+
+    /**
      *  @Get("/{ballot}", as="ballot.read")
      *  @Middleware("can:view,election")
      */
