@@ -27,6 +27,7 @@ class Ballot extends Model
         'description' => '',
         'email_subject' => '',
         'email_template' => '',
+        'is_secret' => true
     ];
 
     public $fillable = [
@@ -35,11 +36,13 @@ class Ballot extends Model
         'active',
         'description',
         'email_subject',
-        'email_template'
+        'email_template',
+        'is_secret'
     ];
 
     protected $casts = [
-        'active' => 'boolean'
+        'active' => 'boolean',
+        'is_secret' => 'boolean'
     ];
 
     public function components()
