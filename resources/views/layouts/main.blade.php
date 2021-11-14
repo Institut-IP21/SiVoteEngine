@@ -20,12 +20,16 @@
         }
 
     </style>
+    @stack('scripts')
+    @livewireStyles
 </head>
 
 <body>
     @section('body')
     @show
+    @yield('content')
     <script src="{{ asset('/js/app.js') }}" type=""></script>
+    @livewireScripts
 </body>
 
 </html>

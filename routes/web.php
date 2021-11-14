@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\Election;
+use App\Http\Livewire\Session;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -17,3 +17,5 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('home');
 });
+
+Route::get('/session/{election}', Session::class)->middleware('web');
