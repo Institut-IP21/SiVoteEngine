@@ -19,6 +19,7 @@ class BallotComplete extends JsonResource
             'election_id' => $this->election_id,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
+            'is_secret' => $this->is_secret,
             'title' => $this->title,
             'active' => $this->active,
             'votes_count' => $this->votes_count,

@@ -22,7 +22,8 @@ class Vote extends Model
 
     public $fillable = [
         'values',
-        'ballot_id'
+        'ballot_id',
+        'cast_by'
     ];
 
     protected $casts = [

@@ -34,6 +34,7 @@ class BallotApiController extends Controller
             'description' => 'nullable|string|min:5',
             'email_template' => 'nullable|string|min:5',
             'email_subject' => 'nullable|string|min:5',
+            'is_secret'  => 'sometimes|boolean',
         ];
 
         if ($errors = $this->findErrors($params, $settings)) {
@@ -45,7 +46,29 @@ class BallotApiController extends Controller
             'description' => $params['description'] ?? '',
             'email_template' => $params['email_template'] ?? '',
             'email_subject' => $params['email_subject'] ?? '',
-            'title' => $params['title']
+            'title' => $params['title'],
+            'is_secret' => $params['is_secret'] ?? true,
+        ]);
+
+        return new BallotResource($election);
+    }
+
+    /**
+     * @Post("/create/session", as="ballot.create.session")
+     * @Middleware("can:update,election")
+     */
+    public function createForSessionElection(Election $election)
+    {
+        if ($election->mode !== Election::MODE_SESSION) {
+            return $this->basicResponse(400, ['error' => 'Can only use for elections with mode SESSION.']);
+        }
+
+        $election = Ballot::create([
+            'election_id' => $election->id,
+            'description' =>  '',
+            'email_template' =>  '',
+            'email_subject' => '',
+            'title' => 'SESSION BALLOT for ELECTION ' . $election->id
         ]);
 
         return new BallotResource($election);

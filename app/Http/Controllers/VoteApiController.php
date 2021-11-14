@@ -6,6 +6,7 @@ use App\Models\Ballot;
 use App\Models\Election;
 use App\Models\Vote;
 use App\Services\BallotService;
+use App\Services\VoteService;
 use Illuminate\Http\Request;
 
 /**
@@ -35,22 +36,30 @@ class VoteApiController extends Controller
      * @Post("/generate", as="vote.generate")
      * @Middleware("can:update,election")
      */
-    public function generate(Election $election, Ballot $ballot, Request $request)
+    public function generate(Election $election, Ballot $ballot, Request $request, VoteService $voteService)
     {
         $params = $request->all();
-        $settings = [
-            'quantity' => 'required|integer|min:1|max:10000'
-        ];
+
+        if ($ballot->is_secret) {
+            $settings = [
+                'quantity' => 'required|integer|min:1|max:10000'
+            ];
+        } else {
+            $settings = [
+                'voters' => 'required|array|min:1|max:10000'
+            ];
+        }
 
         if ($errors = $this->findErrors($params, $settings)) {
             return $errors;
         }
 
-        $now = date('Y-m-d H:i:s');
-        for ($i = 0; $i < $params['quantity']; $i++) {
-            $vote = Vote::create(['ballot_id' => $ballot->id, 'created_at' => $now]);
-            $codes[] = $vote->id;
+        if ($ballot->is_secret) {
+            $codes = $voteService->generateSecretVotes($ballot, $params['quantity']);
+        } else {
+            $codes = $voteService->generatePublicVotes($ballot, $params['voters']);
         }
+
         return $codes;
     }
 }

@@ -8,7 +8,7 @@
     ],
     "license": "MIT",
     "require": {
-        "php": "^7.3|^8.0",
+        "php": "^8.0",
         "brianium/paratest": "^6.3",
         "deployer/deployer": "^7.0",
         "doctrine/dbal": "2.*",
@@ -25,7 +25,6 @@
         "vlucas/phpdotenv": "^5.3"
     },
     "require-dev": {
-        "deployer/recipes": "^6.2",
         "predis/predis": "^1.1",
         "facade/ignition": "^2.5",
         "fakerphp/faker": "^1.9.1",
