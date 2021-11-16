@@ -14,7 +14,7 @@ class AddSessionModeToElections extends Migration
     public function up()
     {
         Schema::table('elections', function (Blueprint $table) {
-            $table->enum('mode', ['basic', 'session'])->default('basic')->after('level');
+            $table->string('mode')->default('basic')->after('level');
         });
     }
 

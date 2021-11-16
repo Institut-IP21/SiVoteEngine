@@ -43,15 +43,6 @@ class Election extends Model
         'abstainable' => 'boolean',
     ];
 
-    public function setModeAttribute($value)
-    {
-        if (!is_null($this->mode)) {
-            throw new \Exception('Cannot change mode of an election');
-        }
-
-        $this->mode = $value;
-    }
-
     public function ballots()
     {
         return $this->hasMany(Ballot::class);
