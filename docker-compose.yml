@@ -38,7 +38,7 @@ services:
     volumes:
       - ./:/var/www
       - ./docker-env/nginx/conf.d/app.dev.conf:/etc/nginx/conf.d/app.dev.conf
-	links:
+    links:
       - evote_app
 
   #MySQL Service
@@ -65,7 +65,7 @@ services:
     expose:
       - "${REDIS_PORT}"
     volumes:
-     - redisdata:/data
+      - redisdata:/data
 
   evote_mailhog:
     image: mailhog/mailhog:latest
