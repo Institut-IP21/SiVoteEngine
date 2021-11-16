@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\Election as ElectionResource;
 use App\Models\Election;
+use App\Services\BallotService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -27,7 +28,7 @@ class ElectionApiController extends Controller
             'size' =>
             'integer',
             'sort_by' =>
-            'string|in:id,created_at,title|required_with:sort_direction',
+            'string|in:id,created_at,title,mode|required_with:sort_direction',
             'sort_direction' =>
             'in:desc,asc|required_with:sort_by',
         ];
@@ -64,6 +65,7 @@ class ElectionApiController extends Controller
             'level'         => 'integer|required',
             'abstainable'   => 'nullable|boolean',
             'description'   => 'nullable|string',
+            'mode'          => 'sometimes|string|in:' . implode(',', Election::MODES),
         ];
 
         if ($errors = $this->findErrors($params, $settings)) {
@@ -76,6 +78,7 @@ class ElectionApiController extends Controller
             'owner' => $this->getOwner(),
             'abstainable' => $params['abstainable'] ?? true,
             'description' => $params['description'] ?? '',
+            'mode' => $params['mode'] ?? Election::MODE_BASIC,
         ];
 
         $election = Election::create($election_params);

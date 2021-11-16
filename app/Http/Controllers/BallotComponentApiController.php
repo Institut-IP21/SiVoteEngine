@@ -38,6 +38,18 @@ class BallotComponentApiController extends Controller
      */
     public function create(Election $election, Ballot $ballot, Request $request)
     {
+        if ($election->mode === Election::MODE_SESSION) {
+            $ballot->loadCount('components');
+            if ($ballot->components_count >= 1) {
+                return $this->basicResponse(
+                    400,
+                    [
+                        'error' => 'Only one component per ballot for SESSION elections is allowed.'
+                    ]
+                );
+            }
+        }
+
         $params = $request->all();
         $settings = [
             'title' => 'required|string|min:1',
