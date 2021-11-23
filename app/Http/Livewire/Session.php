@@ -18,6 +18,7 @@ class Session extends Component
         $this->election = $election;
         $this->counter = 0;
         $vote = Vote::find(['id' => $request->query('code')])->first();
+        $this->code = $vote->id;
     }
 
     public function render()
