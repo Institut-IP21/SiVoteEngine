@@ -10,14 +10,16 @@
             <h2 class="text-2xl border-b pb-3">Ballots</h2>
             <div class="flex flex-wrap" wire:poll.5000ms>
                 @foreach ($election->ballots as $ballot)
-                    <div class="w-full p-3">
-                        <div class="bg-white rounded-lg shadow-lg p-3">
-                            <div class="flex flex-col break-words">
-                                <div class="font-semibold text-xl mb-2">{{ $ballot->title }}</div>
-                                <div class="text-gray-700 text-base">{{ $ballot->description }}</div>
+                    @if ($ballot->active)
+                        <div class="w-full p-3">
+                            <div class="bg-white rounded-lg shadow-lg p-3">
+                                <div class="flex flex-col break-words">
+                                    <div class="font-semibold text-xl mb-2">{{ $ballot->title }}</div>
+                                    <div class="text-gray-700 text-base">{{ $ballot->description }}</div>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    @endif
                 @endforeach
             </div>
         </div>

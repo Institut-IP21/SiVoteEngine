@@ -68,6 +68,7 @@ class BallotApiController extends Controller
             'description' =>  '',
             'email_template' =>  '',
             'email_subject' => '',
+            'is_secret' => false,
             'title' => 'SESSION BALLOT for ELECTION ' . $election->id
         ]);
 

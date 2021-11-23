@@ -18,4 +18,4 @@ Route::get('/', function () {
     return view('home');
 });
 
-Route::get('/session/{election}', Session::class)->middleware('web');
+Route::get('/session/{election}', Session::class)->middleware('web')->name('session');
