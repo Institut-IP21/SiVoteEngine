@@ -8,6 +8,7 @@ use App\BallotComponents\FirstPastThePost\v1\FirstPastThePost;
 use App\BallotComponents\RankedChoice\v1\RankedChoice;
 use App\BallotComponents\YesNo\v1\YesNo;
 use App\Models\Ballot;
+use App\Models\BallotComponent;
 use App\Models\Vote;
 use League\Csv\Writer;
 
@@ -62,6 +63,11 @@ class BallotService
         return array_reduce($ballot->components, function ($acc, $component) use ($ballot) {
             return array_merge($acc, $this->components[$component['type']][$component['version']]::getSubmissionValidator($component, $ballot->election));
         }, []);
+    }
+
+    public function getComponentValidators(BallotComponent $component)
+    {
+        return $this->components[$component->type][$component->version]::getSubmissionValidator($component, $component->ballot->election);
     }
 
     public function getBallotComponentClass($ballotType, $version)

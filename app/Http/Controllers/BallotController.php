@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Ballot;
+use App\Models\BallotComponent;
 use App\Models\Election;
 use App\Models\Personalization;
 use App\Models\Vote;
@@ -63,8 +64,8 @@ class BallotController extends Controller
      */
     public function vote(Election $election, Ballot $ballot, Request $request)
     {
-        if ($election->mode === Election::MODE_SESSION) {
-            throw new \Exception("Can not view SESSION elections this way ");
+        if ($election->mode === Ballot::MODE_SESSION) {
+            throw new \Exception("Can not vote SESSION ballots this way ");
         }
 
         $code = $request->input('code');
@@ -93,6 +94,56 @@ class BallotController extends Controller
         $values = $request->except(['code', '_token']); // Could get the component slugs and say ->only
         $vote = Vote::find(['code' => $code, 'ballot_id' => $ballot->id])->first();
         $vote->values = $values;
+        $vote->save();
+
+        $pers = Personalization::where('owner', $election->owner)->first();
+        return view('voted', ['election' => $election, 'ballot' => $ballot, 'vote' => $vote, 'pers' => $pers]);
+    }
+
+    /**
+     *  @Post("/{election}/ballot/component/{ballotComponent}", as="ballot.vote")
+     */
+    public function vote(Election $election, BallotComponent $component, Request $request)
+    {
+        if ($election->mode !== Ballot::MODE_SESSION) {
+            throw new \Exception("Only SESSION ballots can vote this way");
+        }
+
+        $code = $request->input('code');
+        $vote = Vote::find($code);
+
+        $ballot = $component->ballot;
+
+        if (!$vote || !$vote->ballot->id === $ballot->id) {
+            return view('404', ['code' => 404]);
+        }
+
+        if (!$ballot->active) {
+            return view('ballot-expired', ['code' => 404]);
+        }
+
+        $settings = array_merge([
+            'code' => 'required|uuid|exists:App\Models\Vote,id',
+        ], $this->ballotService->getComponentValidators($component));
+
+        $validator = Validator::make($request->all(), $settings);
+        $errors = $validator->errors();
+
+        if (!$errors->isEmpty()) {
+            return view('vote-failed', ['election' => $election, 'ballot' => $ballot, 'errors' => $errors]);
+        }
+
+        $code = $request->input('code');
+        $vote = Vote::find(['code' => $code, 'ballot_id' => $ballot->id])->first();
+
+        $values = $request->except(['code', '_token']); // Could get the component slugs and say ->only
+        $oldValues = $vote->values;
+        if (!is_array($oldValues)) {
+            $oldValues = [];
+        }
+
+        $vote->values = array_merge($values, $oldValues);
+
         $vote->save();
 
         $pers = Personalization::where('owner', $election->owner)->first();
