@@ -103,7 +103,7 @@ class BallotController extends Controller
     /**
      *  @Post("/{election}/ballot/component/{ballotComponent}", as="ballot.vote")
      */
-    public function vote(Election $election, BallotComponent $component, Request $request)
+    public function voteComponent(Election $election, BallotComponent $component, Request $request)
     {
         if ($election->mode !== Ballot::MODE_SESSION) {
             throw new \Exception("Only SESSION ballots can vote this way");
