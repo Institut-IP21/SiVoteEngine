@@ -16,6 +16,10 @@ class Ballot extends Model
     use SoftDeletes, CascadeSoftDeletes;
     use Uuid;
 
+    const MODE_BASIC = 'basic';
+    const MODE_SESSION = 'session';
+    const MODES = [self::MODE_BASIC, self::MODE_SESSION];
+
     protected $keyType = 'string';
     public $incrementing = false;
 
@@ -27,7 +31,8 @@ class Ballot extends Model
         'description' => '',
         'email_subject' => '',
         'email_template' => '',
-        'is_secret' => true
+        'is_secret' => true,
+        'mode' => self::MODE_BASIC,
     ];
 
     public $fillable = [
@@ -37,7 +42,8 @@ class Ballot extends Model
         'description',
         'email_subject',
         'email_template',
-        'is_secret'
+        'is_secret',
+        'mode'
     ];
 
     protected $casts = [
@@ -48,11 +54,6 @@ class Ballot extends Model
     public function components()
     {
         return $this->hasMany(BallotComponent::class)->orderBy('order');
-    }
-
-    public function getModeAttribute()
-    {
-        return $this->election->mode;
     }
 
     public function getComponentsAttribute()

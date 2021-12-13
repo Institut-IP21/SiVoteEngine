@@ -21,6 +21,7 @@ class Ballot extends JsonResource
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
             'is_secret' => $this->is_secret,
+            'mode' => this->mode,
             'title' => $this->title,
             'active' => $this->active,
             'votes_count' => $this->votes_count,

@@ -30,11 +30,12 @@ class BallotApiController extends Controller
     {
         $params = $request->all();
         $settings = [
-            'title' => 'required|string|min:5',
-            'description' => 'nullable|string|min:5',
+            'title'          => 'required|string|min:5',
+            'description'    => 'nullable|string|min:5',
             'email_template' => 'nullable|string|min:5',
-            'email_subject' => 'nullable|string|min:5',
-            'is_secret'  => 'sometimes|boolean',
+            'email_subject'  => 'nullable|string|min:5',
+            'is_secret'      => 'sometimes|boolean',
+            'mode'           => 'sometimes|string|in:' . implode(',', Ballot::MODES),
         ];
 
         if ($errors = $this->findErrors($params, $settings)) {
@@ -42,34 +43,13 @@ class BallotApiController extends Controller
         }
 
         $election = Ballot::create([
-            'election_id' => $election->id,
-            'description' => $params['description'] ?? '',
+            'election_id'    => $election->id,
+            'description'    => $params['description'] ?? '',
             'email_template' => $params['email_template'] ?? '',
-            'email_subject' => $params['email_subject'] ?? '',
-            'title' => $params['title'],
-            'is_secret' => $params['is_secret'] ?? true,
-        ]);
-
-        return new BallotResource($election);
-    }
-
-    /**
-     * @Post("/create/session", as="ballot.create.session")
-     * @Middleware("can:update,election")
-     */
-    public function createForSessionElection(Election $election)
-    {
-        if ($election->mode !== Election::MODE_SESSION) {
-            return $this->basicResponse(400, ['error' => 'Can only use for elections with mode SESSION.']);
-        }
-
-        $election = Ballot::create([
-            'election_id' => $election->id,
-            'description' =>  '',
-            'email_template' =>  '',
-            'email_subject' => '',
-            'is_secret' => false,
-            'title' => 'SESSION BALLOT for ELECTION ' . $election->id
+            'email_subject'  => $params['email_subject'] ?? '',
+            'title'          => $params['title'],
+            'is_secret'      => $params['is_secret'] ?? true,
+            'mode'           => $params['mode'] ?? Ballot::MODE_BASIC,
         ]);
 
         return new BallotResource($election);
