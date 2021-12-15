@@ -46,7 +46,7 @@ class Ballot extends JsonResource
         ];
 
         if ($this->mode === BallotModel::MODE_SESSION) {
-            list($cursor, $keys) = Redis::scan(0, 'MATCH', "*:active-voters:*", 'COUNT', 10000);
+            list($cursor, $keys) = Redis::scan(0, 'MATCH', "*:active-voters:{$this->id}*", 'COUNT', 10000);
             $resource['active_voters'] = count($keys);
         }
         return $resource;
