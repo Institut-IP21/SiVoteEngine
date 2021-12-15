@@ -43,7 +43,7 @@ class VoteService
             $codes[] = [
                 'code' => $vote->id,
                 'voter' => $voter,
-                'access_url' => URL::temporarySignedRoute('session', now()->addMinutes(120), ['election' => $election->id, 'code' => $vote->id])
+                'access_url' => URL::temporarySignedRoute('ballot.session', now()->addMinutes(120), ['election' => $election->id, 'ballot' => $ballot->id, 'code' => $vote->id])
             ];
         }
         return $codes;

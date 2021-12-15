@@ -60,8 +60,18 @@ class BallotService
 
     public function getSubmissionValidators(Ballot $ballot)
     {
-        return array_reduce($ballot->components, function ($acc, $component) use ($ballot) {
-            return array_merge($acc, $this->components[$component['type']][$component['version']]::getSubmissionValidator($component, $ballot->election));
+        return array_reduce($ballot->components, function ($validators, $component) use ($ballot) {
+            return array_merge($validators, $this->components[$component['type']][$component['version']]::getSubmissionValidator($component, $ballot->election));
+        }, []);
+    }
+
+    public function getPartialSubmissionValidators(Ballot $ballot, $params)
+    {
+        return array_reduce($ballot->components, function ($validators, $component) use ($ballot, $params) {
+            if (!array_key_exists($component->id, $params)) {
+                return $validators;
+            }
+            return array_merge($validators, $this->components[$component['type']][$component['version']]::getSubmissionValidator($component, $ballot->election));
         }, []);
     }
 

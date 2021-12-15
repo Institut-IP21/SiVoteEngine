@@ -23,11 +23,15 @@ class BallotComponent extends Model
         'version',
         'options',
         'ballot_id',
+        'active',
+        'finished',
     ];
 
     protected $casts = [
         'options' => 'array',
         'order' => 'integer',
+        'active' => 'boolean',
+        'finished' => 'boolean',
     ];
 
     protected $appends = ['slug'];

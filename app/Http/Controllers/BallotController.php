@@ -29,10 +29,6 @@ class BallotController extends Controller
      */
     public function view(Election $election, Ballot $ballot, Request $request)
     {
-        if ($election->mode === Election::MODE_SESSION) {
-            throw new \Exception("Can not view SESSION elections this way ");
-        }
-
         $code = $request->query('code');
         $vote = Vote::find($code);
 
@@ -101,18 +97,16 @@ class BallotController extends Controller
     }
 
     /**
-     *  @Post("/{election}/ballot/component/{ballotComponent}", as="ballot.vote")
+     *  @Post("/{election}/ballot/{ballot}/component", as="ballot.vote.component")
      */
-    public function voteComponent(Election $election, BallotComponent $component, Request $request)
+    public function voteComponent(Election $election, Ballot $ballot, BallotComponent $component, Request $request)
     {
-        if ($election->mode !== Ballot::MODE_SESSION) {
+        if ($ballot->mode !== Ballot::MODE_SESSION) {
             throw new \Exception("Only SESSION ballots can vote this way");
         }
 
         $code = $request->input('code');
         $vote = Vote::find($code);
-
-        $ballot = $component->ballot;
 
         if (!$vote || !$vote->ballot->id === $ballot->id) {
             return view('404', ['code' => 404]);
@@ -124,7 +118,7 @@ class BallotController extends Controller
 
         $settings = array_merge([
             'code' => 'required|uuid|exists:App\Models\Vote,id',
-        ], $this->ballotService->getComponentValidators($component));
+        ], $this->ballotService->getPartialSubmissionValidators($ballot, $request->all()));
 
         $validator = Validator::make($request->all(), $settings);
         $errors = $validator->errors();
@@ -155,10 +149,6 @@ class BallotController extends Controller
      */
     public function result(Election $election, Ballot $ballot, Request $request)
     {
-        if ($election->mode === Election::MODE_SESSION) {
-            throw new \Exception("Can not view SESSION elections this way ");
-        }
-
         if (!$ballot->finished) {
             return response(__('ballot.result.not_yet'), 403);
         }

@@ -61,6 +61,11 @@ class Ballot extends Model
         return $this->components()->get()->all();
     }
 
+    public function disableComponents()
+    {
+        $this->components()->where('active', true)->update(['active' => false]);
+    }
+
     public function getLockedAttribute()
     {
         return $this->active || $this->finished;

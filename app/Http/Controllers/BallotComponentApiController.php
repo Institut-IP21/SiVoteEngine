@@ -185,8 +185,28 @@ class BallotComponentApiController extends Controller
      * @Delete("/{component}", as="component.delete")
      * @Middleware("can:update,election")
      */
-    public function delete(Election $election, Ballot $ballot, BallotComponent $component, Request $request)
+    public function delete(Election $election, Ballot $ballot, BallotComponent $component)
     {
         return $component->delete();
+    }
+
+    /**
+     * @Post("/{component}/activate", as="component.activate")
+     * @Middleware("can:update,election")
+     */
+    public function activate(Election $election, Ballot $ballot, BallotComponent $component)
+    {
+        $component->active = true;
+        return $component->save();
+    }
+    /**
+     * @Post("/{component}/deactivate", as="component.deactivate")
+     * @Middleware("can:update,election")
+     */
+    public function deactivate(Election $election, Ballot $ballot, BallotComponent $component)
+    {
+        $component->active = false;
+        $component->finished = true;
+        return $component->save();
     }
 }

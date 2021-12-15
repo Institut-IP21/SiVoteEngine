@@ -42,6 +42,10 @@ class BallotApiController extends Controller
             return $errors;
         }
 
+        if ($params['mode'] === Ballot::MODE_SESSION) {
+            $params['is_secret'] = false;
+        }
+
         $election = Ballot::create([
             'election_id'    => $election->id,
             'description'    => $params['description'] ?? '',
