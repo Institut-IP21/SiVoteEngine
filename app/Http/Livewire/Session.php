@@ -30,7 +30,7 @@ class Session extends Component
         $this->activeComponents = $this->ballot->components()->get()->filter(function ($component) {
             return $component->active;
         });
-        Redis::set("session:active-voters:{$this->ballot->id}:{$this->code}", 1, 'EX', 90);
+        Redis::set("session:active-voters:{$this->ballot->id}:{$this->code}", 1, 'EX', 30);
         return view('livewire.session-ballot', ['ballot' => $this->ballot])->extends('layouts.main')->slot('content');
     }
 }
