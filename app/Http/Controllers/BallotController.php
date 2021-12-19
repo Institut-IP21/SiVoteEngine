@@ -140,8 +140,7 @@ class BallotController extends Controller
 
         $vote->save();
 
-        $pers = Personalization::where('owner', $election->owner)->first();
-        return view('voted', ['election' => $election, 'ballot' => $ballot, 'vote' => $vote, 'pers' => $pers]);
+        return redirect()->back()->with('success', __('ballot.vote.registered'));
     }
 
     /**

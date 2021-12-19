@@ -1,4 +1,4 @@
-<div id="app" class="bg-gray-100 min-h-screen" wire:poll.3000ms>
+<div id="app" class="bg-gray-100 min-h-screen">
     <div class="py-2"></div>
     <div class="max-w-screen-md text-center mx-auto">
         <div class="w-full py-3 rounded overflow-hidden shadow-md mx-auto bg-white">
@@ -9,6 +9,14 @@
         </div>
     </div>
     <div class="py-2"></div>
+    @if (session('success'))
+        <div class="max-w-screen-md text-center mx-auto bg-green-600 text-white">
+            <div class="w-full py-3 rounded overflow-hidden shadow-md mx-auto">
+                <h1 class="text-2xl">{{ session('success') }}</h1>
+            </div>
+        </div>
+        <div class="py-2"></div>
+    @endif
     @if (count($activeComponents) > 0)
         <form class="max-w-screen-md mx-auto h-full flex flex-col"
             action="/election/{{ $ballot->election->id }}/ballot/{{ $ballot->id }}/component/" method="post">
@@ -48,10 +56,10 @@
             @endif
         </form>
     @else
-    <div class="max-w-screen-md mx-auto overflow-hidden shadow-md mx-auto bg-white">
-        <div class="px-6 py-4">
-            <span>Trenutno ni odprtih vprasanj</span>
+        <div class="max-w-screen-md mx-auto overflow-hidden shadow-md mx-auto bg-white">
+            <div class="px-6 py-4">
+                <span>Trenutno ni odprtih vprasanj</span>
+            </div>
         </div>
-    </div>
     @endif
 </div>
