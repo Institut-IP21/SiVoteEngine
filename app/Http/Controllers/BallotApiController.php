@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Resources\Ballot as BallotResource;
 use App\Http\Resources\BallotComplete;
 use App\Models\Ballot;
+use App\Models\BallotComponent;
 use App\Models\Election;
 use App\Services\BallotService;
 use Illuminate\Http\Request;
@@ -190,5 +191,38 @@ class BallotApiController extends Controller
         }
 
         return $ballot->delete();
+    }
+
+    /**
+     *  @Post("/{ballot}/switch-order", as="ballot.switch-order")
+     *  @Middleware("can:update,election")
+     */
+    public function switchOrder(Election $election, Ballot $ballot, Request $request)
+    {
+        if ($ballot->finished) {
+            return response('Finished ballots can not be reordered', 403);
+        }
+
+        $params = $request->all();
+        $settings = [
+            'component1' => 'required|uuid',
+            'component2' => 'required|uuid',
+        ];
+
+        if ($errors = $this->findErrors($params, $settings)) {
+            return $errors;
+        }
+
+        $component1 = BallotComponent::find($params['component1']);
+        $component2 = BallotComponent::find($params['component2']);
+
+        $temp = $component1->order;
+
+        $component1->order = $component2->order;
+        $component2->order = $temp;
+        $component1->save();
+        $component2->save();
+
+        return new BallotResource($ballot);
     }
 }
