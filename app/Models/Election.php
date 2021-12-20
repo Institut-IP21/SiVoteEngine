@@ -40,7 +40,7 @@ class Election extends Model
 
     public function ballots()
     {
-        return $this->hasMany(Ballot::class);
+        return $this->hasMany(Ballot::class)->orderBy('created_at', 'desc');
     }
 
     public function getActiveAttribute()
