@@ -27,16 +27,16 @@ class FirstPastThePost extends BallotComponentType
 
     public static function calculateResults(array $votes, BallotComponent $component)
     {
-        $result = array_reduce($votes, function ($runningTotal, $vote) use ($component) {
-            if (empty($vote['values'])) {
-                return $runningTotal;
-            }
-            $value = $vote['values'][$component->id];
-            $runningTotal[$value] = array_key_exists($value, $runningTotal) ? $runningTotal[$value] + 1 : 1;
-            return $runningTotal;
-        }, []);
+        $state = collect($votes)
+            ->groupBy(function ($vote) use ($component) {
+                return $vote->values[$component->id];
+            })
+            ->map(function ($votes) {
+                return $votes->count();
+            })
+            ->toArray();
 
-        return self::annotateStateForVictory($result);
+        return self::annotateStateForVictory($state);
     }
 
     public static function annotateStateForVictory($state)

@@ -43,7 +43,7 @@ class BallotApiController extends Controller
             return $errors;
         }
 
-        if ($params['mode'] === Ballot::MODE_SESSION) {
+        if (($params['mode'] ?? '') === Ballot::MODE_SESSION) {
             $params['is_secret'] = false;
         }
 
