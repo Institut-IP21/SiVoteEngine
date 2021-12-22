@@ -10,8 +10,8 @@ class BallotServiceProvider extends ServiceProvider
 
     public function register()
     {
-        $this->app->singleton('ballot', function ($app) {
-            return new BallotService($app);
+        $this->app->singleton('ballot', function () {
+            return new BallotService();
         });
     }
 }
