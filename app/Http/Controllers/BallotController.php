@@ -27,12 +27,12 @@ class BallotController extends Controller
     /**
      *  @Get("/{election}/ballot/{ballot}", as="ballot.show")
      */
-    public function view(Election $election, Ballot $ballot, Request $request)
+    public function view(Election $election, Ballot $ballot, Request $request, BallotService $service)
     {
         $code = $request->query('code');
         $vote = Vote::find($code);
 
-        if (!$vote || !$vote->ballot()->id == $ballot->id) {
+        if (!$vote || !$vote->ballot->id == $ballot->id) {
             return view('404', ['code' => 404]);
         }
 
@@ -40,9 +40,11 @@ class BallotController extends Controller
             return view('ballot-expired', ['code' => 404]);
         }
 
+        $componentTree = $service->getComponentTree();
+
         $code = $request->query('code');
         $pers = Personalization::where('owner', $election->owner)->first();
-        return view('ballot', ['election' => $election, 'ballot' => $ballot, 'code' => $code, 'pers' => $pers]);
+        return view('ballot', ['election' => $election, 'ballot' => $ballot, 'code' => $code, 'pers' => $pers, 'componentTree' => $componentTree]);
     }
 
     /**
@@ -67,7 +69,7 @@ class BallotController extends Controller
         $code = $request->input('code');
         $vote = Vote::find($code);
 
-        if (!$vote || !$vote->ballot()->id == $ballot->id) {
+        if (!$vote || !$vote->ballot->id == $ballot->id) {
             return view('404', ['code' => 404]);
         }
 
@@ -108,7 +110,7 @@ class BallotController extends Controller
         $code = $request->input('code');
         $vote = Vote::find($code);
 
-        if (!$vote || !$vote->ballot()->id == $ballot->id) {
+        if (!$vote || !$vote->ballot->id == $ballot->id) {
             return view('404', ['code' => 404]);
         }
 

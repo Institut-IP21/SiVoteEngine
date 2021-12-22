@@ -75,7 +75,7 @@ class BallotCreate extends Command
             'description' => $description,
         ]);
 
-        $this->info("Created new ballot titled '{$ballot->title}' with ID {$ballot->id} for election '{$ballot->election()->title}'.");
+        $this->info("Created new ballot titled '{$ballot->title}' with ID {$ballot->id} for election '{$ballot->election->title}'.");
         return 0;
     }
 }
