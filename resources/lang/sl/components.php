@@ -25,7 +25,7 @@ return [
         'name' => 'Preferenčno vprašanje',
         'description' => 'Volivci seznam možnosti uredijo po vrsti glede na preferenco.',
         'intro' => 'Pred vami je :options opcij. Razvrstite jih po vrsti od najboljše do najslabše. Razvrstite lahko kolikor opcij želite.',
-        'state' => 'Do sedaj ste razvrstili {{ selected.length }} opcij, lahko jih še {{ rankees.length - selected.length }}.',
+        'state' => 'Do sedaj ste razvrstili :selected opcij, lahko jih še :remaining.',
         'UP' => 'GOR',
         'DOWN' => 'DOL',
         'round' => 'Runda',

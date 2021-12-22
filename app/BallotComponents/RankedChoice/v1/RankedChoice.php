@@ -11,6 +11,7 @@ use Illuminate\Validation\Rule;
 class RankedChoice extends BallotComponentType
 {
     public static $needsOptions = true;
+    public static $livewireForm = true;
 
     public static $optionsValidator = [
         'options' => 'bail|required|array|min:2',

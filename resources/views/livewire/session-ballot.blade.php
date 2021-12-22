@@ -2,7 +2,7 @@
     <div class="py-2"></div>
     <div class="max-w-screen-md text-center mx-auto">
         <div class="w-full py-3 rounded overflow-hidden shadow-md mx-auto bg-white">
-            <h1 class="text-2xl">Ballot {{ $ballot->title }}</h1>
+            <h1 class="text-2xl">{{ $ballot->title }}</h1>
             @if ($ballot->description)
                 <p class="mt-2 border-t pt-3">{{ $ballot->description }}</p>
             @endif
@@ -43,7 +43,13 @@
                             <p class="px-7 mb-6 pb-5 border-b text-justify">{{ $component->description }}</p>
                         @endif
                         <div class="px-7">
-                            @include($component->form_template, ['component' => $component, 'election' => $election])
+                            @if ($componentTree[$component->type][$component->version]['livewireForm'])
+                                @livewire(Str::kebab($component->type) . '-livewire',, ['ballot' => $ballot, 'component'
+                                => $component])
+                            @else
+                                @include($component->form_template, ['component' => $component, 'election' =>
+                                $election])
+                            @endif
                         </div>
                     </div>
                 </div>

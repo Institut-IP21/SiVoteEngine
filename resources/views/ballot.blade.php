@@ -42,10 +42,16 @@
                                 <span>{{ $component->title }}</span>
                             </div>
                             @if ($component->description)
-                            <p class="px-7 mb-6 pb-5 border-b text-justify">{{ $component->description }}</p>
+                                <p class="px-7 mb-6 pb-5 border-b text-justify">{{ $component->description }}</p>
                             @endif
                             <div class="px-7">
-                                @include($component->form_template, ['component' => $component, 'election' => $election])
+                                @if ($componentTree[$component->type][$component->version]['livewireForm'])
+                                    @livewire(Str::kebab($component->type) . '-livewire', ['ballot' => $ballot, 'component'
+                                    => $component])
+                                @else
+                                    @include($component->form_template, ['component' => $component, 'election' =>
+                                    $election])
+                                @endif
                             </div>
                         </div>
                     </div>
