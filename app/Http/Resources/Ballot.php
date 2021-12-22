@@ -49,6 +49,7 @@ class Ballot extends JsonResource
             list($cursor, $keys) = Redis::scan(0, 'MATCH', "*:active-voters:{$this->id}*", 'COUNT', 10000);
             $resource['active_voters'] = count($keys);
         }
+
         return $resource;
     }
 }
