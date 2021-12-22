@@ -9,6 +9,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Dyrynda\Database\Support\CascadeSoftDeletes;
 
+/**
+ * @method static ElectionFactory factory(mixed? $parameters)
+ */
 class Election extends Model
 {
     use HasFactory;
@@ -55,10 +58,5 @@ class Election extends Model
         return $this->ballots()->get()->contains(function (Ballot $ballot) {
             return $ballot->locked;
         });
-    }
-
-    protected static function newFactory()
-    {
-        return ElectionFactory::new();
     }
 }

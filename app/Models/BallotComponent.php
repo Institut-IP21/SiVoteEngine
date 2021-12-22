@@ -38,7 +38,7 @@ class BallotComponent extends Model
 
     public function ballot()
     {
-        $this->belongsTo(Ballot::class);
+        return $this->belongsTo(Ballot::class);
     }
 
     public function getSlugAttribute()

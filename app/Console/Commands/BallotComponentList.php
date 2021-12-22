@@ -43,7 +43,7 @@ class BallotComponentList extends Command
     {
         $ballotId = $this->option('ballot');
 
-        if ($ballotId && Ballot::exists($ballotId)) {
+        if ($ballotId && Ballot::where(['id', $ballotId])->exists()) {
             $ballotComponents = BallotComponent::find(['ballot_id' => $ballotId]);
             $this->info("Displaying Component of Ballot $ballotId");
         } else {
@@ -53,5 +53,6 @@ class BallotComponentList extends Command
         $this->newLine();
 
         $this->table(['ID', 'Ballot', 'Title', 'Type', 'Deleted At', 'version', 'Created At', 'Updated At'], $ballotComponents);
+        return 0;
     }
 }

@@ -47,7 +47,7 @@ class BallotCreate extends Command
         $title = $this->option('title');
         $description = $this->option('description');
 
-        while (!$electionId || !Election::exists($electionId)) {
+        while (!$electionId || !Election::where(['id', $electionId])->exists()) {
             $elections = Election::where(['owner' => config('app.cli.default_owner'), 'deleted_at' => null])
                 ->orderBy('created_at', 'desc')
                 ->get()
@@ -55,7 +55,7 @@ class BallotCreate extends Command
 
             $electionChoice = $this->choice('Please enter the ID of an existing election', array_values($elections->pluck('title')->toArray()));
             $electionId = $elections->firstWhere('title', $electionChoice)->id;
-            $electionExists = Election::exists($electionId);
+            $electionExists = Election::where(['id', $electionId])->exists();
             if (!$electionExists) {
                 $this->info("Could not find election with ID {$electionId}");
             }
@@ -75,6 +75,7 @@ class BallotCreate extends Command
             'description' => $description,
         ]);
 
-        $this->info("Created new ballot titled '{$ballot->title}' with ID {$ballot->id} for election '{$ballot->election->title}'.");
+        $this->info("Created new ballot titled '{$ballot->title}' with ID {$ballot->id} for election '{$ballot->election()->title}'.");
+        return 0;
     }
 }

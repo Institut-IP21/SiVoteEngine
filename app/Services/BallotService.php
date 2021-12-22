@@ -61,7 +61,7 @@ class BallotService
     public function getSubmissionValidators(Ballot $ballot)
     {
         return array_reduce($ballot->components, function ($validators, $component) use ($ballot) {
-            return array_merge($validators, $this->components[$component['type']][$component['version']]::getSubmissionValidator($component, $ballot->election));
+            return array_merge($validators, $this->components[$component['type']][$component['version']]::getSubmissionValidator($component, $ballot->election()));
         }, []);
     }
 
@@ -71,13 +71,13 @@ class BallotService
             if (!array_key_exists($component->id, $params)) {
                 return $validators;
             }
-            return array_merge($validators, $this->components[$component['type']][$component['version']]::getSubmissionValidator($component, $ballot->election));
+            return array_merge($validators, $this->components[$component['type']][$component['version']]::getSubmissionValidator($component, $ballot->election()));
         }, []);
     }
 
     public function getComponentValidators(BallotComponent $component)
     {
-        return $this->components[$component->type][$component->version]::getSubmissionValidator($component, $component->ballot->election);
+        return $this->components[$component->type][$component->version]::getSubmissionValidator($component, $component->ballot()->election());
     }
 
     public function getBallotComponentClass($ballotType, $version)

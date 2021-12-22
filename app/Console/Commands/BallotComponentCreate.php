@@ -58,9 +58,9 @@ class BallotComponentCreate extends Command
         $version = $this->option('version');
         $options = $this->option('options');
 
-        while (!$ballotId || !Ballot::exists($ballotId)) {
+        while (!$ballotId || !Ballot::where(['id', $ballotId])->exists()) {
             $ballotId = $this->ask('Please enter the ID of an existing ballot');
-            if (!$ballotId || !Ballot::exists($ballotId)) {
+            if (!$ballotId || !Ballot::where(['id', $ballotId])->exists()) {
                 $this->info("Could not find ballot with ID {$ballotId}");
             }
         }
@@ -74,7 +74,7 @@ class BallotComponentCreate extends Command
         }
 
         while (!$type || !in_array($type, $ballotTypes)) {
-            $type = $this->choice('Please choose a ballot type:', $ballotTypes, 0);
+            $type = $this->choice('Please choose a ballot type:', $ballotTypes, "YesNo");
             if (!$type || !in_array($type, $ballotTypes)) {
                 $this->info('Not a valid ballot type');
             }
@@ -82,14 +82,14 @@ class BallotComponentCreate extends Command
 
         $ballotTypeVersions = $this->ballotService->getBallotVersions($type);
 
-        while (!$version || !$version === -1 || !in_array($version, $ballotTypeVersions)) {
-            $version = $this->choice("Please choose a valid version of the {$type} ballot type:", $ballotTypeVersions, count($ballotTypeVersions) - 1);
-            if (!$version || !$version === -1 || !in_array($version, $ballotTypeVersions)) {
+        while (!$version || !$version == -1 || !in_array($version, $ballotTypeVersions)) {
+            $version = $this->choice("Please choose a valid version of the {$type} ballot type:", $ballotTypeVersions, "v1");
+            if (!$version || !$version == -1 || !in_array($version, $ballotTypeVersions)) {
                 $this->info("Not a valid version of {$type} ballot type");
             }
         }
 
-        if ($version === -1) {
+        if ($version == -1) {
             $version = array_key_last($ballotTypeVersions);
         }
 
@@ -129,5 +129,6 @@ class BallotComponentCreate extends Command
         } else {
             $this->warn('Cancelled');
         }
+        return 0;
     }
 }

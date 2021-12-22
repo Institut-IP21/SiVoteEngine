@@ -44,15 +44,15 @@ class BallotCodesGenerate extends Command
     {
         $ballotId = $this->option('ballot');
 
-        if (!$ballotId || !Ballot::exists($ballotId)) {
+        if (!$ballotId || !Ballot::where(['id', $ballotId])->exists()) {
             $this->error("Could not find Ballot with ID $ballotId");
-            return;
+            return 1;
         }
 
         $quantity = (int) $this->option('quantity');
         if (!$quantity || !is_int($quantity)) {
             $this->error("Quantity must be an integer");
-            return;
+            return 1;
         }
 
         $codes = [];
@@ -63,5 +63,6 @@ class BallotCodesGenerate extends Command
         }
 
         $this->info(print_r($codes, true));
+        return 0;
     }
 }
