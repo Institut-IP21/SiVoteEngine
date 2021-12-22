@@ -1,0 +1,647 @@
+parameters:
+	ignoreErrors:
+		-
+			message: "#^Access to an undefined property Illuminate\\\\Database\\\\Eloquent\\\\Collection\\<Illuminate\\\\Database\\\\Eloquent\\\\Model\\>\\|Illuminate\\\\Database\\\\Eloquent\\\\Model\\:\\:\\$id\\.$#"
+			count: 4
+			path: app/BallotComponents/FirstPastThePost/v1/FirstPastThePostTest.php
+
+		-
+			message: "#^Parameter \\#1 \\$component of static method App\\\\BallotComponents\\\\FirstPastThePost\\\\v1\\\\FirstPastThePost\\:\\:getSubmissionValidator\\(\\) expects App\\\\Models\\\\BallotComponent, Illuminate\\\\Database\\\\Eloquent\\\\Collection\\<Illuminate\\\\Database\\\\Eloquent\\\\Model\\>\\|Illuminate\\\\Database\\\\Eloquent\\\\Model given\\.$#"
+			count: 1
+			path: app/BallotComponents/FirstPastThePost/v1/FirstPastThePostTest.php
+
+		-
+			message: "#^Parameter \\#2 \\$component of static method App\\\\BallotComponents\\\\FirstPastThePost\\\\v1\\\\FirstPastThePost\\:\\:calculateResults\\(\\) expects App\\\\Models\\\\BallotComponent, Illuminate\\\\Database\\\\Eloquent\\\\Collection\\<Illuminate\\\\Database\\\\Eloquent\\\\Model\\>\\|Illuminate\\\\Database\\\\Eloquent\\\\Model given\\.$#"
+			count: 1
+			path: app/BallotComponents/FirstPastThePost/v1/FirstPastThePostTest.php
+
+		-
+			message: "#^Parameter \\#2 \\$election of static method App\\\\BallotComponents\\\\FirstPastThePost\\\\v1\\\\FirstPastThePost\\:\\:getSubmissionValidator\\(\\) expects App\\\\Models\\\\Election, Illuminate\\\\Database\\\\Eloquent\\\\Collection\\<Illuminate\\\\Database\\\\Eloquent\\\\Model\\>\\|Illuminate\\\\Database\\\\Eloquent\\\\Model given\\.$#"
+			count: 1
+			path: app/BallotComponents/FirstPastThePost/v1/FirstPastThePostTest.php
+
+		-
+			message: "#^Method App\\\\BallotComponents\\\\RankedChoice\\\\v1\\\\RankedChoice\\:\\:getTotals\\(\\) with return type void returns mixed but should not return anything\\.$#"
+			count: 1
+			path: app/BallotComponents/RankedChoice/v1/RankedChoice.php
+
+		-
+			message: "#^Method App\\\\BallotComponents\\\\RankedChoice\\\\v1\\\\RankedChoice\\:\\:runIteration\\(\\) with return type void returns array\\<int, mixed\\> but should not return anything\\.$#"
+			count: 2
+			path: app/BallotComponents/RankedChoice/v1/RankedChoice.php
+
+		-
+			message: "#^Method App\\\\BallotComponents\\\\RankedChoice\\\\v1\\\\RankedChoice\\:\\:runIteration\\(\\) with return type void returns void but should not return anything\\.$#"
+			count: 2
+			path: app/BallotComponents/RankedChoice/v1/RankedChoice.php
+
+		-
+			message: "#^Result of static method App\\\\BallotComponents\\\\RankedChoice\\\\v1\\\\RankedChoice\\:\\:runIteration\\(\\) \\(void\\) is used\\.$#"
+			count: 4
+			path: app/BallotComponents/RankedChoice/v1/RankedChoice.php
+
+		-
+			message: "#^Access to an undefined property Illuminate\\\\Database\\\\Eloquent\\\\Collection\\<Illuminate\\\\Database\\\\Eloquent\\\\Model\\>\\|Illuminate\\\\Database\\\\Eloquent\\\\Model\\:\\:\\$id\\.$#"
+			count: 11
+			path: app/BallotComponents/RankedChoice/v1/RankedChoiceTest.php
+
+		-
+			message: "#^Parameter \\#1 \\$component of static method App\\\\BallotComponents\\\\RankedChoice\\\\v1\\\\RankedChoice\\:\\:getSubmissionValidator\\(\\) expects App\\\\Models\\\\BallotComponent, Illuminate\\\\Database\\\\Eloquent\\\\Collection\\<Illuminate\\\\Database\\\\Eloquent\\\\Model\\>\\|Illuminate\\\\Database\\\\Eloquent\\\\Model given\\.$#"
+			count: 1
+			path: app/BallotComponents/RankedChoice/v1/RankedChoiceTest.php
+
+		-
+			message: "#^Parameter \\#2 \\$election of static method App\\\\BallotComponents\\\\RankedChoice\\\\v1\\\\RankedChoice\\:\\:getSubmissionValidator\\(\\) expects App\\\\Models\\\\Election, Illuminate\\\\Database\\\\Eloquent\\\\Collection\\<Illuminate\\\\Database\\\\Eloquent\\\\Model\\>\\|Illuminate\\\\Database\\\\Eloquent\\\\Model given\\.$#"
+			count: 1
+			path: app/BallotComponents/RankedChoice/v1/RankedChoiceTest.php
+
+		-
+			message: "#^Access to an undefined property Illuminate\\\\Database\\\\Eloquent\\\\Collection\\<Illuminate\\\\Database\\\\Eloquent\\\\Model\\>\\|Illuminate\\\\Database\\\\Eloquent\\\\Model\\:\\:\\$id\\.$#"
+			count: 4
+			path: app/BallotComponents/YesNo/v1/YesNoTest.php
+
+		-
+			message: "#^Parameter \\#1 \\$component of static method App\\\\BallotComponents\\\\YesNo\\\\v1\\\\YesNo\\:\\:getSubmissionValidator\\(\\) expects App\\\\Models\\\\BallotComponent, Illuminate\\\\Database\\\\Eloquent\\\\Collection\\<Illuminate\\\\Database\\\\Eloquent\\\\Model\\>\\|Illuminate\\\\Database\\\\Eloquent\\\\Model given\\.$#"
+			count: 1
+			path: app/BallotComponents/YesNo/v1/YesNoTest.php
+
+		-
+			message: "#^Parameter \\#2 \\$component of static method App\\\\BallotComponents\\\\YesNo\\\\v1\\\\YesNo\\:\\:calculateResults\\(\\) expects App\\\\Models\\\\BallotComponent, Illuminate\\\\Database\\\\Eloquent\\\\Collection\\<Illuminate\\\\Database\\\\Eloquent\\\\Model\\>\\|Illuminate\\\\Database\\\\Eloquent\\\\Model given\\.$#"
+			count: 1
+			path: app/BallotComponents/YesNo/v1/YesNoTest.php
+
+		-
+			message: "#^Parameter \\#2 \\$election of static method App\\\\BallotComponents\\\\YesNo\\\\v1\\\\YesNo\\:\\:getSubmissionValidator\\(\\) expects App\\\\Models\\\\Election, Illuminate\\\\Database\\\\Eloquent\\\\Collection\\<Illuminate\\\\Database\\\\Eloquent\\\\Model\\>\\|Illuminate\\\\Database\\\\Eloquent\\\\Model given\\.$#"
+			count: 1
+			path: app/BallotComponents/YesNo/v1/YesNoTest.php
+
+		-
+			message: "#^Method App\\\\Console\\\\Commands\\\\BallotCodesGenerate\\:\\:handle\\(\\) should return int but empty return statement found\\.$#"
+			count: 2
+			path: app/Console/Commands/BallotCodesGenerate.php
+
+		-
+			message: "#^Method App\\\\Console\\\\Commands\\\\BallotCodesGenerate\\:\\:handle\\(\\) should return int but return statement is missing\\.$#"
+			count: 1
+			path: app/Console/Commands/BallotCodesGenerate.php
+
+		-
+			message: "#^Static method Illuminate\\\\Database\\\\Eloquent\\\\Builder\\<App\\\\Models\\\\Ballot\\>\\:\\:exists\\(\\) invoked with 1 parameter, 0 required\\.$#"
+			count: 1
+			path: app/Console/Commands/BallotCodesGenerate.php
+
+		-
+			message: "#^Method App\\\\Console\\\\Commands\\\\BallotComponentCreate\\:\\:handle\\(\\) should return int but return statement is missing\\.$#"
+			count: 1
+			path: app/Console/Commands/BallotComponentCreate.php
+
+		-
+			message: "#^Negated boolean expression is always false\\.$#"
+			count: 2
+			path: app/Console/Commands/BallotComponentCreate.php
+
+		-
+			message: "#^Parameter \\#3 \\$default of method Illuminate\\\\Console\\\\Command\\:\\:choice\\(\\) expects string\\|null, int given\\.$#"
+			count: 1
+			path: app/Console/Commands/BallotComponentCreate.php
+
+		-
+			message: "#^Parameter \\#3 \\$default of method Illuminate\\\\Console\\\\Command\\:\\:choice\\(\\) expects string\\|null, int\\<\\-1, max\\> given\\.$#"
+			count: 1
+			path: app/Console/Commands/BallotComponentCreate.php
+
+		-
+			message: "#^Static method Illuminate\\\\Database\\\\Eloquent\\\\Builder\\<App\\\\Models\\\\Ballot\\>\\:\\:exists\\(\\) invoked with 1 parameter, 0 required\\.$#"
+			count: 2
+			path: app/Console/Commands/BallotComponentCreate.php
+
+		-
+			message: "#^Strict comparison using \\=\\=\\= between false and \\-1 will always evaluate to false\\.$#"
+			count: 2
+			path: app/Console/Commands/BallotComponentCreate.php
+
+		-
+			message: "#^Strict comparison using \\=\\=\\= between non\\-empty\\-array\\|non\\-empty\\-string\\|true and \\-1 will always evaluate to false\\.$#"
+			count: 1
+			path: app/Console/Commands/BallotComponentCreate.php
+
+		-
+			message: "#^Method App\\\\Console\\\\Commands\\\\BallotComponentList\\:\\:handle\\(\\) should return int but return statement is missing\\.$#"
+			count: 1
+			path: app/Console/Commands/BallotComponentList.php
+
+		-
+			message: "#^Static method Illuminate\\\\Database\\\\Eloquent\\\\Builder\\<App\\\\Models\\\\Ballot\\>\\:\\:exists\\(\\) invoked with 1 parameter, 0 required\\.$#"
+			count: 1
+			path: app/Console/Commands/BallotComponentList.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Models\\\\Ballot\\:\\:\\$election\\.$#"
+			count: 1
+			path: app/Console/Commands/BallotCreate.php
+
+		-
+			message: "#^Method App\\\\Console\\\\Commands\\\\BallotCreate\\:\\:handle\\(\\) should return int but return statement is missing\\.$#"
+			count: 1
+			path: app/Console/Commands/BallotCreate.php
+
+		-
+			message: "#^Static method Illuminate\\\\Database\\\\Eloquent\\\\Builder\\<App\\\\Models\\\\Election\\>\\:\\:exists\\(\\) invoked with 1 parameter, 0 required\\.$#"
+			count: 2
+			path: app/Console/Commands/BallotCreate.php
+
+		-
+			message: "#^Method App\\\\Console\\\\Commands\\\\BallotList\\:\\:handle\\(\\) should return int but return statement is missing\\.$#"
+			count: 1
+			path: app/Console/Commands/BallotList.php
+
+		-
+			message: "#^Static method Illuminate\\\\Database\\\\Eloquent\\\\Builder\\<App\\\\Models\\\\Election\\>\\:\\:exists\\(\\) invoked with 1 parameter, 0 required\\.$#"
+			count: 1
+			path: app/Console/Commands/BallotList.php
+
+		-
+			message: "#^Method App\\\\Console\\\\Commands\\\\ElectionCreate\\:\\:handle\\(\\) should return int but return statement is missing\\.$#"
+			count: 1
+			path: app/Console/Commands/ElectionCreate.php
+
+		-
+			message: "#^Parameter \\#3 \\$default of method Illuminate\\\\Console\\\\Command\\:\\:choice\\(\\) expects string\\|null, int given\\.$#"
+			count: 1
+			path: app/Console/Commands/ElectionCreate.php
+
+		-
+			message: "#^Method App\\\\Console\\\\Commands\\\\ElectionList\\:\\:handle\\(\\) should return int but return statement is missing\\.$#"
+			count: 1
+			path: app/Console/Commands/ElectionList.php
+
+		-
+			message: "#^Method App\\\\Console\\\\Commands\\\\EvoteCache\\:\\:handle\\(\\) should return int but return statement is missing\\.$#"
+			count: 1
+			path: app/Console/Commands/EvoteCache.php
+
+		-
+			message: "#^PHPDoc type array of property App\\\\Exceptions\\\\Handler\\:\\:\\$dontFlash is not covariant with PHPDoc type array\\<string\\> of overridden property Illuminate\\\\Foundation\\\\Exceptions\\\\Handler\\:\\:\\$dontFlash\\.$#"
+			count: 1
+			path: app/Exceptions/Handler.php
+
+		-
+			message: "#^PHPDoc type array of property App\\\\Exceptions\\\\Handler\\:\\:\\$dontReport is not covariant with PHPDoc type array\\<string\\> of overridden property Illuminate\\\\Foundation\\\\Exceptions\\\\Handler\\:\\:\\$dontReport\\.$#"
+			count: 1
+			path: app/Exceptions/Handler.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Models\\\\Election\\:\\:\\$mode\\.$#"
+			count: 1
+			path: app/Http/Controllers/BallotController.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Models\\\\Vote\\:\\:\\$ballot\\.$#"
+			count: 1
+			path: app/Http/Controllers/BallotController.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Models\\\\Vote\\|Illuminate\\\\Database\\\\Eloquent\\\\Collection\\<App\\\\Models\\\\Vote\\>\\:\\:\\$ballot\\.$#"
+			count: 2
+			path: app/Http/Controllers/BallotController.php
+
+		-
+			message: "#^Strict comparison using \\=\\=\\= between bool and string will always evaluate to false\\.$#"
+			count: 3
+			path: app/Http/Controllers/BallotController.php
+
+		-
+			message: "#^Access to property \\$owner on an unknown class App\\\\Models\\\\User\\.$#"
+			count: 1
+			path: app/Http/Controllers/Controller.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Models\\\\Election\\:\\:\\$mode\\.$#"
+			count: 1
+			path: app/Http/Controllers/ElectionController.php
+
+		-
+			message: "#^Access to undefined constant App\\\\Models\\\\Election\\:\\:MODE_SESSION\\.$#"
+			count: 1
+			path: app/Http/Controllers/ElectionController.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Livewire\\\\Election\\:\\:\\$counter\\.$#"
+			count: 2
+			path: app/Http/Livewire/Election.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Livewire\\\\Election\\:\\:\\$election\\.$#"
+			count: 2
+			path: app/Http/Livewire/Election.php
+
+		-
+			message: "#^Parameter \\#1 \\$view of function view expects view\\-string\\|null, string given\\.$#"
+			count: 1
+			path: app/Http/Livewire/Election.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Livewire\\\\Session\\:\\:\\$activeComponents\\.$#"
+			count: 1
+			path: app/Http/Livewire/Session.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Livewire\\\\Session\\:\\:\\$ballot\\.$#"
+			count: 4
+			path: app/Http/Livewire/Session.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Livewire\\\\Session\\:\\:\\$code\\.$#"
+			count: 2
+			path: app/Http/Livewire/Session.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Livewire\\\\Session\\:\\:\\$election\\.$#"
+			count: 1
+			path: app/Http/Livewire/Session.php
+
+		-
+			message: "#^Parameter \\#3 \\$timeout of static method Redis\\:\\:set\\(\\) expects array\\|int, string given\\.$#"
+			count: 1
+			path: app/Http/Livewire/Session.php
+
+		-
+			message: "#^Static method Redis\\:\\:set\\(\\) invoked with 4 parameters, 2\\-3 required\\.$#"
+			count: 1
+			path: app/Http/Livewire/Session.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Models\\\\ApiUser\\:\\:\\$owner\\.$#"
+			count: 1
+			path: app/Http/Middleware/ApiAuth.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\Ballot\\:\\:\\$active\\.$#"
+			count: 1
+			path: app/Http/Resources/Ballot.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\Ballot\\:\\:\\$components\\.$#"
+			count: 1
+			path: app/Http/Resources/Ballot.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\Ballot\\:\\:\\$created_at\\.$#"
+			count: 1
+			path: app/Http/Resources/Ballot.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\Ballot\\:\\:\\$description\\.$#"
+			count: 1
+			path: app/Http/Resources/Ballot.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\Ballot\\:\\:\\$election_id\\.$#"
+			count: 3
+			path: app/Http/Resources/Ballot.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\Ballot\\:\\:\\$email_subject\\.$#"
+			count: 1
+			path: app/Http/Resources/Ballot.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\Ballot\\:\\:\\$email_template\\.$#"
+			count: 1
+			path: app/Http/Resources/Ballot.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\Ballot\\:\\:\\$finished\\.$#"
+			count: 1
+			path: app/Http/Resources/Ballot.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\Ballot\\:\\:\\$id\\.$#"
+			count: 4
+			path: app/Http/Resources/Ballot.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\Ballot\\:\\:\\$is_secret\\.$#"
+			count: 1
+			path: app/Http/Resources/Ballot.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\Ballot\\:\\:\\$mode\\.$#"
+			count: 1
+			path: app/Http/Resources/Ballot.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\Ballot\\:\\:\\$title\\.$#"
+			count: 1
+			path: app/Http/Resources/Ballot.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\Ballot\\:\\:\\$updated_at\\.$#"
+			count: 1
+			path: app/Http/Resources/Ballot.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\Ballot\\:\\:\\$votes_count\\.$#"
+			count: 1
+			path: app/Http/Resources/Ballot.php
+
+		-
+			message: "#^Call to an undefined method Illuminate\\\\Http\\\\Resources\\\\Json\\\\AnonymousResourceCollection\\:\\:keyBy\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/Ballot.php
+
+		-
+			message: "#^Parameter \\#1 \\$iterator of static method Redis\\:\\:scan\\(\\) is passed by reference, so it expects variables only\\.$#"
+			count: 1
+			path: app/Http/Resources/Ballot.php
+
+		-
+			message: "#^Parameter \\#1 \\$value of function count expects array\\|Countable, string given\\.$#"
+			count: 1
+			path: app/Http/Resources/Ballot.php
+
+		-
+			message: "#^Parameter \\#3 \\$count of static method Redis\\:\\:scan\\(\\) expects int\\|null, string given\\.$#"
+			count: 1
+			path: app/Http/Resources/Ballot.php
+
+		-
+			message: "#^Static method Redis\\:\\:scan\\(\\) invoked with 5 parameters, 1\\-3 required\\.$#"
+			count: 1
+			path: app/Http/Resources/Ballot.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\BallotComplete\\:\\:\\$active\\.$#"
+			count: 1
+			path: app/Http/Resources/BallotComplete.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\BallotComplete\\:\\:\\$cast_votes\\.$#"
+			count: 1
+			path: app/Http/Resources/BallotComplete.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\BallotComplete\\:\\:\\$components\\.$#"
+			count: 1
+			path: app/Http/Resources/BallotComplete.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\BallotComplete\\:\\:\\$created_at\\.$#"
+			count: 1
+			path: app/Http/Resources/BallotComplete.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\BallotComplete\\:\\:\\$description\\.$#"
+			count: 1
+			path: app/Http/Resources/BallotComplete.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\BallotComplete\\:\\:\\$election_id\\.$#"
+			count: 1
+			path: app/Http/Resources/BallotComplete.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\BallotComplete\\:\\:\\$email_subject\\.$#"
+			count: 1
+			path: app/Http/Resources/BallotComplete.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\BallotComplete\\:\\:\\$email_template\\.$#"
+			count: 1
+			path: app/Http/Resources/BallotComplete.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\BallotComplete\\:\\:\\$finished\\.$#"
+			count: 1
+			path: app/Http/Resources/BallotComplete.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\BallotComplete\\:\\:\\$id\\.$#"
+			count: 1
+			path: app/Http/Resources/BallotComplete.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\BallotComplete\\:\\:\\$is_secret\\.$#"
+			count: 1
+			path: app/Http/Resources/BallotComplete.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\BallotComplete\\:\\:\\$title\\.$#"
+			count: 1
+			path: app/Http/Resources/BallotComplete.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\BallotComplete\\:\\:\\$updated_at\\.$#"
+			count: 1
+			path: app/Http/Resources/BallotComplete.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\BallotComplete\\:\\:\\$votes_count\\.$#"
+			count: 1
+			path: app/Http/Resources/BallotComplete.php
+
+		-
+			message: "#^Call to an undefined method Illuminate\\\\Http\\\\Resources\\\\Json\\\\AnonymousResourceCollection\\:\\:keyBy\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/BallotComplete.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\BallotSimple\\:\\:\\$active\\.$#"
+			count: 1
+			path: app/Http/Resources/BallotSimple.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\BallotSimple\\:\\:\\$components\\.$#"
+			count: 1
+			path: app/Http/Resources/BallotSimple.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\BallotSimple\\:\\:\\$created_at\\.$#"
+			count: 1
+			path: app/Http/Resources/BallotSimple.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\BallotSimple\\:\\:\\$description\\.$#"
+			count: 1
+			path: app/Http/Resources/BallotSimple.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\BallotSimple\\:\\:\\$election_id\\.$#"
+			count: 1
+			path: app/Http/Resources/BallotSimple.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\BallotSimple\\:\\:\\$email_subject\\.$#"
+			count: 1
+			path: app/Http/Resources/BallotSimple.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\BallotSimple\\:\\:\\$email_template\\.$#"
+			count: 1
+			path: app/Http/Resources/BallotSimple.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\BallotSimple\\:\\:\\$id\\.$#"
+			count: 1
+			path: app/Http/Resources/BallotSimple.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\BallotSimple\\:\\:\\$is_secret\\.$#"
+			count: 1
+			path: app/Http/Resources/BallotSimple.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\BallotSimple\\:\\:\\$title\\.$#"
+			count: 1
+			path: app/Http/Resources/BallotSimple.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\BallotSimple\\:\\:\\$updated_at\\.$#"
+			count: 1
+			path: app/Http/Resources/BallotSimple.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\Election\\:\\:\\$abstainable\\.$#"
+			count: 1
+			path: app/Http/Resources/Election.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\Election\\:\\:\\$active\\.$#"
+			count: 1
+			path: app/Http/Resources/Election.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\Election\\:\\:\\$ballots\\.$#"
+			count: 1
+			path: app/Http/Resources/Election.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\Election\\:\\:\\$created_at\\.$#"
+			count: 1
+			path: app/Http/Resources/Election.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\Election\\:\\:\\$description\\.$#"
+			count: 1
+			path: app/Http/Resources/Election.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\Election\\:\\:\\$id\\.$#"
+			count: 1
+			path: app/Http/Resources/Election.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\Election\\:\\:\\$level\\.$#"
+			count: 1
+			path: app/Http/Resources/Election.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\Election\\:\\:\\$locked\\.$#"
+			count: 1
+			path: app/Http/Resources/Election.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\Election\\:\\:\\$owner\\.$#"
+			count: 1
+			path: app/Http/Resources/Election.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\Election\\:\\:\\$title\\.$#"
+			count: 1
+			path: app/Http/Resources/Election.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\Election\\:\\:\\$updated_at\\.$#"
+			count: 1
+			path: app/Http/Resources/Election.php
+
+		-
+			message: "#^Call to an undefined method Illuminate\\\\Http\\\\Resources\\\\Json\\\\AnonymousResourceCollection\\:\\:keyBy\\(\\)\\.$#"
+			count: 1
+			path: app/Http/Resources/Election.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\PersonalizationFull\\:\\:\\$created_at\\.$#"
+			count: 1
+			path: app/Http/Resources/PersonalizationFull.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\PersonalizationFull\\:\\:\\$id\\.$#"
+			count: 1
+			path: app/Http/Resources/PersonalizationFull.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\PersonalizationFull\\:\\:\\$owner\\.$#"
+			count: 1
+			path: app/Http/Resources/PersonalizationFull.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\PersonalizationFull\\:\\:\\$photo_url\\.$#"
+			count: 1
+			path: app/Http/Resources/PersonalizationFull.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Http\\\\Resources\\\\PersonalizationFull\\:\\:\\$updated_at\\.$#"
+			count: 1
+			path: app/Http/Resources/PersonalizationFull.php
+
+		-
+			message: "#^PHPDoc type array of property App\\\\Models\\\\ApiUser\\:\\:\\$fillable is not covariant with PHPDoc type array\\<string\\> of overridden property Illuminate\\\\Database\\\\Eloquent\\\\Model\\:\\:\\$fillable\\.$#"
+			count: 1
+			path: app/Models/ApiUser.php
+
+		-
+			message: "#^PHPDoc type array of property App\\\\Models\\\\Personalization\\:\\:\\$fillable is not covariant with PHPDoc type array\\<string\\> of overridden property Illuminate\\\\Database\\\\Eloquent\\\\Model\\:\\:\\$fillable\\.$#"
+			count: 1
+			path: app/Models/Personalization.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Models\\\\ApiUser\\:\\:\\$owner\\.$#"
+			count: 3
+			path: app/Policies/ElectionPolicy.php
+
+		-
+			message: "#^PHPDoc tag @param for parameter \\$user with type App\\\\Models\\\\User is not subtype of native type App\\\\Models\\\\ApiUser\\.$#"
+			count: 5
+			path: app/Policies/ElectionPolicy.php
+
+		-
+			message: "#^Parameter \\$user of method App\\\\Policies\\\\ElectionPolicy\\:\\:create\\(\\) has invalid type App\\\\Models\\\\User\\.$#"
+			count: 1
+			path: app/Policies/ElectionPolicy.php
+
+		-
+			message: "#^Parameter \\$user of method App\\\\Policies\\\\ElectionPolicy\\:\\:delete\\(\\) has invalid type App\\\\Models\\\\User\\.$#"
+			count: 1
+			path: app/Policies/ElectionPolicy.php
+
+		-
+			message: "#^Parameter \\$user of method App\\\\Policies\\\\ElectionPolicy\\:\\:update\\(\\) has invalid type App\\\\Models\\\\User\\.$#"
+			count: 1
+			path: app/Policies/ElectionPolicy.php
+
+		-
+			message: "#^Parameter \\$user of method App\\\\Policies\\\\ElectionPolicy\\:\\:view\\(\\) has invalid type App\\\\Models\\\\User\\.$#"
+			count: 1
+			path: app/Policies/ElectionPolicy.php
+
+		-
+			message: "#^Parameter \\$user of method App\\\\Policies\\\\ElectionPolicy\\:\\:viewAny\\(\\) has invalid type App\\\\Models\\\\User\\.$#"
+			count: 1
+			path: app/Policies/ElectionPolicy.php
+
+		-
+			message: "#^Class App\\\\Services\\\\BallotService does not have a constructor and must be instantiated without any parameters\\.$#"
+			count: 1
+			path: app/Providers/BallotServiceProvider.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Models\\\\Ballot\\:\\:\\$election\\.$#"
+			count: 2
+			path: app/Services/BallotService.php
+
+		-
+			message: "#^Access to an undefined property App\\\\Models\\\\BallotComponent\\:\\:\\$ballot\\.$#"
+			count: 1
+			path: app/Services/BallotService.php
+
