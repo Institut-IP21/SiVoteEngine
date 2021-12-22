@@ -1,4 +1,4 @@
-<div id="app" class="bg-gray-100 min-h-screen">
+<div id="app" class="bg-gray-100 min-h-screen" wire:poll.5000ms>
     <div class="py-2"></div>
     <div class="max-w-screen-md text-center mx-auto">
         <div class="w-full py-3 rounded overflow-hidden shadow-md mx-auto bg-white">
@@ -49,7 +49,7 @@
                 </div>
                 <div class="py-6"></div>
             @endforeach
-            @if ($code !== 'predogled')
+            @if ($code !== 'preview-mode')
                 <div class="my-6 text-center">
                     <button type="submit" class="btn btn-blue w-full">Oddaj glas</button>
                 </div>

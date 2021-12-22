@@ -22,7 +22,7 @@ class Session extends Component
         $this->ballot = $ballot;
 
         $vote = Vote::find(['id' => $request->query('code')])->first();
-        $this->code = $vote->id ?? 'predogled';
+        $this->code = $vote->id ?? 'preview-mode';
     }
 
     public function render()
@@ -31,8 +31,8 @@ class Session extends Component
             return $component->active;
         });
 
-        if ($this->code !== 'predogled') {
-            Redis::set("session:active-voters:{$this->ballot->id}:{$this->code}", 1, 'EX', 30);
+        if ($this->code !== 'preview-mode') {
+            Redis::set("session:active-voters:{$this->ballot->id}:{$this->code}", 1, 'EX', 60);
         }
 
         return view('livewire.session-ballot', ['ballot' => $this->ballot])->extends('layouts.main')->slot('content');
