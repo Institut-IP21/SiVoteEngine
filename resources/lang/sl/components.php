@@ -13,17 +13,17 @@ return [
         'abstain' => 'Vzdržan',
         'name' => 'Da/Ne vprašanje',
         'tie' => 'Izid je neodločen.',
-        'description' => 'Volivci izbirajo med Da, Ne, in glede na nastavitve, Vzdržano.'
+        'description' => 'Glasovalci izbirajo med Da, Ne, in glede na nastavitve, Vzdržano.'
     ],
     'fptp' => [
-        'name' => 'First past the post / Plurality vprašanje',
+        'name' => 'Izbira ene vrednosti izmed večih',
         'abstain' => 'Vzdržan',
         'tie' => 'Izid je neodločen. Isto število glasov so prejeli: ',
-        'description' => 'Volivci izberejo natančno eno izmed izbir.'
+        'description' => 'Glasovalci izberejo natančno eno izmed izbir.'
     ],
     'rankedchoice' => [
-        'name' => 'Preferenčno vprašanje',
-        'description' => 'Volivci seznam možnosti uredijo po vrsti glede na preferenco.',
+        'name' => 'Razvrščanje vrednosti',
+        'description' => 'Glasovalci seznam možnosti uredijo po vrsti glede na preferenco.',
         'intro' => 'Pred vami je :options opcij. Razvrstite jih po vrsti od najboljše do najslabše. Razvrstite lahko kolikor opcij želite.',
         'state' => 'Do sedaj ste razvrstili :selected opcij, lahko jih še :remaining.',
         'UP' => 'GOR',
@@ -34,8 +34,8 @@ return [
         'tie_elimination' => 'Izenačeno - eliminiran'
     ],
     'approval' => [
-        'name' => 'Approval vote',
-        'description' => 'Volivci označijo, katere izmed možnosti na seznamu podpirajo.',
+        'name' => 'Odobritveni glas',
+        'description' => 'Glasovalci označijo, katere izmed možnosti na seznamu podpirajo.',
         'oftotal' => 'Podpora (%)'
     ],
     'created' => [
