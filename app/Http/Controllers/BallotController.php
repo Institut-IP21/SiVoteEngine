@@ -51,10 +51,12 @@ class BallotController extends Controller
      *  @Get("/{election}/ballot/{ballot}/preview", as="ballot.preview")
      *  @Middleware("signed")
      */
-    public function preview(Election $election, Ballot $ballot, Request $request)
+    public function preview(Election $election, Ballot $ballot, Request $request, BallotService $service)
     {
         $pers = Personalization::where('owner', $election->owner)->first();
-        return view('ballot-preview', ['election' => $election, 'ballot' => $ballot, 'pers' => $pers]);
+        $componentTree = $service->getComponentTree();
+
+        return view('ballot-preview', ['election' => $election, 'ballot' => $ballot, 'pers' => $pers, 'componentTree' => $componentTree]);
     }
 
     /**

@@ -44,7 +44,7 @@
                         @endif
                         <div class="px-7">
                             @if ($componentTree[$component->type][$component->version]['livewireForm'])
-                                @livewire(Str::kebab($component->type) . '-livewire',, ['ballot' => $ballot, 'component'
+                                @livewire(Str::kebab($component->type) . '-livewire', ['ballot' => $ballot, 'component'
                                 => $component])
                             @else
                                 @include($component->form_template, ['component' => $component, 'election' =>

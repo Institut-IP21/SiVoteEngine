@@ -56,6 +56,11 @@ class BallotComponent extends Model
         return $this->type . '/' . $this->version . '/form';
     }
 
+    public function getFormTemplateLivewireAttribute()
+    {
+        return $this->type . '/' . $this->version . '/form_livewire';
+    }
+
     public function getResultTemplateAttribute()
     {
         return $this->type . '/' . $this->version . '/result';
