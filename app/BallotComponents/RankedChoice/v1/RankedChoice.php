@@ -76,6 +76,10 @@ class RankedChoice extends BallotComponentType
                 return $runningTotal;
             }
 
+            if (!array_key_exists($component->id, $vote['values'])) {
+                return $runningTotal;
+            }
+
             $values = $vote['values'][$component->id];
 
             if (!count($values)) {

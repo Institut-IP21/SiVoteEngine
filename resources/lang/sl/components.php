@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'option' => 'Vrednost',
+    'option' => 'Izbira',
     'votes' => 'Število glasov',
     'winner' => 'Zmagovalec',
     'eliminated' => 'Eliminiran',
@@ -28,7 +28,7 @@ return [
         'state' => 'Do sedaj ste razvrstili :selected opcij, lahko jih še :remaining.',
         'UP' => 'GOR',
         'DOWN' => 'DOL',
-        'round' => 'Runda',
+        'round' => 'Krog',
         'winner_is' => 'Zmagovalec je',
         'no_winner' => 'Zmagovalca ni mogoče določiti, možni zmagovalci so',
         'tie_elimination' => 'Izenačeno - eliminiran'

@@ -101,13 +101,11 @@ class BallotService
         return $ballot->components()->get()->reduce(function ($acc, $component) use ($votes) {
             $componentClass = $this->getBallotComponentClassInstance($component['type'], $component['version'], $component['settings']);
             $acc[$component->id] = [
-                'results' => $componentClass::calculateResults($votes, $component)
-            ];
-            $acc[$component->id] = array_merge($acc[$component->id], [
+                'results' => $componentClass::calculateResults($votes, $component),
                 'title' => $component->title,
                 'description' => $component->description,
                 'type' => $component->type
-            ]);
+            ];
             return $acc;
         }, []);
     }
