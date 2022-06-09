@@ -35,19 +35,40 @@ class ApprovalVote extends BallotComponentType
 
     public static function calculateResults(array $votes, BallotComponent $component)
     {
-        return array_reduce($votes, function ($runningTotal, $vote) use ($component) {
-            if (empty($vote['values'])) {
-                return $runningTotal;
-            }
-            if (!array_key_exists($component->id, $vote['values'])) {
-                return $runningTotal;
-            }
-            $approved_options = $vote['values'][$component->id];
-            foreach ($approved_options as $approved_option) {
-                $runningTotal[$approved_option] = array_key_exists($approved_option, $runningTotal) ? $runningTotal[$approved_option] + 1 : 1;
-            }
-            return $runningTotal;
-        }, []);
+        $state = collect($votes)
+            ->groupBy(function ($vote) use ($component) {
+                return $vote->values[$component->id];
+            })
+            ->map(function ($votes) {
+                return $votes->count();
+            })
+            ->toArray();
+
+        return self::annotateStateForVictory($state);
+    }
+
+    public static function annotateStateForVictory($state)
+    {
+        if (count($state) === 0) {
+            return [
+                'state' => $state,
+                'total_votes' => 0,
+                'winner' => null,
+                'winners' => null
+            ];
+        }
+        $winners = array_keys($state, max($state));
+        if (count($winners) > 1) {
+            $winner = 'tie';
+        } else {
+            $winner = $winners[0];
+        }
+        return [
+            'state' => $state,
+            'total_votes' => array_sum($state),
+            'winner' => $winner,
+            'winners' => $winners
+        ];
     }
 
     public static function getSubmissionValidator(BallotComponent $component, Election $election)

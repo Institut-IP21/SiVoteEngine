@@ -7,10 +7,10 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 class ApiUser extends Authenticatable
 {
 
+    public string $owner;
+
     /**
      * The attributes that are mass assignable.
-     *
-     * @var array
      */
     protected $fillable = [
         'owner',

@@ -14,7 +14,8 @@ class Vote extends Model
     use Uuid;
 
     protected $encryptable = [
-        'values'
+        'values',
+        'cast_by'
     ];
 
     protected $keyType = 'string';

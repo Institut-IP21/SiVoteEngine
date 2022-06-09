@@ -5,7 +5,6 @@ namespace Deployer;
 $env = \Dotenv\Dotenv::createImmutable(__DIR__)->load();
 
 require 'recipe/laravel.php';
-require 'recipe/yarn.php';
 require 'contrib/php-fpm.php';
 require 'contrib/npm.php';
 

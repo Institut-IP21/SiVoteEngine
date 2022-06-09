@@ -40,5 +40,6 @@ class ElectionList extends Command
     {
         $elections = Election::all();
         $this->table(['ID', 'Title', 'Description', 'Level', 'Owner', 'Abstainable', 'Deleted At', 'Created At', 'Updated At'], $elections);
+        return 0;
     }
 }

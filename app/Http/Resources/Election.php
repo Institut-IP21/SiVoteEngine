@@ -16,7 +16,6 @@ class Election extends JsonResource
     {
         return [
             'id' => $this->id,
-            'mode' => $this->mode,
             'title' => $this->title,
             'description' => $this->description,
             'owner' => $this->owner,

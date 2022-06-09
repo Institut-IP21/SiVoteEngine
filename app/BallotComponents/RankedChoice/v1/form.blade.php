@@ -17,20 +17,23 @@
             <div class="border-r border-blue-300 flex-1 text-2xl buttons d-flex">
                 <button type="button"
                     class="btn disabled:opacity-30 hover:bg-blue-100 hover:bg-opacity-25 disabled:bg-transparent"
-                    :disabled="i === 0 || selected.length < 2" @click="up(option, i)" :class="{
+                    :disabled="i === 0 || selected.length < 2" @click="up(option, i)"
+                    :class="{
                         'cursor-not-allowed': i === 0 || selected.length < 2
                     }">
                     <i>{{ __('components.rankedchoice.UP') }}</i>
                 </button>
                 <button type="button"
                     class="btn disabled:opacity-30 hover:bg-blue-100 hover:bg-opacity-25 disabled:bg-transparent"
-                    @click="down(option, i)" :disabled="i === selected.length - 1 || selected.length < 2" :class="{
+                    @click="down(option, i)" :disabled="i === selected.length - 1 || selected.length < 2"
+                    :class="{
                         'cursor-not-allowed':
                             i === selected.length - 1 || selected.length < 2
                     }">
                     <i>{{ __('components.rankedchoice.DOWN') }}</i>
                 </button>
-                <button class="btn border-l bg-red-200 text-red-600 hover:text-white hover:bg-red-600 rounded-none" @click="remove(option, i)">
+                <button class="btn border-l bg-red-200 text-red-600 hover:text-white hover:bg-red-600 rounded-none"
+                    @click="remove(option, i)">
                     <i>X</i>
                 </button>
             </div>

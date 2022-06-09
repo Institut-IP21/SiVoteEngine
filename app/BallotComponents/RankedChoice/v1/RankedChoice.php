@@ -7,11 +7,11 @@ use App\BallotComponents\BallotComponentType;
 use App\Models\BallotComponent;
 use App\Models\Election;
 use Illuminate\Validation\Rule;
-use phpDocumentor\Reflection\Types\Null_;
 
 class RankedChoice extends BallotComponentType
 {
     public static $needsOptions = true;
+    public static $livewireForm = true;
 
     public static $optionsValidator = [
         'options' => 'bail|required|array|min:2',
@@ -54,7 +54,7 @@ class RankedChoice extends BallotComponentType
      * @param BallotComponent $component
      * @param array $rounds - The elimination rounds, each containing one fewer options than the last
      * @param array $omit - The options that have been eliminated in previous rounds
-     * @return void
+     * @return array - The list of all rounds
      */
     public static function runIteration($votes, $component, $rounds = [], $omit = [])
     {
@@ -73,6 +73,10 @@ class RankedChoice extends BallotComponentType
         $state = array_reduce($votes, function ($runningTotal, $vote) use ($component, $omit) {
             // Skip the votes that were never cast
             if (empty($vote['values'])) {
+                return $runningTotal;
+            }
+
+            if (!array_key_exists($component->id, $vote['values'])) {
                 return $runningTotal;
             }
 
@@ -141,7 +145,7 @@ class RankedChoice extends BallotComponentType
      *
      * @param array $votes
      * @param BallotComponent $component
-     * @return void
+     * @return array - The frequencies of each option being in each place in the ranking
      */
     public static function getTotals($votes, $component)
     {

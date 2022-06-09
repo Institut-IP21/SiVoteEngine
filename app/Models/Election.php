@@ -9,15 +9,14 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Dyrynda\Database\Support\CascadeSoftDeletes;
 
+/**
+ * @method static ElectionFactory factory(mixed? $parameters)
+ */
 class Election extends Model
 {
     use HasFactory;
     use SoftDeletes, CascadeSoftDeletes;
     use Uuid;
-
-    const MODE_BASIC = 'basic';
-    const MODE_SESSION = 'session';
-    const MODES = [self::MODE_BASIC, self::MODE_SESSION];
 
     protected $keyType = 'string';
     public $incrementing = false;
@@ -35,26 +34,16 @@ class Election extends Model
         'title',
         'description',
         'level',
-        'abstainable',
-        'mode'
+        'abstainable'
     ];
 
     protected $casts = [
         'abstainable' => 'boolean',
     ];
 
-    public function setModeAttribute($value)
-    {
-        if (!is_null($this->mode)) {
-            throw new \Exception('Cannot change mode of an election');
-        }
-
-        $this->mode = $value;
-    }
-
     public function ballots()
     {
-        return $this->hasMany(Ballot::class);
+        return $this->hasMany(Ballot::class)->orderBy('created_at', 'desc');
     }
 
     public function getActiveAttribute()
@@ -69,10 +58,5 @@ class Election extends Model
         return $this->ballots()->get()->contains(function (Ballot $ballot) {
             return $ballot->locked;
         });
-    }
-
-    protected static function newFactory()
-    {
-        return ElectionFactory::new();
     }
 }

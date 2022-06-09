@@ -57,7 +57,7 @@ class VoteApiController extends Controller
         if ($ballot->is_secret) {
             $codes = $voteService->generateSecretVotes($ballot, $params['quantity']);
         } else {
-            $codes = $voteService->generatePublicVotes($ballot, $params['voters']);
+            $codes = $voteService->generatePublicVotes($election, $ballot, $params['voters']);
         }
 
         return $codes;

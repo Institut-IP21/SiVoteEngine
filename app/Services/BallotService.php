@@ -8,6 +8,7 @@ use App\BallotComponents\FirstPastThePost\v1\FirstPastThePost;
 use App\BallotComponents\RankedChoice\v1\RankedChoice;
 use App\BallotComponents\YesNo\v1\YesNo;
 use App\Models\Ballot;
+use App\Models\BallotComponent;
 use App\Models\Vote;
 use League\Csv\Writer;
 
@@ -36,6 +37,7 @@ class BallotService
             foreach ($versions as $version => $class) {
                 $tree[$type][$version] = [
                     'needsOptions' => $class::$needsOptions,
+                    'livewireForm' => $class::$livewireForm,
                     'optionsValidators' => $class::$optionsValidator,
                     'strings' => $class::strings()
                 ];
@@ -59,9 +61,24 @@ class BallotService
 
     public function getSubmissionValidators(Ballot $ballot)
     {
-        return array_reduce($ballot->components, function ($acc, $component) use ($ballot) {
-            return array_merge($acc, $this->components[$component['type']][$component['version']]::getSubmissionValidator($component, $ballot->election));
+        return array_reduce($ballot->components, function ($validators, $component) use ($ballot) {
+            return array_merge($validators, $this->components[$component['type']][$component['version']]::getSubmissionValidator($component, $ballot->election));
         }, []);
+    }
+
+    public function getPartialSubmissionValidators(Ballot $ballot, $params)
+    {
+        return array_reduce($ballot->components, function ($validators, $component) use ($ballot, $params) {
+            if (!array_key_exists($component->id, $params)) {
+                return $validators;
+            }
+            return array_merge($validators, $this->components[$component['type']][$component['version']]::getSubmissionValidator($component, $ballot->election));
+        }, []);
+    }
+
+    public function getComponentValidators(BallotComponent $component)
+    {
+        return $this->components[$component->type][$component->version]::getSubmissionValidator($component, $component->ballot->election);
     }
 
     public function getBallotComponentClass($ballotType, $version)
@@ -84,13 +101,11 @@ class BallotService
         return $ballot->components()->get()->reduce(function ($acc, $component) use ($votes) {
             $componentClass = $this->getBallotComponentClassInstance($component['type'], $component['version'], $component['settings']);
             $acc[$component->id] = [
-                'results' => $componentClass::calculateResults($votes, $component)
-            ];
-            $acc[$component->id] = array_merge($acc[$component->id], [
+                'results' => $componentClass::calculateResults($votes, $component),
                 'title' => $component->title,
                 'description' => $component->description,
                 'type' => $component->type
-            ]);
+            ];
             return $acc;
         }, []);
     }

@@ -44,7 +44,7 @@ class ElectionCreate extends Command
     {
         $title = $this->option('title');
         $abstainable = strtolower($this->option('abstainable'));
-        $level = intval($this->option('level'));
+        $level = $this->option('level');
         $description = $this->option('description');
 
         if (!$title) {
@@ -59,12 +59,12 @@ class ElectionCreate extends Command
             $abstainable = $this->confirm('Can the voters abstain on questions in this election?', true);
         }
 
-        if (!in_array($level, [2, 3])) {
+        if (!in_array($level, ["2", "3"])) {
             $levels = [
-                2 => 'Level 2 - Medium level of security. Your organization only needs one voting committee to operate this election.',
-                3 => 'Level 3 - High level of security. Your organization needs one voting committee to operate this election, as well operate the Proxy on your own infrastructure.'
+                "2" => 'Level 2 - Medium level of security. Your organization only needs one voting committee to operate this election.',
+                "3" => 'Level 3 - High level of security. Your organization needs one voting committee to operate this election, as well operate the Proxy on your own infrastructure.'
             ];
-            $level = $this->choice('What level of security should this election have?', $levels, 2);
+            $level = $this->choice('What level of security should this election have?', $levels, "2");
             $level = array_search($level, $levels);
         }
 
@@ -76,5 +76,6 @@ class ElectionCreate extends Command
         ]);
 
         $this->info("Created Election '{$election->title}' with id {$election->id}");
+        return 0;
     }
 }

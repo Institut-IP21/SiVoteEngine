@@ -28,7 +28,7 @@ class ElectionApiController extends Controller
             'size' =>
             'integer',
             'sort_by' =>
-            'string|in:id,created_at,title,mode|required_with:sort_direction',
+            'string|in:id,created_at,title|required_with:sort_direction',
             'sort_direction' =>
             'in:desc,asc|required_with:sort_by',
         ];
@@ -64,8 +64,7 @@ class ElectionApiController extends Controller
             'title'         => 'required|string|min:5',
             'level'         => 'integer|required',
             'abstainable'   => 'nullable|boolean',
-            'description'   => 'nullable|string',
-            'mode'          => 'sometimes|string|in:' . implode(',', Election::MODES),
+            'description'   => 'nullable|string'
         ];
 
         if ($errors = $this->findErrors($params, $settings)) {
@@ -77,8 +76,7 @@ class ElectionApiController extends Controller
             'level' => $params['level'],
             'owner' => $this->getOwner(),
             'abstainable' => $params['abstainable'] ?? true,
-            'description' => $params['description'] ?? '',
-            'mode' => $params['mode'] ?? Election::MODE_BASIC,
+            'description' => $params['description'] ?? ''
         ];
 
         $election = Election::create($election_params);
@@ -127,8 +125,12 @@ class ElectionApiController extends Controller
             $election->description = $params['description'];
         }
 
-        // todo maybe disallow changing level after it starts, or at all.
         if (array_key_exists('level', $params)) {
+            if ($election->locked) {
+                return response()->json([
+                    'error' => 'Cannot change level of a locked election.'
+                ], 400);
+            }
             $election->level = $params['level'];
         }
 

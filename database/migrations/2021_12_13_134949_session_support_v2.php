@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class AddSessionModeToElections extends Migration
+class SessionSupportV2 extends Migration
 {
     /**
      * Run the migrations.
@@ -14,7 +14,11 @@ class AddSessionModeToElections extends Migration
     public function up()
     {
         Schema::table('elections', function (Blueprint $table) {
-            $table->string('mode')->default('basic')->after('level');
+            $table->dropColumn('mode');
+        });
+
+        Schema::table('ballots', function (Blueprint $table) {
+            $table->string('mode')->default('basic');
         });
     }
 
@@ -25,8 +29,6 @@ class AddSessionModeToElections extends Migration
      */
     public function down()
     {
-        Schema::table('elections', function (Blueprint $table) {
-            $table->dropColumn('mode');
-        });
+        //
     }
 }

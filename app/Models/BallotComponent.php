@@ -23,18 +23,22 @@ class BallotComponent extends Model
         'version',
         'options',
         'ballot_id',
+        'active',
+        'finished',
     ];
 
     protected $casts = [
         'options' => 'array',
         'order' => 'integer',
+        'active' => 'boolean',
+        'finished' => 'boolean',
     ];
 
     protected $appends = ['slug'];
 
     public function ballot()
     {
-        $this->belongsTo(Ballot::class);
+        return $this->belongsTo(Ballot::class);
     }
 
     public function getSlugAttribute()
@@ -50,6 +54,11 @@ class BallotComponent extends Model
     public function getFormTemplateAttribute()
     {
         return $this->type . '/' . $this->version . '/form';
+    }
+
+    public function getFormTemplateLivewireAttribute()
+    {
+        return $this->type . '/' . $this->version . '/form_livewire';
     }
 
     public function getResultTemplateAttribute()

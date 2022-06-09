@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Resources\Ballot as BallotResource;
 use App\Http\Resources\BallotComplete;
 use App\Models\Ballot;
+use App\Models\BallotComponent;
 use App\Models\Election;
 use App\Services\BallotService;
 use Illuminate\Http\Request;
@@ -30,45 +31,30 @@ class BallotApiController extends Controller
     {
         $params = $request->all();
         $settings = [
-            'title' => 'required|string|min:5',
-            'description' => 'nullable|string|min:5',
+            'title'          => 'required|string|min:5',
+            'description'    => 'nullable|string|min:5',
             'email_template' => 'nullable|string|min:5',
-            'email_subject' => 'nullable|string|min:5',
-            'is_secret'  => 'sometimes|boolean',
+            'email_subject'  => 'nullable|string|min:5',
+            'is_secret'      => 'sometimes|boolean',
+            'mode'           => 'sometimes|string|in:' . implode(',', Ballot::MODES),
         ];
 
         if ($errors = $this->findErrors($params, $settings)) {
             return $errors;
         }
 
-        $election = Ballot::create([
-            'election_id' => $election->id,
-            'description' => $params['description'] ?? '',
-            'email_template' => $params['email_template'] ?? '',
-            'email_subject' => $params['email_subject'] ?? '',
-            'title' => $params['title'],
-            'is_secret' => $params['is_secret'] ?? true,
-        ]);
-
-        return new BallotResource($election);
-    }
-
-    /**
-     * @Post("/create/session", as="ballot.create.session")
-     * @Middleware("can:update,election")
-     */
-    public function createForSessionElection(Election $election)
-    {
-        if ($election->mode !== Election::MODE_SESSION) {
-            return $this->basicResponse(400, ['error' => 'Can only use for elections with mode SESSION.']);
+        if (($params['mode'] ?? '') === Ballot::MODE_SESSION) {
+            $params['is_secret'] = false;
         }
 
         $election = Ballot::create([
-            'election_id' => $election->id,
-            'description' =>  '',
-            'email_template' =>  '',
-            'email_subject' => '',
-            'title' => 'SESSION BALLOT for ELECTION ' . $election->id
+            'election_id'    => $election->id,
+            'description'    => $params['description'] ?? '',
+            'email_template' => $params['email_template'] ?? '',
+            'email_subject'  => $params['email_subject'] ?? '',
+            'title'          => $params['title'],
+            'is_secret'      => $params['is_secret'] ?? true,
+            'mode'           => $params['mode'] ?? Ballot::MODE_BASIC,
         ]);
 
         return new BallotResource($election);
@@ -205,5 +191,38 @@ class BallotApiController extends Controller
         }
 
         return $ballot->delete();
+    }
+
+    /**
+     *  @Post("/{ballot}/switch-order", as="ballot.switch-order")
+     *  @Middleware("can:update,election")
+     */
+    public function switchOrder(Election $election, Ballot $ballot, Request $request)
+    {
+        if ($ballot->finished) {
+            return response('Finished ballots can not be reordered', 403);
+        }
+
+        $params = $request->all();
+        $settings = [
+            'component1' => 'required|uuid',
+            'component2' => 'required|uuid',
+        ];
+
+        if ($errors = $this->findErrors($params, $settings)) {
+            return $errors;
+        }
+
+        $component1 = BallotComponent::find($params['component1']);
+        $component2 = BallotComponent::find($params['component2']);
+
+        $temp = $component1->order;
+
+        $component1->order = $component2->order;
+        $component2->order = $temp;
+        $component1->save();
+        $component2->save();
+
+        return new BallotResource($ballot);
     }
 }

@@ -3,11 +3,12 @@
 namespace App\Services;
 
 use App\Models\Ballot;
+use App\Models\Election;
 use App\Models\Vote;
+use Illuminate\Support\Facades\URL;
 
 class VoteService
 {
-
     public function generateSecretVotes(Ballot $ballot, int $quantity): array
     {
         $codes = [];
@@ -25,7 +26,7 @@ class VoteService
         return $codes;
     }
 
-    public function generatePublicVotes(Ballot $ballot, array $voters): array
+    public function generatePublicVotes(Election $election, Ballot $ballot, array $voters): array
     {
         $codes = [];
 
@@ -39,7 +40,11 @@ class VoteService
                     'cast_by' => $voter
                 ]
             );
-            $codes[] = $vote->id;
+            $codes[] = [
+                'code' => $vote->id,
+                'voter' => $voter,
+                'access_url' => URL::temporarySignedRoute('ballot.session', now()->addMinutes(120), ['election' => $election->id, 'ballot' => $ballot->id, 'code' => $vote->id])
+            ];
         }
         return $codes;
     }

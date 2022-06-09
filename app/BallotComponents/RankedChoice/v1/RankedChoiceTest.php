@@ -43,25 +43,37 @@ class RankedChoiceTest extends TestCase
         ]);
 
         $votes = Vote::factory()
-            ->count(4)
+            ->count(8)
             ->state([
                 'ballot_id' => $ballot->id,
             ])->sequence(
-                [ 'values' => [
-                    $component->id => ['Ana', 'Betty', 'Charles', 'David', 'Ernest' ]
+                ['values' => [
+                    $component->id => ['Ana', 'Betty', 'Charles', 'David', 'Ernest']
                 ]],
-                [ 'values' => [
-                    $component->id => [ "Charles", "Betty", "Ernest", "Ana", "David" ]
+                ['values' => [
+                    $component->id => ["Charles", "Betty", "Ernest", "Ana", "David"]
                 ]],
-                [ 'values' => [
-                    $component->id => [ "Ernest", "Betty", "David", "Charles", "Ana" ]
+                ['values' => [
+                    $component->id => ["Ernest", "Betty", "David", "Charles", "Ana"]
                 ]],
-                [ 'values' => [
-                    $component->id => [ "Ana", "Charles", "David", "Ernest", "Betty" ]
+                ['values' => [
+                    $component->id => ["Ana", "Betty", "David", "Charles", "Ernest"]
+                ]],
+                ['values' => [
+                    $component->id => ["Ernest", "Betty", "David", "Charles", "Ana"]
+                ]],
+                ['values' => [
+                    $component->id => ["Charles", "Ana", "David", "Betty", "Ernest"]
+                ]],
+                ['values' => [
+                    $component->id => ["Betty", "Ana", "David", "Charles", "Ernest"]
+                ]],
+                ['values' => [
+                    $component->id => ["Ana", "Charles", "David", "Ernest", "Betty"]
                 ]]
             )->make();
 
         $results = RankedChoice::calculateResults($votes->values()->all(), $component);
-        assertEquals($results['result']['winners'], ['tie']);
+        assertEquals($results['result']['winners'], ['Ana', 'tie']);
     }
 }

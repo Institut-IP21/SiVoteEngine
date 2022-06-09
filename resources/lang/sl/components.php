@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'option' => 'Vrednost',
+    'option' => 'Izbira',
     'votes' => 'Število glasov',
     'winner' => 'Zmagovalec',
     'eliminated' => 'Eliminiran',
@@ -13,29 +13,29 @@ return [
         'abstain' => 'Vzdržan',
         'name' => 'Da/Ne vprašanje',
         'tie' => 'Izid je neodločen.',
-        'description' => 'Volivci izrazijo bodisi podporo bodisi nasprotovanje dani postavki.'
+        'description' => 'Glasovalci izbirajo med Da, Ne, in glede na nastavitve, Vzdržano.'
     ],
     'fptp' => [
-        'name' => 'First past the post / Plurality vprašanje',
+        'name' => 'Izbira ene vrednosti izmed večih',
         'abstain' => 'Vzdržan',
         'tie' => 'Izid je neodločen. Isto število glasov so prejeli: ',
-        'description' => 'Volivci izberejo natančno eno možnost iz seznama.'
+        'description' => 'Glasovalci izberejo natančno eno izmed izbir.'
     ],
     'rankedchoice' => [
-        'name' => 'Preferenčno vprašanje',
-        'description' => 'Volivci seznam možnosti uredijo po vrsti glede na preferenco.',
+        'name' => 'Razvrščanje vrednosti',
+        'description' => 'Glasovalci seznam možnosti uredijo po vrsti glede na preferenco.',
         'intro' => 'Pred vami je :options opcij. Razvrstite jih po vrsti od najboljše do najslabše. Razvrstite lahko kolikor opcij želite.',
-        'state' => 'Do sedaj ste razvrstili {{ selected.length }} opcij, lahko jih še {{ rankees.length - selected.length }}.',
+        'state' => 'Do sedaj ste razvrstili :selected opcij, lahko jih še :remaining.',
         'UP' => 'GOR',
         'DOWN' => 'DOL',
-        'round' => 'Runda',
+        'round' => 'Krog',
         'winner_is' => 'Zmagovalec je',
         'no_winner' => 'Zmagovalca ni mogoče določiti, možni zmagovalci so',
         'tie_elimination' => 'Izenačeno - eliminiran'
     ],
     'approval' => [
-        'name' => 'Approval vote',
-        'description' => 'Volivci označijo, katere izmed možnosti na seznamu podpirajo.',
+        'name' => 'Odobritveni glas',
+        'description' => 'Glasovalci označijo, katere izmed možnosti na seznamu podpirajo.',
         'oftotal' => 'Podpora (%)'
     ],
     'created' => [
