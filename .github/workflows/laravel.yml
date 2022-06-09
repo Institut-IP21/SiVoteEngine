@@ -38,4 +38,4 @@ jobs:
       run: php artisan migrate:fresh
 
     - name: Execute tests
-      run: php artisan test
+      run: php artisan test --parallel
