@@ -37,5 +37,8 @@ jobs:
     - name: Init DB
       run: php artisan migrate:fresh
 
+    - name: Init caches
+      run: php artisan evote:cache
+
     - name: Execute tests
       run: php artisan test --parallel
