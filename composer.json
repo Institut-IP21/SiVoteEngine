@@ -23,7 +23,7 @@
         "league/csv": "^9.6",
         "livewire/livewire": "^2.7",
         "predis/predis": "^1.1",
-        "vlucas/phpdotenv": "^5.3"
+        "vlucas/phpdotenv": "^5.4"
     },
     "require-dev": {
         "facade/ignition": "^2.5",

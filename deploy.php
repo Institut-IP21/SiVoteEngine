@@ -2,7 +2,11 @@
 
 namespace Deployer;
 
-$env = \Dotenv\Dotenv::createImmutable(__DIR__)->load();
+use Dotenv;
+
+require './vendor/autoload.php';
+
+Dotenv\Dotenv::createImmutable(__DIR__)->load();
 
 require 'recipe/laravel.php';
 require 'contrib/php-fpm.php';
@@ -10,7 +14,7 @@ require 'contrib/npm.php';
 
 set('application', 'SiVoteEngine');
 set('repository', 'git@github.com:Institut-IP21/SiVoteEngine');
-set('php_fpm_version', '7.4');
+set('php_fpm_version', '8.0');
 
 host('staging')
     ->set('labels', ['stage' => 'staging'])
