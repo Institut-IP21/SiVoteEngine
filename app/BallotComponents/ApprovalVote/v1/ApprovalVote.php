@@ -37,7 +37,10 @@ class ApprovalVote extends BallotComponentType
     {
         $state = collect($votes)
             ->groupBy(function ($vote) use ($component) {
-                return $vote->values[$component->id];
+                if (array_key_exists($component->id, $vote->values)) {
+                    return $vote->values[$component->id];
+                }
+                return 'abstain';
             })
             ->map(function ($votes) {
                 return $votes->count();

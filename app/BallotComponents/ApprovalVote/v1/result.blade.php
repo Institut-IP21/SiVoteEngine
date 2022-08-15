@@ -9,7 +9,7 @@ $result = $results[$component->id]['results'];
 @foreach ($result['state'] as $option => $votes)
     <div
         class="row {{ count($result['winners']) > 1 && in_array($option, $result['winners']) ? 'bg-yellow-100' : '' }}{{ in_array($option, $result['winners']) ? 'winner bg-green-200' : '' }}">
-        <div class="flex-1 border p-3">{{ $option }}</div>
+        <div class="flex-1 border p-3">{{ $option === 'abstain' ? __('components.fptp.abstain') : $option }}</div>
         <div class="flex-1 border p-3">{{ $votes }}</div>
         <div class="flex-1 border p-3">
             {{ round(($votes / $result['total_votes']) * 100, 2) }}
