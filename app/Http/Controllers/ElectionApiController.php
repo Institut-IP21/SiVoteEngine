@@ -48,7 +48,7 @@ class ElectionApiController extends Controller
 
         return ElectionResource::collection(
             $query
-                ->paginate($params['size'] ?? 5)
+                ->paginate($params['size'] ?? 10)
                 ->appends($params)
         );
     }
