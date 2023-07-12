@@ -20,24 +20,24 @@
             </div>
         @endif
         <div class="py-2"></div>
-        @if ($ballot->components)
-            <form class="max-w-screen-md mx-auto h-full flex flex-col"
-                action="/election/{{ $ballot->election->id }}/ballot/{{ $ballot->id }}" method="post">
-                @csrf
-                <div class="w-full rounded overflow-hidden shadow-md mx-auto bg-white">
-                    <div class="px-6 py-4">
-                        <div class="mb-6 font-bold text-xl flex justify-between items-baseline">
-                            <span> Glasovalna koda</span>
-                            <span class="font-light text-base text-right"></span>
-                        </div>
-                        <input name="code" readonly
-                            x-bind:type="show ? 'text' : 'password'"
-                            x-data="{ show: false }"
-                            x-on:mouseover="show = true" x-on:mouseout="show = false"
-                            class="shadow appearance-none border rounded w-full py-2 px-3 leading-tight focus:outline-none"
-                            id="code" type="password" placeholder="Kodaa" value="{{ $code }}">
+        <form class="max-w-screen-md mx-auto h-full flex flex-col"
+            action="/election/{{ $ballot->election->id }}/ballot/{{ $ballot->id }}" method="post">
+            @csrf
+            <div class="w-full rounded overflow-hidden shadow-md mx-auto bg-white">
+                <div class="px-6 py-4">
+                    <div class="mb-6 font-bold text-xl flex justify-between items-baseline">
+                        <span> Glasovalna koda</span>
+                        <span class="font-light text-base text-right"></span>
                     </div>
+                    <input name="code" readonly
+                        x-bind:type="show ? 'text' : 'password'"
+                        x-data="{ show: false }"
+                        x-on:mouseover="show = true" x-on:mouseout="show = false"
+                        class="shadow appearance-none border rounded w-full py-2 px-3 leading-tight focus:outline-none"
+                        id="code" type="password" placeholder="Kodaa" value="{{ $code }}">
                 </div>
+            </div>
+            @if ($ballot->components)
                 @foreach ($ballot->components as $component)
                     <div class="w-full rounded overflow-hidden shadow-md mx-auto bg-white">
                         <div class="py-6">
@@ -63,9 +63,9 @@
                 <div class="my-6 text-center">
                     <button type="submit" class="btn btn-blue w-full">Oddaj glas</button>
                 </div>
-            </form>
-        @else
-            <span>No components!</span>
-        @endif
+            @else
+                <span>No components!</span>
+            @endif
+        </form>
     </div>
 @endsection
