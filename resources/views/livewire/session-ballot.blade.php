@@ -28,8 +28,11 @@
                         <span class="font-light text-base text-right"></span>
                     </div>
                     <input name="code" readonly
+                        x-bind:type="show ? 'text' : 'password'"
+                        x-data="{ show: false }"
+                        x-on:mouseover="show = true" x-on:mouseout="show = false"
                         class="shadow appearance-none border rounded w-full py-2 px-3 leading-tight focus:outline-none"
-                        id="code" type="text" placeholder="Koda" value="{{ $code }}">
+                        id="code" type="password" placeholder="Koda" value="{{ $code }}">
                 </div>
             </div>
             <div class="py-2"></div>
