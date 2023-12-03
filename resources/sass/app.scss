@@ -6,35 +6,71 @@
 .btn {
     @apply font-bold py-2 px-4 rounded;
 }
+
 .btn-blue {
     @apply bg-blue-500 text-white;
 }
+
 .btn-blue:hover {
     @apply bg-blue-700;
 }
-.row,
-.d-flex {
-    display: flex;
+
+//
+// Question Labels
+//
+
+@mixin question {
+    font-size: 1.3rem;
+    color: var(--color);
+    line-height: 1;
+
+    @media (max-width: 640px) {
+        font-size: 1.2rem;
+        padding-bottom: 0.7rem;
+        line-height: 1;
+    }
 }
 
-.radio {
-    font-size: 1.5rem;
-    color: var(--color);
+.question {
+    @include question;
 }
-.radio__label {
-    line-height: 1;
-}
-.radio__input {
+
+//
+// Question Inputs
+//
+
+@mixin generic_input {
     display: flex;
+
     input {
         opacity: 0;
         width: 0;
         height: 0;
-        &:checked + .radio__control {
-            background: currentColor;
-        }
     }
 }
+
+//
+// Specifics by type
+//
+
+// --- Radio ---
+
+label.radio {
+    @include question;
+}
+
+.radio__label {
+    @include question;
+}
+
+.radio__input {
+    @include generic_input;
+
+    input:checked+.radio__control {
+        background: currentColor;
+    }
+}
+
 .radio__control {
     display: block;
     width: 1em;
@@ -43,24 +79,24 @@
     border: 0.1em solid currentColor;
 }
 
+// --- Checkbox ---
+
 .checkbox {
-    font-size: 1.5rem;
-    color: var(--color);
+    @include question;
 }
+
 .checkbox__label {
-    line-height: 1;
+    @include question;
 }
+
 .checkbox__input {
-    display: flex;
-    input {
-        opacity: 0;
-        width: 0;
-        height: 0;
-        &:checked + .checkbox__control {
-            background: currentColor;
-        }
+    @include generic_input;
+
+    input:checked+.checkbox__control {
+        background: currentColor;
     }
 }
+
 .checkbox__control {
     display: block;
     width: 1em;
@@ -68,14 +104,16 @@
     border: 0.1em solid currentColor;
 }
 
-.round_state {
-    max-width: 200px;
-    min-width: 185px;
-}
+// --- Ranked choice ---
 
 .tie-header {
     writing-mode: vertical-lr;
     transform: rotate(180deg);
+}
+
+.round_state {
+    max-width: 200px;
+    min-width: 185px;
 }
 
 @import "tailwindcss/utilities";

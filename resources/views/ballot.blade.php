@@ -3,69 +3,49 @@
 @section('title', 'Ballot')
 
 @section('body')
-    <div id="app" class="bg-gray-100 min-h-screen">
-        <div class="py-2"></div>
-        <div class="max-w-screen-md text-center mx-auto">
-            <div class="w-full py-3 rounded overflow-hidden shadow-md mx-auto bg-white">
-                <h1 class="text-2xl">Ballot {{ $ballot->title }}</h1>
-                @if ($ballot->description)
-                    <p class="mt-2 border-t pt-3">{{ $ballot->description }}</p>
-                @endif
+<x-ballot-wrapper>
+    <x-ballot-logo :pers="$pers" />
+
+    <x-ballot-title :ballot="$ballot" />
+
+    <form class="max-w-screen-md mx-auto h-full flex flex-col"
+        action="/election/{{ $ballot->election->id }}/ballot/{{ $ballot->id }}" method="post">
+        @csrf
+
+        <x-ballot-code :code="$code" />
+
+        @if ($ballot->components)
+        <div class="h-full flex flex-col mt-3 sm:mt-8">
+            @foreach ($ballot->components as $component)
+            <div class="w-full rounded overflow-hidden shadow bg-white mb-10 p-5 sm:px-8 sm:pt-7 sm:pb-8">
+                <x-ballot-component.title :component="$component" />
+
+                <x-ballot-component.desc :component="$component" />
+
+                <x-ballot-component.form :component="$component" :componentTree="$componentTree" :election="$election"
+                    :ballot="$ballot" />
             </div>
+            @endforeach
         </div>
-        <div class="py-2"></div>
-        @if ($pers && $pers->photo_url)
-            <div class="flex justify-center">
-                <img src="{{ $pers->photo_url }}" alt="">
-            </div>
+        <div class="mt-6 mb-12 w-full">
+            <button type="submit"
+                class="block w-1/2 mx-auto border border-black bg-blue-700 text-white uppercase px-6 py-4 text-xl font-bold">
+                Oddaj glas
+            </button>
+        </div>
+
+        <div class="mt-6 mb-20 text-center w-full text-sm font-thin">
+            Glasovanje se izvaja z odprtokodnim sistemom za anonimno glasovanje <a class="underline"
+                href="https://github.com/Institut-IP21">SiVote</a> in platforme <a class="underline"
+                href="https://eglasovanje.si">eGlasovanje.si</a>.
+            <br />
+            Vaš glas bo zabeležen anonimno.
+        </div>
+
+        @else
+        <span>No components!</span>
         @endif
-        <div class="py-2"></div>
-        <form class="max-w-screen-md mx-auto h-full flex flex-col"
-            action="/election/{{ $ballot->election->id }}/ballot/{{ $ballot->id }}" method="post">
-            @csrf
-            <div class="w-full rounded overflow-hidden shadow-md mx-auto bg-white">
-                <div class="px-6 py-4">
-                    <div class="mb-6 font-bold text-xl flex justify-between items-baseline">
-                        <span> Glasovalna koda</span>
-                        <span class="font-light text-base text-right"></span>
-                    </div>
-                    <input name="code" readonly
-                        x-bind:type="show ? 'text' : 'password'"
-                        x-data="{ show: false }"
-                        x-on:mouseover="show = true" x-on:mouseout="show = false"
-                        class="shadow appearance-none border rounded w-full py-2 px-3 leading-tight focus:outline-none"
-                        id="code" type="password" placeholder="Kodaa" value="{{ $code }}">
-                </div>
-            </div>
-            @if ($ballot->components)
-                @foreach ($ballot->components as $component)
-                    <div class="w-full rounded overflow-hidden shadow-md mx-auto bg-white">
-                        <div class="py-6">
-                            <div class="px-7 mb-6 pb-5 font-bold text-xl flex justify-between items-baseline border-b">
-                                <span>{{ $component->title }}</span>
-                            </div>
-                            @if ($component->description)
-                                <p class="px-7 mb-6 pb-5 border-b text-justify">{{ $component->description }}</p>
-                            @endif
-                            <div class="px-7">
-                                @if ($componentTree[$component->type][$component->version]['livewireForm'])
-                                    @livewire(Str::kebab($component->type) . '-livewire', ['ballot' => $ballot, 'component'
-                                    => $component])
-                                @else
-                                    @include($component->form_template, ['component' => $component, 'election' =>
-                                    $election])
-                                @endif
-                            </div>
-                        </div>
-                    </div>
-                    <div class="py-6"></div>
-                @endforeach
-                <div class="my-6 text-center">
-                    <button type="submit" class="btn btn-blue w-full">Oddaj glas</button>
-                </div>
-            @else
-                <span>No components!</span>
-            @endif
-        </form>
-    </div>
+
+    </form>
+</x-ballot-wrapper>
 @endsection
