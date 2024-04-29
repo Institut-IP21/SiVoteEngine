@@ -7,15 +7,8 @@ use App\Models\Personalization;
 
 use Illuminate\Http\Request;
 
-/**
- * @Controller(prefix="api/owner")
- * @Middleware("api")
- */
 class OwnerController extends Controller
 {
-    /**
-     * @Post("/personalization", as="owner.personalization")
-     */
     public function updatePersonalization(Request $request)
     {
         $params = $request->all();

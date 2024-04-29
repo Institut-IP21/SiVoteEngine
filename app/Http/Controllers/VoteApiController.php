@@ -9,10 +9,6 @@ use App\Services\BallotService;
 use App\Services\VoteService;
 use Illuminate\Http\Request;
 
-/**
- * @Controller(prefix="api/election/{election}/ballot/{ballot}/vote")
- * @Middleware("api")
- */
 class VoteApiController extends Controller
 {
     protected BallotService $ballotService;
@@ -22,20 +18,13 @@ class VoteApiController extends Controller
         $this->ballotService = $ballotService;
     }
 
-    /**
-     * @Get("/", as="vote.show")
-     * @Middleware("can:view,election")
-     */
     public function show(Election $election, Ballot $ballot, Request $request)
     {
         return array_map(function ($vote) {
             return $vote['id'];
         }, $ballot->votes()->get()->toArray());
     }
-    /**
-     * @Post("/generate", as="vote.generate")
-     * @Middleware("can:update,election")
-     */
+
     public function generate(Election $election, Ballot $ballot, Request $request, VoteService $voteService)
     {
         $params = $request->all();

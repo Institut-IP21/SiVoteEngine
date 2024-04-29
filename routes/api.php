@@ -3,6 +3,8 @@
 use App\Http\Controllers\BallotApiController;
 use App\Http\Controllers\BallotComponentApiController;
 use App\Http\Controllers\ElectionApiController;
+use App\Http\Controllers\OwnerController;
+use App\Http\Controllers\VoteApiController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -50,6 +52,15 @@ Route::middleware('api')->prefix('election/{election}/ballot/{ballot}/component'
     Route::delete('/{component}', [BallotComponentApiController::class, 'delete'])->name('component.api.delete')->middleware('can:update,election');
     Route::post('/{component}/activate', [BallotComponentApiController::class, 'activate'])->name('component.api.activate')->middleware('can:update,election');
     Route::post('/{component}/deactivate', [BallotComponentApiController::class, 'deactivate'])->name('component.api.deactivate')->middleware('can:update,election');
+});
+
+Route::middleware('api')->prefix('election/{election}/ballot/{ballot}/vote')->group(function () {
+    Route::get('/', [VoteApiController::class, 'show'])->name('vote.show')->middleware('can:view,election');
+    Route::post('/generate', [VoteApiController::class, 'generate'])->name('vote.generate')->middleware('can:update,election');
+});
+
+Route::middleware('api')->prefix('owner')->group(function () {
+    Route::post('/personalization', [OwnerController::class, 'updatePersonalization'])->name('owner.personalization');
 });
 
 Route::fallback(function () {
