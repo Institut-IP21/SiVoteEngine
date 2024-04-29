@@ -12,7 +12,6 @@
         "deployer/deployer": "^7.0",
         "doctrine/dbal": "2.*",
         "dyrynda/laravel-cascade-soft-deletes": "^4.1",
-        "fideloper/proxy": "^4.4",
         "fruitcake/laravel-cors": "^2.0",
         "goldspecdigital/laravel-eloquent-uuid": "^9.0",
         "guzzlehttp/guzzle": "^7.0.1",
