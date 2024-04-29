@@ -8,17 +8,9 @@ use App\Services\BallotService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
-/**
- * @Controller(prefix="api/election")
- * @Middleware("api")
- */
 class ElectionApiController extends Controller
 {
 
-    /**
-     * @Get("/", as="election.list")
-     * @Middleware("can:viewAny,App\Models\Election")
-     */
     public function list(Request $request)
     {
         $params = $request->all();
@@ -53,10 +45,6 @@ class ElectionApiController extends Controller
         );
     }
 
-    /**
-     * @Post("/create", as="election.create")
-     * @Middleware("can:create,App\Models\Election")
-     */
     public function create(Request $request)
     {
         $params = $request->all();
@@ -86,19 +74,11 @@ class ElectionApiController extends Controller
             ->setStatusCode(201);
     }
 
-    /**
-     * @Get("/{election}", as="election.read")
-     * @Middleware("can:view,election")
-     */
     public function read(Election $election, Request $request)
     {
         return new ElectionResource($election);
     }
 
-    /**
-     * @Post("/{election}", as="election.update")
-     * @Middleware("can:update,election")
-     */
     public function update(Election $election, Request $request)
     {
         $params = $request->all();
@@ -139,10 +119,6 @@ class ElectionApiController extends Controller
         return new ElectionResource($election);
     }
 
-    /**
-     * @Delete("/{election}", as="election.delete")
-     * @Middleware("can:delete,election")
-     */
     public function delete(Election $election, Request $request)
     {
         return $election->delete();

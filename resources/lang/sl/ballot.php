@@ -12,4 +12,5 @@ return [
         'registered' => 'Vaš glas je bil zabeležen.'
     ],
     'expired' => 'Glasovanje za to glasovnico je že zaključeno.',
+    'voteId' => 'Glasovalna koda',
 ];

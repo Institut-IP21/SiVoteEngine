@@ -10,10 +10,6 @@ use App\Models\Election;
 use App\Services\BallotService;
 use Illuminate\Http\Request;
 
-/**
- * @Controller(prefix="api/election/{election}/ballot")
- * @Middleware("api")
- */
 class BallotApiController extends Controller
 {
     private BallotService $ballotService;
@@ -23,10 +19,6 @@ class BallotApiController extends Controller
         $this->ballotService = $ballotService;
     }
 
-    /**
-     * @Post("/create", as="ballot.create")
-     * @Middleware("can:update,election")
-     */
     public function create(Election $election, Request $request)
     {
         $params = $request->all();
@@ -60,19 +52,11 @@ class BallotApiController extends Controller
         return new BallotResource($election);
     }
 
-    /**
-     *  @Get("/{ballot}", as="ballot.read")
-     *  @Middleware("can:view,election")
-     */
     public function read(Election $election, Ballot $ballot, Request $request)
     {
         return new BallotResource($ballot);
     }
 
-    /**
-     *  @Get("/{ballot}/result", as="ballot.results")
-     *  @Middleware("can:view,election")
-     */
     public function result(Election $election, Ballot $ballot, Request $request)
     {
         if (!$ballot->finished) {
@@ -82,10 +66,6 @@ class BallotApiController extends Controller
         return $results;
     }
 
-    /**
-     *  @Get("/{ballot}/votes", as="ballot.votes")
-     *  @Middleware("can:view,election")
-     */
     public function votes(Election $election, Ballot $ballot, Request $request)
     {
         if (!$ballot->finished) {
@@ -94,10 +74,6 @@ class BallotApiController extends Controller
         return new BallotComplete($ballot);
     }
 
-    /**
-     *  @Get("/{ballot}/votes.csv", as="ballot.votes.csv")
-     *  @Middleware("can:view,election")
-     */
     public function votesCsv(Election $election, Ballot $ballot, Request $request)
     {
         if (!$ballot->finished) {
@@ -107,10 +83,6 @@ class BallotApiController extends Controller
         return response(['data' => $csv], 200);
     }
 
-    /**
-     *  @Post("/{ballot}", as="ballot.update")
-     *  @Middleware("can:update,election")
-     */
     public function update(Election $election, Ballot $ballot, Request $request)
     {
         if ($ballot->locked) {
@@ -150,10 +122,7 @@ class BallotApiController extends Controller
         return new BallotResource($ballot);
     }
 
-    /**
-     *  @Post("/{ballot}/activate", as="ballot.activate")
-     *  @Middleware("can:update,election")
-     */
+
     public function activate(Election $election, Ballot $ballot, Request $request)
     {
         if ($ballot->finished) {
@@ -167,10 +136,6 @@ class BallotApiController extends Controller
         return new BallotResource($ballot);
     }
 
-    /**
-     *  @Post("/{ballot}/deactivate", as="ballot.deactivate")
-     *  @Middleware("can:update,election")
-     */
     public function deactivate(Election $election, Ballot $ballot, Request $request)
     {
         if ($ballot->active) {
@@ -180,10 +145,6 @@ class BallotApiController extends Controller
         return new BallotResource($ballot);
     }
 
-    /**
-     *  @Delete("/{ballot}", as="ballot.delete")
-     *  @Middleware("can:update,election")
-     */
     public function delete(Election $election, Ballot $ballot, Request $request)
     {
         if ($ballot->active) {
@@ -193,10 +154,6 @@ class BallotApiController extends Controller
         return $ballot->delete();
     }
 
-    /**
-     *  @Post("/{ballot}/switch-order", as="ballot.switch-order")
-     *  @Middleware("can:update,election")
-     */
     public function switchOrder(Election $election, Ballot $ballot, Request $request)
     {
         if ($ballot->finished) {

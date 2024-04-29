@@ -11,10 +11,6 @@ use App\Services\BallotService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
-/**
- * @Controller(prefix="election")
- * @Middleware("web")
- */
 class BallotController extends Controller
 {
     private BallotService $ballotService;
@@ -24,9 +20,6 @@ class BallotController extends Controller
         $this->ballotService = $ballotService;
     }
 
-    /**
-     *  @Get("/{election}/ballot/{ballot}", as="ballot.show")
-     */
     public function view(Election $election, Ballot $ballot, Request $request, BallotService $service)
     {
         $code = $request->query('code');
@@ -47,10 +40,6 @@ class BallotController extends Controller
         return view('ballot', ['election' => $election, 'ballot' => $ballot, 'code' => $code, 'pers' => $pers, 'componentTree' => $componentTree]);
     }
 
-    /**
-     *  @Get("/{election}/ballot/{ballot}/preview", as="ballot.preview")
-     *  @Middleware("signed")
-     */
     public function preview(Election $election, Ballot $ballot, Request $request, BallotService $service)
     {
         $pers = Personalization::where('owner', $election->owner)->first();
@@ -59,9 +48,6 @@ class BallotController extends Controller
         return view('ballot-preview', ['election' => $election, 'ballot' => $ballot, 'pers' => $pers, 'componentTree' => $componentTree]);
     }
 
-    /**
-     *  @Post("/{election}/ballot/{ballot}", as="ballot.vote")
-     */
     public function vote(Election $election, Ballot $ballot, Request $request)
     {
         if ($ballot->mode === Ballot::MODE_SESSION) {
@@ -100,9 +86,6 @@ class BallotController extends Controller
         return view('voted', ['election' => $election, 'ballot' => $ballot, 'vote' => $vote, 'pers' => $pers]);
     }
 
-    /**
-     *  @Post("/{election}/ballot/{ballot}/component", as="ballot.vote.component")
-     */
     public function voteComponent(Election $election, Ballot $ballot, BallotComponent $component, Request $request)
     {
         if ($ballot->mode !== Ballot::MODE_SESSION) {
@@ -147,9 +130,6 @@ class BallotController extends Controller
         return redirect()->back()->with('success', __('ballot.vote.registered'));
     }
 
-    /**
-     *  @Get("/{election}/ballot/{ballot}/result", as="ballot.result")
-     */
     public function result(Election $election, Ballot $ballot, Request $request)
     {
         if (!$ballot->finished) {

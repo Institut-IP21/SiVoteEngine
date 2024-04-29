@@ -39,9 +39,6 @@ class EvoteCache extends Command
     {
         $this->call('optimize:clear');
 
-        $this->call('route:scan');
-        $this->call('model:scan');
-
         $this->call('config:cache');
         $this->call('route:cache');
         $this->call('view:cache');

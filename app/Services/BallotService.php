@@ -115,7 +115,7 @@ class BallotService
         $votes = $ballot->castVotes();
         $components = $ballot->components()->get();
 
-        $header = $components->pluck('title')->prepend(__('VOTE ID'))->toArray();
+        $header = $components->pluck('title')->prepend(__('ballot.voteId'))->toArray();
 
         $results_per_component = $components->map(function ($component) use ($votes) {
             $componentClass = $this->getBallotComponentClassInstance($component['type'], $component['version'], $component['settings']);

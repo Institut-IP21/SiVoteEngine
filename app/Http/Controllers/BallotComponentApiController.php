@@ -9,10 +9,6 @@ use App\Models\Election;
 use App\Services\BallotService;
 use Illuminate\Http\Request;
 
-/**
- * @Controller(prefix="api/election/{election}/ballot/{ballot}/component")
- * @Middleware("api")
- */
 class BallotComponentApiController extends Controller
 {
     protected BallotService $ballotService;
@@ -22,20 +18,12 @@ class BallotComponentApiController extends Controller
         $this->ballotService = $ballotService;
     }
 
-    /**
-     * @Get("/", as="component.list")
-     * @Middleware("can:view,election")
-     */
     public function list(Election $election)
     {
         return [
             'data' => $this->ballotService->getComponentTree()
         ];
     }
-    /**
-     * @Post("/create", as="component.create")
-     * @Middleware("can:update,election")
-     */
     public function create(Election $election, Ballot $ballot, Request $request)
     {
         $params = $request->all();
@@ -95,19 +83,11 @@ class BallotComponentApiController extends Controller
         return new ComponentResource($component);
     }
 
-    /**
-     * @Get("/{component}", as="component.read")
-     * @Middleware("can:view,election")
-     */
     public function read(Election $election, Ballot $ballot, BallotComponent $component, Request $request)
     {
         return new ComponentResource($component);
     }
 
-    /**
-     * @Post("/{component}", as="component.update")
-     * @Middleware("can:update,election")
-     */
     public function update(Election $election, Ballot $ballot, BallotComponent $component, Request $request)
     {
         $params = $request->all();
@@ -181,28 +161,16 @@ class BallotComponentApiController extends Controller
         return new ComponentResource($component);
     }
 
-    /**
-     * @Delete("/{component}", as="component.delete")
-     * @Middleware("can:update,election")
-     */
     public function delete(Election $election, Ballot $ballot, BallotComponent $component)
     {
         return $component->delete();
     }
 
-    /**
-     * @Post("/{component}/activate", as="component.activate")
-     * @Middleware("can:update,election")
-     */
     public function activate(Election $election, Ballot $ballot, BallotComponent $component)
     {
         $component->active = true;
         return $component->save();
     }
-    /**
-     * @Post("/{component}/deactivate", as="component.deactivate")
-     * @Middleware("can:update,election")
-     */
     public function deactivate(Election $election, Ballot $ballot, BallotComponent $component)
     {
         $component->active = false;
