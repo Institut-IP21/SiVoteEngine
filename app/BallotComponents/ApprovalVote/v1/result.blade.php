@@ -6,7 +6,7 @@ $result = $results[$component->id]['results'];
 
     @foreach ($result['state'] as $option => $votes)
     <div
-        class="flex flex-row {{ count($result['winners']) > 1 && in_array($option, $result['winners']) ? 'bg-yellow-100' : '' }}{{ in_array($option, $result['winners']) ? 'winner bg-green-200' : '' }}">
+        class="flex flex-row {{ count($result['winners']) > 1 && in_array($option, $result['winners']) ? 'bg-yellow-100' : '' }}{{ in_array($option, $result['winners']) ? ' winner bg-green-200' : '' }}">
         <x-ballot-results-table-row>
             {{ $option === 'abstain' ? __('components.fptp.abstain') : $option }}
         </x-ballot-results-table-row>

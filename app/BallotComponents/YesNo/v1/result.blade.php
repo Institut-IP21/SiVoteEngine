@@ -16,7 +16,6 @@ $result = $results[$component->id]['results'];
             {{ round(($votes / $result['total_votes']) * 100, 2) }}
         </x-ballot-results-table-row>
     </div>
-    </div>
     @endforeach
 </x-ballot-results-table>
 
