@@ -10,5 +10,7 @@ return [
     ],
     'vote' => [
         'registered' => 'Your vote has been registered'
-    ]
+    ],
+    'expired' => 'This ballot has already expired.',
+    'voteId' => 'Vote ID',
 ];

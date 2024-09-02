@@ -12,10 +12,13 @@ return [
         'no' => 'No',
         'abstain' => 'Abstain',
         'name' => 'Yes/No question',
+        'tie' => 'The outcome is a tie.',
         'description' => 'Voters choose whether they support or oppose a single item.'
     ],
     'fptp' => [
         'name' => 'First past the post / Plurality question',
+        'abstain' => 'Abstain',
+        'tie' => 'The outcome is a tie. The following options received the same number of votes: ',
         'description' => 'Voters choose one item from a list of options.'
     ],
     'rankedchoice' => [
@@ -34,5 +37,8 @@ return [
         'name' => 'Approval vote question',
         'description' => 'Voters approve of any number of options from a list.',
         'oftotal' => 'Approval (%)'
+    ],
+    'created' => [
+        'success' => 'Component created.'
     ]
 ];

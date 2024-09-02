@@ -39,6 +39,6 @@ return [
         'oftotal' => 'Podpora (%)'
     ],
     'created' => [
-        'success' => 'Component created.'
+        'success' => 'Komponenta ustvarjena.'
     ]
 ];
