@@ -4,9 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\Election as ElectionResource;
 use App\Models\Election;
-use App\Services\BallotService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class ElectionApiController extends Controller
 {
@@ -74,7 +72,7 @@ class ElectionApiController extends Controller
             ->setStatusCode(201);
     }
 
-    public function read(Election $election, Request $request)
+    public function read(Election $election)
     {
         return new ElectionResource($election);
     }
