@@ -40,8 +40,9 @@
     @section('body')
     @show
     @yield('content')
-    <script src="{{ asset('/js/app.js') }}" type=""></script>
     @livewireScripts
+
+    <script src="{{ asset('/js/app.js') }}" type=""></script>
 </body>
 
 </html>

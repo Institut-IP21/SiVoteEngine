@@ -35,7 +35,7 @@ Route::middleware('api')->prefix('election/{election}/ballot')->group(function (
     Route::post('/create', [BallotApiController::class, 'create'])->name('ballot.api.create')->middleware('can:update,election');
     Route::get('/{ballot}', [BallotApiController::class, 'read'])->name('ballot.api.read')->middleware('can:view,election');
     Route::post('/{ballot}/update', [BallotApiController::class, 'update'])->name('ballot.api.update')->middleware('can:update,election');
-    Route::post('/{ballot}/delete', [BallotApiController::class, 'delete'])->name('ballot.api.delete')->middleware('can:delete,election');
+    Route::delete('/{ballot}', [BallotApiController::class, 'delete'])->name('ballot.api.delete')->middleware('can:delete,election');
     Route::get('/{ballot}/result', [BallotApiController::class, 'result'])->name('ballot.api.result')->middleware('can:view,election');
     Route::get('/{ballot}/vote', [BallotApiController::class, 'votes'])->name('ballot.api.votes')->middleware('can:view,election');
     Route::get('/{ballot}/votes.csv', [BallotApiController::class, 'votesCsv'])->name('ballot.api.votes.csv')->middleware('can:view,election');
