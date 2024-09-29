@@ -33,6 +33,7 @@ class Ballot extends Model
         'email_template' => '',
         'is_secret' => true,
         'mode' => self::MODE_BASIC,
+        'quorum' => null,
     ];
 
     public $fillable = [
@@ -43,12 +44,14 @@ class Ballot extends Model
         'email_subject',
         'email_template',
         'is_secret',
-        'mode'
+        'mode',
+        'quorum',
     ];
 
     protected $casts = [
         'active' => 'boolean',
-        'is_secret' => 'boolean'
+        'is_secret' => 'boolean',
+        'quorum' => 'integer',
     ];
 
     public function components()
