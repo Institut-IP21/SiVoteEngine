@@ -25,6 +25,7 @@ class BallotSimple extends JsonResource
             'description' => $this->description,
             'email_subject' => $this->email_subject,
             'email_template' => $this->email_template,
+            'quorum' => $this->quorum,
             'components' => BallotComponent::collection($this->components)
         ];
     }

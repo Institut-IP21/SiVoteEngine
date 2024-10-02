@@ -28,6 +28,7 @@ class BallotApiController extends Controller
             'email_template' => 'nullable|string|min:5',
             'email_subject'  => 'nullable|string|min:5',
             'is_secret'      => 'sometimes|boolean',
+            'quorum'         => 'sometimes|integer',
             'mode'           => 'sometimes|string|in:' . implode(',', Ballot::MODES),
         ];
 
@@ -46,6 +47,7 @@ class BallotApiController extends Controller
             'email_subject'  => $params['email_subject'] ?? '',
             'title'          => $params['title'],
             'is_secret'      => $params['is_secret'] ?? true,
+            'quorum'         => $params['quorum'] ?? null,
             'mode'           => $params['mode'] ?? Ballot::MODE_BASIC,
         ]);
 
