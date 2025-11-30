@@ -25,7 +25,7 @@ class BallotController extends Controller
         $code = $request->query('code');
         $vote = Vote::find($code);
 
-        if (!$vote || !$vote->ballot->id == $ballot->id) {
+        if (!$vote || $vote->ballot_id !== $ballot->id) {
             return view('404', ['code' => 404]);
         }
 
@@ -57,7 +57,7 @@ class BallotController extends Controller
         $code = $request->input('code');
         $vote = Vote::find($code);
 
-        if (!$vote || !$vote->ballot->id == $ballot->id) {
+        if (!$vote || $vote->ballot_id !== $ballot->id) {
             return view('404', ['code' => 404]);
         }
 
@@ -95,7 +95,7 @@ class BallotController extends Controller
         $code = $request->input('code');
         $vote = Vote::find($code);
 
-        if (!$vote || !$vote->ballot->id == $ballot->id) {
+        if (!$vote || $vote->ballot_id !== $ballot->id) {
             return view('404', ['code' => 404]);
         }
 
