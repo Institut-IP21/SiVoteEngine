@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Livewire;
+namespace App\Livewire;
 
 use App\Models\Ballot;
 use App\Models\Election;
@@ -40,7 +40,7 @@ class Session extends Component
         });
 
         if ($this->code !== 'preview-mode') {
-            Redis::set("session:active-voters:{$this->ballot->id}:{$this->code}", 1, 'ex', 60);
+            Redis::set("session:active-voters:{$this->ballot->id}:{$this->code}", 1, 'EX', 60);
         }
 
         return view('livewire.session-ballot', ['ballot' => $this->ballot])->extends('layouts.main')->slot('content');

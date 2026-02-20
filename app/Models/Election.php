@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use Database\Factories\ElectionFactory;
-use GoldSpecDigital\LaravelEloquentUUID\Database\Eloquent\Uuid;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -16,10 +16,7 @@ class Election extends Model
 {
     use HasFactory;
     use SoftDeletes, CascadeSoftDeletes;
-    use Uuid;
-
-    protected $keyType = 'string';
-    public $incrementing = false;
+    use HasUuids;
 
     protected $cascadeDeletes = ['ballots'];
 
