@@ -47,22 +47,22 @@ host('production')
 task('deploy', [
     'deploy:prepare',
     'deploy:vendors',
-    'yarn',
-    'yarn:production',
+    'bun:install',
+    'bun:production',
     'artisan:storage:link',
     'artisan:migrate',
     'artisan:evote:cache',
     'deploy:publish',
 ]);
 
-task('yarn', function () {
+task('bun:install', function () {
     cd('{{release_or_current_path}}');
-    run('yarn');
+    run('bun install');
 });
 
-task('yarn:production', function () {
+task('bun:production', function () {
     cd('{{release_or_current_path}}');
-    run('yarn production');
+    run('bun run production');
 });
 
 task('artisan:evote:cache', function () {

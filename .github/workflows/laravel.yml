@@ -32,8 +32,8 @@ jobs:
         touch database/database.sqlite
     # - name: Compile assets
     #   run: |
-    #     yarn
-    #     yarn production
+    #     bun install
+    #     bun run production
     - name: Init DB
       run: php artisan migrate:fresh
 

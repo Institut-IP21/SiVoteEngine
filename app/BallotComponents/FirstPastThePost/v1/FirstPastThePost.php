@@ -1,23 +1,35 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\BallotComponents\FirstPastThePost\v1;
 
-use Illuminate\Support\Facades\Validator;
-use App\BallotComponents\BallotComponentType;
+use App\BallotComponents\DTOs\ComponentResult;
+use App\BallotComponents\DTOs\ValidationRules;
+use App\BallotComponents\Support\AbstractBallotComponent;
+use App\BallotComponents\Traits\CalculatesSimpleVictory;
 use App\Models\BallotComponent;
 use App\Models\Election;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 
-class FirstPastThePost extends BallotComponentType
+/**
+ * First Past The Post ballot component.
+ *
+ * Single selection voting where the option with the most votes wins.
+ */
+final class FirstPastThePost extends AbstractBallotComponent
 {
-    public static $needsOptions = true;
+    use CalculatesSimpleVictory;
 
-    public static $optionsValidator = [
-        'options' => 'bail|required|array|min:2',
-        'options.*' => 'bail|required|string|distinct|min:1'
-    ];
+    #[\Override]
+    protected function needsOptions(): bool
+    {
+        return true;
+    }
 
-    public static function strings()
+    #[\Override]
+    protected function getStrings(): array
     {
         return [
             'name' => __('components.fptp.name'),
@@ -25,65 +37,37 @@ class FirstPastThePost extends BallotComponentType
         ];
     }
 
-    public static function calculateResults(array $votes, BallotComponent $component)
+    #[\Override]
+    protected function getOptionsValidatorRules(): array
     {
-        $state = collect($votes)
-            ->groupBy(function ($vote) use ($component) {
-                return $vote->values[$component->id];
-            })
-            ->map(function ($votes) {
-                return $votes->count();
-            })
-            ->toArray();
-
-        return self::annotateStateForVictory($state);
-    }
-
-    public static function annotateStateForVictory($state)
-    {
-        if (count($state) === 0) {
-            return [
-                'state' => $state,
-                'total_votes' => 0,
-                'winner' => null,
-                'winners' => null
-            ];
-        }
-        $winners = array_keys($state, max($state));
-        if (count($winners) > 1) {
-            $winner = 'tie';
-        } else {
-            $winner = $winners[0];
-        }
         return [
-            'state' => $state,
-            'total_votes' => array_sum($state),
-            'winner' => $winner,
-            'winners' => $winners
+            'options' => 'bail|required|array|min:2',
+            'options.*' => 'bail|required|string|distinct|min:1',
         ];
     }
 
-    public static function getSubmissionValidator(BallotComponent $component, Election $election)
+    #[\Override]
+    public function calculateResults(Collection $votes, BallotComponent $component): ComponentResult
     {
-        $id = $component->id;
+        $tallies = $votes
+            ->filter(fn ($vote): bool => !empty($vote->values) && isset($vote->values[$component->id]))
+            ->groupBy(fn ($vote): string => $vote->values[$component->id])
+            ->map(fn (Collection $group): int => $group->count())
+            ->toArray();
+
+        return $this->calculateVictory($tallies);
+    }
+
+    #[\Override]
+    public function getSubmissionValidator(BallotComponent $component, Election $election): ValidationRules
+    {
         $options = $component->options;
         if ($election->abstainable) {
             $options[] = 'abstain';
         }
-        return [
-            $id => [
-                'required',
-                Rule::in($options)
-            ]
-        ];
-    }
 
-    public static function validateOptions($options)
-    {
-        //TODO since this is just for CLI, it could be removed and implemented there I think...
-        $validator = Validator::make(['options' => $options], static::$optionsValidator);
-        $messages = $validator->errors();
-
-        return $messages->isEmpty();
+        return new ValidationRules([
+            $component->id => ['required', Rule::in($options)],
+        ]);
     }
 }

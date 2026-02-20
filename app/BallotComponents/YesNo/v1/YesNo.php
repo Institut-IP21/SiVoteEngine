@@ -1,23 +1,44 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\BallotComponents\YesNo\v1;
 
-use Illuminate\Support\Facades\Validator;
-use App\BallotComponents\BallotComponentType;
+use App\BallotComponents\DTOs\ComponentResult;
+use App\BallotComponents\DTOs\ValidationRules;
+use App\BallotComponents\Support\AbstractBallotComponent;
+use App\BallotComponents\Traits\CalculatesSimpleVictory;
 use App\Models\BallotComponent;
 use App\Models\Election;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 
-class YesNo extends BallotComponentType
+/**
+ * Yes/No ballot component.
+ *
+ * A simple binary choice component with preset options.
+ */
+final class YesNo extends AbstractBallotComponent
 {
-    public static $needsOptions = false;
-    public static $presetOptions = ['yes', 'no'];
+    use CalculatesSimpleVictory;
 
-    public static $optionsValidator = [
-        'options' => 'in:yes,no'
-    ];
+    /** @var array<string> */
+    private const PRESET_OPTIONS = ['yes', 'no'];
 
-    public static function strings()
+    #[\Override]
+    protected function needsOptions(): bool
+    {
+        return false;
+    }
+
+    #[\Override]
+    protected function getPresetOptions(): array
+    {
+        return self::PRESET_OPTIONS;
+    }
+
+    #[\Override]
+    protected function getStrings(): array
     {
         return [
             'name' => __('components.yesno.name'),
@@ -25,64 +46,43 @@ class YesNo extends BallotComponentType
         ];
     }
 
-    public static function calculateResults(array $votes, BallotComponent $component)
+    #[\Override]
+    protected function getOptionsValidatorRules(): array
     {
-        $result = array_reduce($votes, function ($runningTotal, $vote) use ($component) {
-            if (empty($vote['values'])) {
-                return $runningTotal;
+        return ['options' => 'in:yes,no'];
+    }
+
+    #[\Override]
+    public function calculateResults(Collection $votes, BallotComponent $component): ComponentResult
+    {
+        $tallies = [];
+
+        foreach ($votes as $vote) {
+            if (empty($vote->values)) {
+                continue;
             }
-            $value = $vote['values'][$component->id];
-            $runningTotal[$value] = array_key_exists($value, $runningTotal) ? $runningTotal[$value] + 1 : 1;
-            return $runningTotal;
-        }, []);
 
-        return self::annotateStateForVictory($result);
+            $value = $vote->values[$component->id] ?? null;
+            if ($value === null) {
+                continue;
+            }
+
+            $tallies[$value] = ($tallies[$value] ?? 0) + 1;
+        }
+
+        return $this->calculateVictory($tallies);
     }
 
-    public static function annotateStateForVictory($state)
+    #[\Override]
+    public function getSubmissionValidator(BallotComponent $component, Election $election): ValidationRules
     {
-        if (count($state) === 0) {
-            return [
-                'state' => $state,
-                'total_votes' => 0,
-                'winner' => null,
-                'winners' => null
-            ];
-        }
-        $winners = array_keys($state, max($state));
-        if (count($winners) > 1) {
-            $winner = 'tie';
-        } else {
-            $winner = $winners[0];
-        }
-        return [
-            'state' => $state,
-            'total_votes' => array_sum($state),
-            'winner' => $winner,
-            'winners' => $winners
-        ];
-    }
-
-    public static function getSubmissionValidator(BallotComponent $component, Election $election)
-    {
-        $id = $component->id;
-        $options = static::$presetOptions;
+        $options = self::PRESET_OPTIONS;
         if ($election->abstainable) {
             $options[] = 'abstain';
         }
-        return [
-            $id => [
-                'required',
-                Rule::in($options)
-            ]
-        ];
-    }
 
-    public static function validateOptions($options)
-    {
-        $validator = Validator::make(['options' => $options], static::$optionsValidator);
-        $messages = $validator->errors();
-
-        return $messages->isEmpty();
+        return new ValidationRules([
+            $component->id => ['required', Rule::in($options)],
+        ]);
     }
 }

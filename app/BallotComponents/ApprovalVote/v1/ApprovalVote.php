@@ -1,23 +1,35 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\BallotComponents\ApprovalVote\v1;
 
-use Illuminate\Support\Facades\Validator;
-use App\BallotComponents\BallotComponentType;
+use App\BallotComponents\DTOs\ComponentResult;
+use App\BallotComponents\DTOs\ValidationRules;
+use App\BallotComponents\Support\AbstractBallotComponent;
+use App\BallotComponents\Traits\CalculatesSimpleVictory;
 use App\Models\BallotComponent;
 use App\Models\Election;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 
-class ApprovalVote extends BallotComponentType
+/**
+ * Approval Vote ballot component.
+ *
+ * Multiple selection voting where voters can approve multiple options.
+ */
+final class ApprovalVote extends AbstractBallotComponent
 {
-    public static $needsOptions = true;
+    use CalculatesSimpleVictory;
 
-    public static $optionsValidator = [
-        'options' => 'bail|required|array|min:2',
-        'options.*' => 'bail|required|string|distinct|min:1'
-    ];
+    #[\Override]
+    protected function needsOptions(): bool
+    {
+        return true;
+    }
 
-    public static function strings()
+    #[\Override]
+    protected function getStrings(): array
     {
         return [
             'name' => __('components.approval.name'),
@@ -25,75 +37,46 @@ class ApprovalVote extends BallotComponentType
         ];
     }
 
-    public static function valuesToCsv($values, $component_id)
+    #[\Override]
+    protected function getOptionsValidatorRules(): array
     {
-        if (array_key_exists($component_id, $values)) {
-            return implode(', ', $values[$component_id]);
-        }
-        return '';
+        return [
+            'options' => 'bail|required|array|min:2',
+            'options.*' => 'bail|required|string|distinct|min:1',
+        ];
     }
 
-    public static function calculateResults(array $votes, BallotComponent $component)
+    #[\Override]
+    public function calculateResults(Collection $votes, BallotComponent $component): ComponentResult
     {
-        $state = collect($votes)
-            ->groupBy(function ($vote) use ($component) {
-                if (array_key_exists($component->id, $vote->values)) {
-                    return $vote->values[$component->id];
-                }
-                return 'abstain';
+        $tallies = $votes
+            ->filter(fn ($vote): bool => !empty($vote->values))
+            ->groupBy(function ($vote) use ($component): string {
+                return $vote->values[$component->id] ?? 'abstain';
             })
-            ->map(function ($votes) {
-                return $votes->count();
-            })
+            ->map(fn (Collection $group): int => $group->count())
             ->toArray();
 
-        return self::annotateStateForVictory($state);
+        return $this->calculateVictory($tallies);
     }
 
-    public static function annotateStateForVictory($state)
+    #[\Override]
+    public function getSubmissionValidator(BallotComponent $component, Election $election): ValidationRules
     {
-        if (count($state) === 0) {
-            return [
-                'state' => $state,
-                'total_votes' => 0,
-                'winner' => null,
-                'winners' => null
-            ];
+        return new ValidationRules([
+            $component->id => [$election->abstainable ? 'nullable' : 'required'],
+            "{$component->id}.*" => [Rule::in($component->options)],
+        ]);
+    }
+
+    #[\Override]
+    public function valuesToCsv(array $values, string $componentId): string
+    {
+        if (!array_key_exists($componentId, $values)) {
+            return '';
         }
-        $winners = array_keys($state, max($state));
-        if (count($winners) > 1) {
-            $winner = 'tie';
-        } else {
-            $winner = $winners[0];
-        }
-        return [
-            'state' => $state,
-            'total_votes' => array_sum($state),
-            'winner' => $winner,
-            'winners' => $winners
-        ];
-    }
 
-    public static function getSubmissionValidator(BallotComponent $component, Election $election)
-    {
-        $id = $component->id;
-        $options = $component->options;
-        return [
-            $id => [
-                $election->abstainable ? 'nullable' : 'required',
-            ],
-            "$id.*" => [
-                Rule::in($options)
-            ]
-        ];
-    }
-
-    public static function validateOptions($options)
-    {
-        //TODO since this is just for CLI, it could be removed and implemented there I think...
-        $validator = Validator::make(['options' => $options], static::$optionsValidator);
-        $messages = $validator->errors();
-
-        return $messages->isEmpty();
+        $value = $values[$componentId];
+        return is_array($value) ? implode(', ', $value) : (string) $value;
     }
 }
