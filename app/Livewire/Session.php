@@ -8,9 +8,11 @@ use App\Models\Vote;
 use App\Services\BallotService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Illuminate\Support\Facades\Redis;
 
+#[Layout('layouts.main')]
 class Session extends Component
 {
 
@@ -43,6 +45,6 @@ class Session extends Component
             Redis::set("session:active-voters:{$this->ballot->id}:{$this->code}", 1, 'EX', 60);
         }
 
-        return view('livewire.session-ballot', ['ballot' => $this->ballot])->extends('layouts.main')->slot('content');
+        return view('livewire.session-ballot', ['ballot' => $this->ballot]);
     }
 }

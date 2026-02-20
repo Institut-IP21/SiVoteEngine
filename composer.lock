@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "04ac55f8a3a264c3e5d9db8afa69cdf0",
+    "content-hash": "b22d9d82384799fd71c0253e061a253e",
     "packages": [
         {
             "name": "brianium/paratest",
@@ -2427,16 +2427,16 @@
         },
         {
             "name": "livewire/livewire",
-            "version": "v3.7.10",
+            "version": "v4.1.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/livewire/livewire.git",
-                "reference": "0dc679eb4c8b4470cb12522b5927ef08ca2358bb"
+                "reference": "4697085e02a1f5f11410a1b5962400e3539f8843"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/livewire/livewire/zipball/0dc679eb4c8b4470cb12522b5927ef08ca2358bb",
-                "reference": "0dc679eb4c8b4470cb12522b5927ef08ca2358bb",
+                "url": "https://api.github.com/repos/livewire/livewire/zipball/4697085e02a1f5f11410a1b5962400e3539f8843",
+                "reference": "4697085e02a1f5f11410a1b5962400e3539f8843",
                 "shasum": ""
             },
             "require": {
@@ -2491,7 +2491,7 @@
             "description": "A front-end framework for Laravel.",
             "support": {
                 "issues": "https://github.com/livewire/livewire/issues",
-                "source": "https://github.com/livewire/livewire/tree/v3.7.10"
+                "source": "https://github.com/livewire/livewire/tree/v4.1.4"
             },
             "funding": [
                 {
@@ -2499,7 +2499,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-02-09T22:49:33+00:00"
+            "time": "2026-02-09T22:59:54+00:00"
         },
         {
             "name": "monolog/monolog",
@@ -3722,26 +3722,27 @@
         },
         {
             "name": "predis/predis",
-            "version": "v2.4.1",
+            "version": "v3.4.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/predis/predis.git",
-                "reference": "07105e050622ed80bd60808367ced9e379f31530"
+                "reference": "1183f5732e6b10efd33f64984a96726eaecb59aa"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/predis/predis/zipball/07105e050622ed80bd60808367ced9e379f31530",
-                "reference": "07105e050622ed80bd60808367ced9e379f31530",
+                "url": "https://api.github.com/repos/predis/predis/zipball/1183f5732e6b10efd33f64984a96726eaecb59aa",
+                "reference": "1183f5732e6b10efd33f64984a96726eaecb59aa",
                 "shasum": ""
             },
             "require": {
-                "php": "^7.2 || ^8.0"
+                "php": "^7.2 || ^8.0",
+                "psr/http-message": "^1.0|^2.0"
             },
             "require-dev": {
                 "friendsofphp/php-cs-fixer": "^3.3",
                 "phpstan/phpstan": "^1.9",
                 "phpunit/phpcov": "^6.0 || ^8.0",
-                "phpunit/phpunit": "^8.0 || ^9.4"
+                "phpunit/phpunit": "^8.0 || ~9.4.4"
             },
             "suggest": {
                 "ext-relay": "Faster connection with in-memory caching (>=0.6.2)"
@@ -3772,7 +3773,7 @@
             ],
             "support": {
                 "issues": "https://github.com/predis/predis/issues",
-                "source": "https://github.com/predis/predis/tree/v2.4.1"
+                "source": "https://github.com/predis/predis/tree/v3.4.0"
             },
             "funding": [
                 {
@@ -3780,7 +3781,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2025-11-12T18:00:11+00:00"
+            "time": "2026-02-11T17:30:28+00:00"
         },
         {
             "name": "psr/clock",
