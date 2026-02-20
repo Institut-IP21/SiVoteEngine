@@ -49,13 +49,20 @@ final class ApprovalVote extends AbstractBallotComponent
     #[\Override]
     public function calculateResults(Collection $votes, BallotComponent $component): ComponentResult
     {
-        $tallies = $votes
-            ->filter(fn ($vote): bool => !empty($vote->values))
-            ->groupBy(function ($vote) use ($component): string {
-                return $vote->values[$component->id] ?? 'abstain';
-            })
-            ->map(fn (Collection $group): int => $group->count())
-            ->toArray();
+        $tallies = [];
+
+        foreach ($votes as $vote) {
+            if (empty($vote->values) || !isset($vote->values[$component->id])) {
+                continue;
+            }
+
+            $value = $vote->values[$component->id];
+            $selections = is_array($value) ? $value : [$value];
+
+            foreach ($selections as $selection) {
+                $tallies[$selection] = ($tallies[$selection] ?? 0) + 1;
+            }
+        }
 
         return $this->calculateVictory($tallies);
     }
