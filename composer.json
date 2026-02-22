@@ -16,7 +16,6 @@
         "laravel/tinker": "^2.5",
         "league/csv": "^9.6",
         "livewire/livewire": "^4.0",
-        "predis/predis": "^3.0",
         "vlucas/phpdotenv": "^5.4"
     },
     "require-dev": {

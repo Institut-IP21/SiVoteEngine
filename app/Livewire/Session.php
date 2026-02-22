@@ -10,7 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
-use Illuminate\Support\Facades\Redis;
+use App\Models\ActiveSessionVoter;
 
 #[Layout('layouts.main')]
 class Session extends Component
@@ -42,7 +42,10 @@ class Session extends Component
         });
 
         if ($this->code !== 'preview-mode') {
-            Redis::set("session:active-voters:{$this->ballot->id}:{$this->code}", 1, 'EX', 60);
+            ActiveSessionVoter::updateOrCreate(
+                ['ballot_id' => $this->ballot->id, 'code' => $this->code],
+                ['last_seen_at' => now()]
+            );
         }
 
         return view('livewire.session-ballot', ['ballot' => $this->ballot]);

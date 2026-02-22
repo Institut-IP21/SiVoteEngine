@@ -3,8 +3,8 @@
 namespace App\Http\Resources;
 
 use App\Models\Ballot as BallotModel;
+use App\Models\ActiveSessionVoter;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\URL;
 
 class Ballot extends JsonResource
@@ -47,8 +47,9 @@ class Ballot extends JsonResource
         ];
 
         if ($this->mode === BallotModel::MODE_SESSION) {
-            list($cursor, $keys) = Redis::scan(0, 'MATCH', "*:active-voters:{$this->id}*", 'COUNT', 10000);
-            $resource['active_voters'] = count($keys);
+            $resource['active_voters'] = ActiveSessionVoter::where('ballot_id', $this->id)
+                ->where('last_seen_at', '>=', now()->subSeconds(60))
+                ->count();
         }
 
         return $resource;
