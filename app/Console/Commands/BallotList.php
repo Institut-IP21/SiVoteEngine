@@ -43,8 +43,8 @@ class BallotList extends Command
     {
         $electionId = $this->option('election');
 
-        if ($electionId && Election::where(['id', $electionId])->exists()) {
-            $ballots = Ballot::find(['election_id' => $electionId]);
+        if ($electionId && Election::where('id', $electionId)->exists()) {
+            $ballots = Ballot::where('election_id', $electionId)->get();
             $this->info("Displaying Ballots for Election $electionId");
         } else {
             $ballots = Ballot::all();

@@ -44,15 +44,16 @@ class BallotCodesGenerate extends Command
     {
         $ballotId = $this->option('ballot');
 
-        if (!$ballotId || !Ballot::where(['id', $ballotId])->exists()) {
-            $this->error("Could not find Ballot with ID $ballotId");
-            return 1;
+        while (!$ballotId || !Ballot::where('id', $ballotId)->exists()) {
+            $ballotId = $this->ask('Please enter the ID of an existing ballot');
+            if (!$ballotId || !Ballot::where('id', $ballotId)->exists()) {
+                $this->error("Could not find Ballot with ID $ballotId");
+            }
         }
 
         $quantity = (int) $this->option('quantity');
-        if (!$quantity || !is_int($quantity)) {
-            $this->error("Quantity must be an integer");
-            return 1;
+        while (!$quantity || $quantity < 1) {
+            $quantity = (int) $this->ask('Please enter the number of codes to generate');
         }
 
         $codes = [];
