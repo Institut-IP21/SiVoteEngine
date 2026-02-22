@@ -52,6 +52,10 @@ class BallotResult extends Command
         $results = $this->ballotService->calculateResults($ballot);
 
         foreach ($results as $componentId => $componentResult) {
+            if ($componentId === '_meta') {
+                continue;
+            }
+
             $this->newLine();
             $this->info($componentResult['title']);
 
@@ -85,6 +89,11 @@ class BallotResult extends Command
 
         $this->newLine();
         $this->info("Total cast votes: {$ballot->votes_count}");
+
+        if ($ballot->quorum !== null) {
+            $met = $ballot->votes_count >= $ballot->quorum ? 'Yes' : 'No';
+            $this->info("Quorum: {$ballot->votes_count} / {$ballot->quorum} — Met: {$met}");
+        }
 
         return 0;
     }

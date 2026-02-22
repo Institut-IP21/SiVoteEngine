@@ -46,6 +46,7 @@ class BallotShow extends Command
             ['Is Secret', $ballot->is_secret ? 'Yes' : 'No'],
             ['Quorum', $ballot->quorum ?? 'N/A'],
             ['Votes Count', $ballot->votes_count],
+            ['Quorum Met', $ballot->quorum === null ? 'N/A' : ($ballot->votes_count >= $ballot->quorum ? 'Yes' : 'No')],
         ]);
 
         $components = $ballot->components()->get();

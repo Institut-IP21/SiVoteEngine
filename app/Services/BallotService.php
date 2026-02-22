@@ -130,6 +130,12 @@ final class BallotService
         $votes = collect($ballot->cast_votes);
         $results = [];
 
+        $results['_meta'] = [
+            'quorum' => $ballot->quorum,
+            'votes_cast' => $ballot->votes_count,
+            'quorum_met' => $ballot->quorum === null || $ballot->votes_count >= $ballot->quorum,
+        ];
+
         foreach ($ballot->components()->get() as $componentModel) {
             $component = $this->registry->resolve($componentModel->type, $componentModel->version);
             $result = $component->calculateResults($votes, $componentModel);

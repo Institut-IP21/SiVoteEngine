@@ -13,4 +13,10 @@ return [
     ],
     'expired' => 'Glasovanje za to glasovnico je že zaključeno.',
     'voteId' => 'Glasovalna koda',
+    'quorum' => [
+        'label' => 'Kvorum',
+        'met' => 'Kvorum dosežen',
+        'not_met' => 'Kvorum ni dosežen',
+        'status' => ':votes / :quorum glasov',
+    ],
 ];
