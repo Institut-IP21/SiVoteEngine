@@ -13,4 +13,10 @@ return [
     ],
     'expired' => 'This ballot has already expired.',
     'voteId' => 'Vote ID',
+    'quorum' => [
+        'label' => 'Quorum',
+        'met' => 'Quorum met',
+        'not_met' => 'Quorum not met',
+        'status' => ':votes / :quorum votes',
+    ],
 ];

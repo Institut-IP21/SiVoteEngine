@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\BallotComponents\FirstPastThePost\v1;
 
 use App\Models\Ballot;
@@ -14,26 +16,36 @@ use function PHPUnit\Framework\assertEquals;
 
 class FirstPastThePostTest extends TestCase
 {
-    public function test_get_submissions_validator()
+    private FirstPastThePost $component;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->component = new FirstPastThePost();
+    }
+
+    public function test_get_submissions_validator(): void
     {
         $election = Election::factory()->make();
-        $component = BallotComponent::factory()->make([
+        $ballotComponent = BallotComponent::factory()->make([
             'type' => 'FirstPastThePost',
             'options' => ['Ana', 'Betty', 'Charles', 'David', 'Ernest']
         ]);
-        $validator = FirstPastThePost::getSubmissionValidator($component, $election);
+
+        $validator = $this->component->getSubmissionValidator($ballotComponent, $election);
+
         assertEquals([
-            $component->id => [
+            $ballotComponent->id => [
                 'required',
                 Rule::in(['Ana', 'Betty', 'Charles', 'David', 'Ernest'])
             ]
-        ], $validator);
+        ], $validator->toArray());
     }
 
-    public function test_calculate_results()
+    public function test_calculate_results(): void
     {
         $ballot = Ballot::factory()->make();
-        $component = BallotComponent::factory()->make([
+        $ballotComponent = BallotComponent::factory()->make([
             'type' => 'FirstPastThePost',
             'options' => ['Ana', 'Betty', 'Charles', 'David', 'Ernest'],
             'ballot' => $ballot
@@ -44,26 +56,27 @@ class FirstPastThePostTest extends TestCase
             ->state([
                 'ballot_id' => $ballot->id,
             ])->sequence(
-                function () use ($component) {
+                function () use ($ballotComponent) {
                     return [
                         'values' => [
-                            $component->id => Arr::random(['Ana', 'Betty', 'Charles', 'David', 'Ernest'])
+                            $ballotComponent->id => Arr::random(['Ana', 'Betty', 'Charles', 'David', 'Ernest'])
                         ]
                     ];
                 },
             )->make();
 
-        $groups = $votes->groupBy(function ($vote) use ($component) {
-            return $vote->values[$component->id];
+        $groups = $votes->groupBy(function ($vote) use ($ballotComponent) {
+            return $vote->values[$ballotComponent->id];
         });
-        $results = FirstPastThePost::calculateResults($votes->values()->all(), $component);
+
+        $results = $this->component->calculateResults(collect($votes), $ballotComponent);
 
         assertEquals([
-            'Ana' => $groups['Ana']->count(),
-            'Betty' => $groups['Betty']->count(),
-            'Charles' => $groups['Charles']->count(),
-            'David' => $groups['David']->count(),
-            'Ernest' => $groups['Ernest']->count()
-        ], $results['state']);
+            'Ana' => $groups->get('Ana', collect())->count(),
+            'Betty' => $groups->get('Betty', collect())->count(),
+            'Charles' => $groups->get('Charles', collect())->count(),
+            'David' => $groups->get('David', collect())->count(),
+            'Ernest' => $groups->get('Ernest', collect())->count()
+        ], $results->toArray()['state']);
     }
 }

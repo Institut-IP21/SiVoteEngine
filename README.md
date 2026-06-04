@@ -18,8 +18,8 @@ You can use the included Docker compose image or deploy directly (see image for 
     docker-compose exec evote_app bash
     composer install
     php artisan migrate
-    yarn install
-    yarn dev
+    bun install
+    bun run dev
 ```
     
 ## Learn more

@@ -1,7 +1,7 @@
 <?php
 
 use App\Http\Controllers\BallotController;
-use App\Http\Livewire\Session;
+use App\Livewire\Session;
 use Illuminate\Support\Facades\Route;
 
 /*

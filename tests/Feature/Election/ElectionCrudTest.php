@@ -4,10 +4,13 @@ namespace Tests\Feature\Election;
 
 use App\Models\Election;
 use Faker\Provider\Uuid;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class ElectionCrudTest extends TestCase
 {
+    use RefreshDatabase;
+
     public $election_schema = [
         'id',
         'title',

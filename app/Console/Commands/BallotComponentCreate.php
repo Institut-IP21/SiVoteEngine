@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Console\Commands;
 
 use App\Models\Ballot;
@@ -29,25 +31,16 @@ class BallotComponentCreate extends Command
      */
     protected $description = 'Create a new ballot for a specified election';
 
-    /**
-     * Create a new command instance.
-     *
-     * @return void
-     */
-    public function __construct(BallotService $ballotService)
-    {
+    public function __construct(
+        private readonly BallotService $ballotService,
+    ) {
         parent::__construct();
-        $this->ballotService = $ballotService;
     }
-
-    private BallotService $ballotService;
 
     /**
      * Execute the console command.
-     *
-     * @return int
      */
-    public function handle()
+    public function handle(): int
     {
         $ballotTypes = $this->ballotService->getBallotTypes();
 
@@ -55,12 +48,12 @@ class BallotComponentCreate extends Command
         $title = $this->option('title');
         $description = $this->option('description');
         $type = $this->option('type');
-        $version = $this->option('version');
+        $version = $this->option('variant');
         $options = $this->option('options');
 
-        while (!$ballotId || !Ballot::where(['id', $ballotId])->exists()) {
+        while (!$ballotId || !Ballot::where('id', $ballotId)->exists()) {
             $ballotId = $this->ask('Please enter the ID of an existing ballot');
-            if (!$ballotId || !Ballot::where(['id', $ballotId])->exists()) {
+            if (!$ballotId || !Ballot::where('id', $ballotId)->exists()) {
                 $this->info("Could not find ballot with ID {$ballotId}");
             }
         }
@@ -82,9 +75,9 @@ class BallotComponentCreate extends Command
 
         $ballotTypeVersions = $this->ballotService->getBallotVersions($type);
 
-        while (!$version || !$version == -1 || !in_array($version, $ballotTypeVersions)) {
+        while ($version == -1 || !in_array($version, $ballotTypeVersions)) {
             $version = $this->choice("Please choose a valid version of the {$type} ballot type:", $ballotTypeVersions, "v1");
-            if (!$version || !$version == -1 || !in_array($version, $ballotTypeVersions)) {
+            if ($version == -1 || !in_array($version, $ballotTypeVersions)) {
                 $this->info("Not a valid version of {$type} ballot type");
             }
         }
@@ -93,13 +86,16 @@ class BallotComponentCreate extends Command
             $version = array_key_last($ballotTypeVersions);
         }
 
-        $ballotComponentClass = $this->ballotService->getBallotComponentClass($type, $version);
+        $componentInstance = $this->ballotService->resolveComponent($type, $version);
+        $metadata = $componentInstance->getMetadata();
 
-        $options = $ballotComponentClass::$needsOptions ? BallotComponent::parseOptionsString($options) : $ballotComponentClass::$presetOptions;
+        $options = $metadata->needsOptions
+            ? BallotComponent::parseOptionsString($options)
+            : $metadata->presetOptions;
 
-        while (!count($options) || !$ballotComponentClass::validateOptions($options)) {
+        while (!count($options) || !$componentInstance->validateOptions($options)) {
             $options = BallotComponent::parseOptionsString($this->ask('Please enter options for the ballot'));
-            if (!$options || !$ballotComponentClass::validateOptions($options)) {
+            if (!$options || !$componentInstance->validateOptions($options)) {
                 $this->info("Not valid options for {$type} ballot type");
             }
         }
@@ -129,6 +125,7 @@ class BallotComponentCreate extends Command
         } else {
             $this->warn('Cancelled');
         }
+
         return 0;
     }
 }

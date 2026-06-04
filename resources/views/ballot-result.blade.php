@@ -15,6 +15,19 @@
         </div>
     </div>
 
+    @if ($ballot->quorum)
+    <div class="w-full max-w-xl mx-auto mb-6 rounded-lg p-4 text-center font-semibold
+        {{ $ballot->votes_count >= $ballot->quorum ? 'bg-green-100 text-green-800 border border-green-300' : 'bg-red-100 text-red-800 border border-red-300' }}">
+        <div class="text-lg">
+            {{ __('ballot.quorum.label') }}:
+            {{ trans_choice('ballot.quorum.status', $ballot->votes_count, ['votes' => $ballot->votes_count, 'quorum' => $ballot->quorum]) }}
+        </div>
+        <div>
+            {{ $ballot->votes_count >= $ballot->quorum ? __('ballot.quorum.met') : __('ballot.quorum.not_met') }}
+        </div>
+    </div>
+    @endif
+
     @if ($ballot->components)
     <div class="h-full flex flex-col mt-3 sm:mt-8">
         @foreach ($ballot->components as $component)

@@ -43,8 +43,8 @@ class BallotComponentList extends Command
     {
         $ballotId = $this->option('ballot');
 
-        if ($ballotId && Ballot::where(['id', $ballotId])->exists()) {
-            $ballotComponents = BallotComponent::find(['ballot_id' => $ballotId]);
+        if ($ballotId && Ballot::where('id', $ballotId)->exists()) {
+            $ballotComponents = BallotComponent::where('ballot_id', $ballotId)->get();
             $this->info("Displaying Component of Ballot $ballotId");
         } else {
             $ballotComponents = BallotComponent::all();
@@ -52,7 +52,20 @@ class BallotComponentList extends Command
         }
         $this->newLine();
 
-        $this->table(['ID', 'Ballot', 'Title', 'Type', 'Deleted At', 'version', 'Created At', 'Updated At'], $ballotComponents);
+        $rows = $ballotComponents->map(function (BallotComponent $c) {
+            return [
+                $c->id,
+                $c->ballot_id,
+                $c->title,
+                $c->type,
+                $c->deleted_at,
+                $c->version,
+                $c->created_at,
+                $c->updated_at,
+            ];
+        });
+
+        $this->table(['ID', 'Ballot', 'Title', 'Type', 'Deleted At', 'version', 'Created At', 'Updated At'], $rows);
         return 0;
     }
 }

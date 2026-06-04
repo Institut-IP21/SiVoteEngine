@@ -16,7 +16,7 @@
         rel="stylesheet">
 
     <!-- Styles -->
-    <link href="{{ asset('css/app.css') }}" rel="stylesheet">
+    @vite(['resources/sass/app.scss', 'resources/js/app.js'])
 
     <style>
         body {
@@ -42,7 +42,6 @@
     @yield('content')
     @livewireScripts
 
-    <script src="{{ asset('/js/app.js') }}" type=""></script>
 </body>
 
 </html>

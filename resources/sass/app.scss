@@ -1,10 +1,15 @@
-@import "tailwindcss/base";
-
-@import "tailwindcss/components";
+@import "tailwindcss";
+@source "../../resources/views/**/*.blade.php";
+@source "../../app/BallotComponents/**/*.blade.php";
+@source "../../app/BallotComponents/**/*.vue";
+@theme {
+    --flex-2: 2 2 0%;
+    --flex-3: 3 3 0%;
+}
 
 // BUTTONS
 .btn {
-    @apply font-bold py-2 px-4 rounded;
+    @apply font-bold py-2 px-4 rounded-sm;
 }
 
 .btn-blue {
@@ -124,5 +129,3 @@ label.radio {
     justify-content: space-between;
     align-items: center;
 }
-
-@import "tailwindcss/utilities";

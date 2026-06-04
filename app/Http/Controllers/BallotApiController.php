@@ -97,6 +97,7 @@ class BallotApiController extends Controller
             'description' => 'nullable|string|min:5',
             'email_template' => 'nullable|string|min:5',
             'email_subject' => 'nullable|string|min:5',
+            'quorum' => 'nullable|integer|min:0',
         ];
 
         if ($errors = $this->findErrors($params, $settings)) {
@@ -117,6 +118,10 @@ class BallotApiController extends Controller
 
         if (array_key_exists('email_subject', $params)) {
             $ballot->email_subject = $params['email_subject'];
+        }
+
+        if (array_key_exists('quorum', $params)) {
+            $ballot->quorum = $params['quorum'];
         }
 
         $ballot->save();

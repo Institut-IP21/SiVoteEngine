@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
 use App\Http\Resources\BallotComponent as ComponentResource;
@@ -11,12 +13,9 @@ use Illuminate\Http\Request;
 
 class BallotComponentApiController extends Controller
 {
-    protected BallotService $ballotService;
-
-    public function __construct(BallotService $ballotService)
-    {
-        $this->ballotService = $ballotService;
-    }
+    public function __construct(
+        protected readonly BallotService $ballotService,
+    ) {}
 
     public function list(Election $election)
     {
@@ -24,6 +23,7 @@ class BallotComponentApiController extends Controller
             'data' => $this->ballotService->getComponentTree()
         ];
     }
+
     public function create(Election $election, Ballot $ballot, Request $request)
     {
         $params = $request->all();
@@ -57,18 +57,19 @@ class BallotComponentApiController extends Controller
             return $errors;
         }
 
-        $class = $this->ballotService->getBallotComponentClass($params['type'], $params['version']);
+        $componentInstance = $this->ballotService->resolveComponent($params['type'], $params['version']);
+        $metadata = $componentInstance->getMetadata();
         $secondaryValidation = [];
 
-        if ($class::$needsOptions) {
-            $secondaryValidation = array_merge($secondaryValidation, $class::$optionsValidator);
+        if ($metadata->needsOptions) {
+            $secondaryValidation = array_merge($secondaryValidation, $metadata->optionsValidator);
         }
 
         if ($errors = $this->findErrors($params, $secondaryValidation)) {
             return $errors;
         }
 
-        $options = $class::$needsOptions ? $params['options'] : $class::$presetOptions;
+        $options = $metadata->needsOptions ? $params['options'] : $metadata->presetOptions;
 
         $component = BallotComponent::create([
             'ballot_id' => $ballot->id,
@@ -121,18 +122,19 @@ class BallotComponentApiController extends Controller
             return $errors;
         }
 
-        $class = $this->ballotService->getBallotComponentClass($params['type'], $params['version']);
+        $componentInstance = $this->ballotService->resolveComponent($params['type'], $params['version']);
+        $metadata = $componentInstance->getMetadata();
         $secondaryValidation = [];
 
-        if (array_key_exists('options', $params) && $class::$needsOptions) {
-            $secondaryValidation = array_merge($secondaryValidation, $class::$optionsValidator);
+        if (array_key_exists('options', $params) && $metadata->needsOptions) {
+            $secondaryValidation = array_merge($secondaryValidation, $metadata->optionsValidator);
         }
 
         if ($errors = $this->findErrors($params, $secondaryValidation)) {
             return $errors;
         }
 
-        if (array_key_exists('options', $params) && $class::$needsOptions) {
+        if (array_key_exists('options', $params) && $metadata->needsOptions) {
             $component->options = $params['options'];
         }
 
@@ -171,6 +173,7 @@ class BallotComponentApiController extends Controller
         $component->active = true;
         return $component->save();
     }
+
     public function deactivate(Election $election, Ballot $ballot, BallotComponent $component)
     {
         $component->active = false;

@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use GoldSpecDigital\LaravelEloquentUUID\Database\Eloquent\Uuid;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -14,14 +14,11 @@ class Ballot extends Model
 {
     use HasFactory;
     use SoftDeletes, CascadeSoftDeletes;
-    use Uuid;
+    use HasUuids;
 
     const MODE_BASIC = 'basic';
     const MODE_SESSION = 'session';
     const MODES = [self::MODE_BASIC, self::MODE_SESSION];
-
-    protected $keyType = 'string';
-    public $incrementing = false;
 
     protected $cascadeDeletes = ['components', 'votes'];
 

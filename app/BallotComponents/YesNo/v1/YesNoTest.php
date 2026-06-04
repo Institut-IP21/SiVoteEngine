@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\BallotComponents\YesNo\v1;
 
 use App\Models\Ballot;
@@ -14,26 +16,36 @@ use function PHPUnit\Framework\assertEquals;
 
 class YesNoTest extends TestCase
 {
-    public function test_get_submissions_validator()
+    private YesNo $component;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->component = new YesNo();
+    }
+
+    public function test_get_submissions_validator(): void
     {
         $election = Election::factory()->make();
-        $component = BallotComponent::factory()->make([
+        $ballotComponent = BallotComponent::factory()->make([
             'type' => 'YesNo',
             'options' => ['yes', 'no']
         ]);
-        $validator = YesNo::getSubmissionValidator($component, $election);
+
+        $validator = $this->component->getSubmissionValidator($ballotComponent, $election);
+
         assertEquals([
-            $component->id => [
+            $ballotComponent->id => [
                 'required',
                 Rule::in(['yes', 'no'])
             ]
-        ], $validator);
+        ], $validator->toArray());
     }
 
-    public function test_calculate_results()
+    public function test_calculate_results(): void
     {
         $ballot = Ballot::factory()->make();
-        $component = BallotComponent::factory()->make([
+        $ballotComponent = BallotComponent::factory()->make([
             'type' => 'YesNo',
             'options' => ['yes', 'no'],
             'ballot' => $ballot
@@ -44,21 +56,22 @@ class YesNoTest extends TestCase
             ->state([
                 'ballot_id' => $ballot->id,
             ])->sequence(
-                function () use ($component) {
+                function () use ($ballotComponent) {
                     return [
                         'values' => [
-                            $component->id => Arr::random(['yes', 'no'])
+                            $ballotComponent->id => Arr::random(['yes', 'no'])
                         ]
                     ];
                 },
             )->make();
 
-        $countYes = $votes->filter(function ($vote) use ($component) {
-            return $vote->values[$component->id] === 'yes';
+        $countYes = $votes->filter(function ($vote) use ($ballotComponent) {
+            return $vote->values[$ballotComponent->id] === 'yes';
         })->count();
         $countNo = 30 - $countYes;
-        $results = YesNo::calculateResults($votes->values()->all(), $component);
 
-        assertEquals([ 'yes' => $countYes, 'no' => $countNo ], $results['state']);
+        $results = $this->component->calculateResults(collect($votes), $ballotComponent);
+
+        assertEquals(['yes' => $countYes, 'no' => $countNo], $results->toArray()['state']);
     }
 }
