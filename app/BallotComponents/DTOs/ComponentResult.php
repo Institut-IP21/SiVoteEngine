@@ -7,7 +7,7 @@ namespace App\BallotComponents\DTOs;
 interface ComponentResult
 {
     /**
-     * Convert to array for backward compatibility with existing views.
+     * Serialize the result for the JSON results API and the Blade result views.
      *
      * @return array<string, mixed>
      */

@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace App\BallotComponents\DTOs;
 
-use App\BallotComponents\Enums\VoteOutcome;
-
-readonly class RankedChoiceResult implements ComponentResult
+final readonly class RankedChoiceResult implements ComponentResult
 {
     /**
      * @param array<int, array<string, mixed>> $rounds Elimination rounds
@@ -17,7 +15,6 @@ readonly class RankedChoiceResult implements ComponentResult
         public array $winners,
         public bool $conclusive,
         public ?string $conclusiveWinner,
-        public VoteOutcome $outcome,
     ) {}
 
     public static function empty(): self
@@ -27,7 +24,6 @@ readonly class RankedChoiceResult implements ComponentResult
             winners: [],
             conclusive: false,
             conclusiveWinner: null,
-            outcome: VoteOutcome::NoVotes,
         );
     }
 
@@ -51,7 +47,6 @@ readonly class RankedChoiceResult implements ComponentResult
             winners: $uniqueWinners,
             conclusive: $conclusive,
             conclusiveWinner: $conclusive ? array_values($uniqueWinners)[0] : null,
-            outcome: $conclusive ? VoteOutcome::Winner : VoteOutcome::Tie,
         );
     }
 

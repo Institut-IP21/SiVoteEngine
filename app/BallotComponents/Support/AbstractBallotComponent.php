@@ -6,6 +6,8 @@ namespace App\BallotComponents\Support;
 
 use App\BallotComponents\Contracts\BallotComponentInterface;
 use App\BallotComponents\DTOs\ComponentMetadata;
+use App\Models\BallotComponent;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Validator;
 
 /**
@@ -77,5 +79,34 @@ abstract class AbstractBallotComponent implements BallotComponentInterface
     public function valuesToCsv(array $values, string $componentId): string
     {
         return $values[$componentId] ?? '';
+    }
+
+    /**
+     * Tally the values cast for this component into an option => count map.
+     *
+     * Handles both single-selection components (a scalar value) and
+     * multi-selection components such as ApprovalVote (an array of values):
+     * a scalar is treated as a single-element selection. Votes that did not
+     * answer this component (null/missing value) are skipped.
+     *
+     * @param Collection<int, \App\Models\Vote> $votes
+     * @return array<string, int> Map of option => vote count
+     */
+    protected function tallyValues(Collection $votes, BallotComponent $component): array
+    {
+        $tallies = [];
+
+        foreach ($votes as $vote) {
+            $value = $vote->values[$component->id] ?? null;
+            if ($value === null) {
+                continue;
+            }
+
+            foreach ((array) $value as $selection) {
+                $tallies[$selection] = ($tallies[$selection] ?? 0) + 1;
+            }
+        }
+
+        return $tallies;
     }
 }

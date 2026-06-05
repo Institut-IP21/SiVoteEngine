@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\BallotComponents\DTOs;
 
-readonly class ComponentMetadata
+final readonly class ComponentMetadata
 {
     /**
      * @param array<string, string> $strings Localized strings (name, description)
@@ -20,7 +20,7 @@ readonly class ComponentMetadata
     ) {}
 
     /**
-     * Convert to array for backward compatibility.
+     * Serialize the metadata for the component-tree API and Blade forms.
      *
      * @return array<string, mixed>
      */

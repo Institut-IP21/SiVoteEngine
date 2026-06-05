@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace App\BallotComponents\DTOs;
 
-use App\BallotComponents\Enums\VoteOutcome;
-
-readonly class SimpleVoteResult implements ComponentResult
+final readonly class SimpleVoteResult implements ComponentResult
 {
     /**
      * @param array<string, int> $state Vote tallies per option
@@ -15,7 +13,6 @@ readonly class SimpleVoteResult implements ComponentResult
     public function __construct(
         public array $state,
         public int $totalVotes,
-        public VoteOutcome $outcome,
         public ?string $winner,
         public ?array $winners,
     ) {}
@@ -25,7 +22,6 @@ readonly class SimpleVoteResult implements ComponentResult
         return new self(
             state: [],
             totalVotes: 0,
-            outcome: VoteOutcome::NoVotes,
             winner: null,
             winners: null,
         );
@@ -49,7 +45,6 @@ readonly class SimpleVoteResult implements ComponentResult
         return new self(
             state: $tallies,
             totalVotes: array_sum($tallies),
-            outcome: $isTie ? VoteOutcome::Tie : VoteOutcome::Winner,
             winner: $isTie ? 'tie' : $winners[0],
             winners: $winners,
         );

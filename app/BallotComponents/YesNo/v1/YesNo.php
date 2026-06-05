@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\BallotComponents\YesNo\v1;
 
 use App\BallotComponents\DTOs\ComponentResult;
+use App\BallotComponents\DTOs\SimpleVoteResult;
 use App\BallotComponents\DTOs\ValidationRules;
 use App\BallotComponents\Support\AbstractBallotComponent;
-use App\BallotComponents\Traits\CalculatesSimpleVictory;
 use App\Models\BallotComponent;
 use App\Models\Election;
 use Illuminate\Support\Collection;
@@ -20,8 +20,6 @@ use Illuminate\Validation\Rule;
  */
 final class YesNo extends AbstractBallotComponent
 {
-    use CalculatesSimpleVictory;
-
     /** @var array<string> */
     private const PRESET_OPTIONS = ['yes', 'no'];
 
@@ -55,22 +53,7 @@ final class YesNo extends AbstractBallotComponent
     #[\Override]
     public function calculateResults(Collection $votes, BallotComponent $component): ComponentResult
     {
-        $tallies = [];
-
-        foreach ($votes as $vote) {
-            if (empty($vote->values)) {
-                continue;
-            }
-
-            $value = $vote->values[$component->id] ?? null;
-            if ($value === null) {
-                continue;
-            }
-
-            $tallies[$value] = ($tallies[$value] ?? 0) + 1;
-        }
-
-        return $this->calculateVictory($tallies);
+        return SimpleVoteResult::fromTallies($this->tallyValues($votes, $component));
     }
 
     #[\Override]

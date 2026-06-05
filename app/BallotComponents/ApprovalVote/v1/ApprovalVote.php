@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\BallotComponents\ApprovalVote\v1;
 
 use App\BallotComponents\DTOs\ComponentResult;
+use App\BallotComponents\DTOs\SimpleVoteResult;
 use App\BallotComponents\DTOs\ValidationRules;
 use App\BallotComponents\Support\AbstractBallotComponent;
-use App\BallotComponents\Traits\CalculatesSimpleVictory;
 use App\Models\BallotComponent;
 use App\Models\Election;
 use Illuminate\Support\Collection;
@@ -20,8 +20,6 @@ use Illuminate\Validation\Rule;
  */
 final class ApprovalVote extends AbstractBallotComponent
 {
-    use CalculatesSimpleVictory;
-
     #[\Override]
     protected function needsOptions(): bool
     {
@@ -49,22 +47,10 @@ final class ApprovalVote extends AbstractBallotComponent
     #[\Override]
     public function calculateResults(Collection $votes, BallotComponent $component): ComponentResult
     {
-        $tallies = [];
-
-        foreach ($votes as $vote) {
-            if (empty($vote->values) || !isset($vote->values[$component->id])) {
-                continue;
-            }
-
-            $value = $vote->values[$component->id];
-            $selections = is_array($value) ? $value : [$value];
-
-            foreach ($selections as $selection) {
-                $tallies[$selection] = ($tallies[$selection] ?? 0) + 1;
-            }
-        }
-
-        return $this->calculateVictory($tallies);
+        // Approval ballots store an array of selections; tallyValues() counts
+        // each selected option once (scalar values are treated as a single
+        // selection).
+        return SimpleVoteResult::fromTallies($this->tallyValues($votes, $component));
     }
 
     #[\Override]

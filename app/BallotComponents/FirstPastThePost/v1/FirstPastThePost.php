@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\BallotComponents\FirstPastThePost\v1;
 
 use App\BallotComponents\DTOs\ComponentResult;
+use App\BallotComponents\DTOs\SimpleVoteResult;
 use App\BallotComponents\DTOs\ValidationRules;
 use App\BallotComponents\Support\AbstractBallotComponent;
-use App\BallotComponents\Traits\CalculatesSimpleVictory;
 use App\Models\BallotComponent;
 use App\Models\Election;
 use Illuminate\Support\Collection;
@@ -20,8 +20,6 @@ use Illuminate\Validation\Rule;
  */
 final class FirstPastThePost extends AbstractBallotComponent
 {
-    use CalculatesSimpleVictory;
-
     #[\Override]
     protected function needsOptions(): bool
     {
@@ -49,13 +47,7 @@ final class FirstPastThePost extends AbstractBallotComponent
     #[\Override]
     public function calculateResults(Collection $votes, BallotComponent $component): ComponentResult
     {
-        $tallies = $votes
-            ->filter(fn ($vote): bool => !empty($vote->values) && isset($vote->values[$component->id]))
-            ->groupBy(fn ($vote): string => $vote->values[$component->id])
-            ->map(fn (Collection $group): int => $group->count())
-            ->toArray();
-
-        return $this->calculateVictory($tallies);
+        return SimpleVoteResult::fromTallies($this->tallyValues($votes, $component));
     }
 
     #[\Override]
