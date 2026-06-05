@@ -123,7 +123,9 @@ class BallotController extends Controller
             $oldValues = [];
         }
 
-        $vote->values = array_merge($values, $oldValues);
+        // Newly submitted values take precedence so a voter can change a
+        // component answer (last-write-wins), matching basic-mode behaviour.
+        $vote->values = array_merge($oldValues, $values);
 
         $vote->save();
 

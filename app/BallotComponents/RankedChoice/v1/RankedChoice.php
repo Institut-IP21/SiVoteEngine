@@ -119,13 +119,20 @@ final class RankedChoice extends AbstractBallotComponent
             $state[$first]++;
         }
 
-        // Check if current leader has a majority
+        // Check if current leader has a majority (strictly more than half of
+        // the ballots still in play). Using "> n/2" correctly recognises e.g.
+        // 3 of 5 votes as a majority; the previous ">= n/2 + 1" was off by one
+        // for odd vote counts and forced needless extra elimination rounds.
         $maxVotes = max($state) ?: 0;
         $currentWinnerHasMajority = $numberOfVotesCast > 0
-            && $maxVotes >= ($numberOfVotesCast / 2 + 1);
+            && $maxVotes > $numberOfVotesCast / 2;
 
-        // Continue elimination if more than 2 options remain and no majority
-        if (count($state) > 2 && !$currentWinnerHasMajority) {
+        // Continue elimination if more than 2 options remain and no majority.
+        // The `$maxVotes > 0` guard stops elimination once no option has any
+        // effective vote left: without it an all-zero state (e.g. every voter
+        // abstained on this component) eliminates every option at once and
+        // recurses into an empty option set, crashing on max([]).
+        if (count($state) > 2 && !$currentWinnerHasMajority && $maxVotes > 0) {
             $minVotes = min($state);
             $omitees = array_keys($state, $minVotes);
 
@@ -233,9 +240,13 @@ final class RankedChoice extends AbstractBallotComponent
     #[\Override]
     public function getSubmissionValidator(BallotComponent $component, Election $election): ValidationRules
     {
+        // The submission must be an array (a ranking). Without the explicit
+        // `array` rule a crafted scalar value bypasses the `.*` option
+        // whitelist entirely and is stored verbatim. `distinct` rejects a
+        // ranking that lists the same option more than once.
         return new ValidationRules([
-            $component->id => [$election->abstainable ? 'nullable' : 'required'],
-            "{$component->id}.*" => [Rule::in($component->options)],
+            $component->id => [$election->abstainable ? 'nullable' : 'required', 'array'],
+            "{$component->id}.*" => ['distinct', Rule::in($component->options)],
         ]);
     }
 

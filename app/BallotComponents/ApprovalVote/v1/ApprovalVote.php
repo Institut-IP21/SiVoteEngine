@@ -70,9 +70,13 @@ final class ApprovalVote extends AbstractBallotComponent
     #[\Override]
     public function getSubmissionValidator(BallotComponent $component, Election $election): ValidationRules
     {
+        // The submission must be an array of options. Without the explicit
+        // `array` rule a crafted scalar value bypasses the `.*` option
+        // whitelist entirely and is stored verbatim. `distinct` prevents a
+        // single ballot from approving the same option more than once.
         return new ValidationRules([
-            $component->id => [$election->abstainable ? 'nullable' : 'required'],
-            "{$component->id}.*" => [Rule::in($component->options)],
+            $component->id => [$election->abstainable ? 'nullable' : 'required', 'array'],
+            "{$component->id}.*" => ['distinct', Rule::in($component->options)],
         ]);
     }
 

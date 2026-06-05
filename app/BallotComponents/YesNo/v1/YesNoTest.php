@@ -4,15 +4,12 @@ declare(strict_types=1);
 
 namespace App\BallotComponents\YesNo\v1;
 
-use App\Models\Ballot;
 use App\Models\BallotComponent;
 use App\Models\Election;
 use App\Models\Vote;
-use Illuminate\Support\Arr;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 use Tests\TestCase;
-
-use function PHPUnit\Framework\assertEquals;
 
 class YesNoTest extends TestCase
 {
@@ -24,54 +21,109 @@ class YesNoTest extends TestCase
         $this->component = new YesNo();
     }
 
-    public function test_get_submissions_validator(): void
+    private function makeComponent(): BallotComponent
     {
-        $election = Election::factory()->make();
-        $ballotComponent = BallotComponent::factory()->make([
+        return BallotComponent::factory()->make([
             'type' => 'YesNo',
-            'options' => ['yes', 'no']
+            'version' => 'v1',
+            'options' => ['yes', 'no'],
         ]);
+    }
 
-        $validator = $this->component->getSubmissionValidator($ballotComponent, $election);
+    /**
+     * @param array<int, string|null> $answers
+     */
+    private function votesFor(BallotComponent $component, array $answers): Collection
+    {
+        $votes = collect();
+        foreach ($answers as $answer) {
+            $votes->push(Vote::factory()->make([
+                'ballot_id' => 'ballot-x',
+                'values' => $answer === null ? null : [$component->id => $answer],
+            ]));
+        }
+        return $votes;
+    }
 
-        assertEquals([
-            $ballotComponent->id => [
-                'required',
-                Rule::in(['yes', 'no'])
-            ]
+    // ----------------------------------------------------------------
+    // Submission validator
+    // ----------------------------------------------------------------
+
+    public function test_submission_validator_non_abstainable(): void
+    {
+        $election = Election::factory()->make(['abstainable' => false]);
+        $component = $this->makeComponent();
+
+        $validator = $this->component->getSubmissionValidator($component, $election);
+
+        $this->assertEquals([
+            $component->id => ['required', Rule::in(['yes', 'no'])],
         ], $validator->toArray());
     }
 
-    public function test_calculate_results(): void
+    public function test_submission_validator_abstainable_adds_abstain_option(): void
     {
-        $ballot = Ballot::factory()->make();
-        $ballotComponent = BallotComponent::factory()->make([
-            'type' => 'YesNo',
-            'options' => ['yes', 'no'],
-            'ballot' => $ballot
-        ]);
+        $election = Election::factory()->make(['abstainable' => true]);
+        $component = $this->makeComponent();
 
-        $votes = Vote::factory()
-            ->count(30)
-            ->state([
-                'ballot_id' => $ballot->id,
-            ])->sequence(
-                function () use ($ballotComponent) {
-                    return [
-                        'values' => [
-                            $ballotComponent->id => Arr::random(['yes', 'no'])
-                        ]
-                    ];
-                },
-            )->make();
+        $validator = $this->component->getSubmissionValidator($component, $election);
 
-        $countYes = $votes->filter(function ($vote) use ($ballotComponent) {
-            return $vote->values[$ballotComponent->id] === 'yes';
-        })->count();
-        $countNo = 30 - $countYes;
+        $this->assertEquals([
+            $component->id => ['required', Rule::in(['yes', 'no', 'abstain'])],
+        ], $validator->toArray());
+    }
 
-        $results = $this->component->calculateResults(collect($votes), $ballotComponent);
+    // ----------------------------------------------------------------
+    // Result calculation (deterministic)
+    // ----------------------------------------------------------------
 
-        assertEquals(['yes' => $countYes, 'no' => $countNo], $results->toArray()['state']);
+    public function test_tallies_yes_and_no_and_picks_winner(): void
+    {
+        $component = $this->makeComponent();
+        $votes = $this->votesFor($component, ['yes', 'yes', 'yes', 'no', 'no']);
+
+        $result = $this->component->calculateResults($votes, $component)->toArray();
+
+        $this->assertEquals(['yes' => 3, 'no' => 2], $result['state']);
+        $this->assertEquals(5, $result['total_votes']);
+        $this->assertEquals('yes', $result['winner']);
+        $this->assertEquals(['yes'], $result['winners']);
+    }
+
+    public function test_counts_abstain_as_its_own_tally(): void
+    {
+        $component = $this->makeComponent();
+        $votes = $this->votesFor($component, ['yes', 'no', 'abstain', 'abstain']);
+
+        $result = $this->component->calculateResults($votes, $component)->toArray();
+
+        $this->assertEquals(2, $result['state']['abstain']);
+        $this->assertEquals(1, $result['state']['yes']);
+        $this->assertEquals(1, $result['state']['no']);
+        // abstain has the plurality here.
+        $this->assertEquals('abstain', $result['winner']);
+    }
+
+    public function test_detects_a_tie(): void
+    {
+        $component = $this->makeComponent();
+        $votes = $this->votesFor($component, ['yes', 'yes', 'no', 'no']);
+
+        $result = $this->component->calculateResults($votes, $component)->toArray();
+
+        $this->assertEquals('tie', $result['winner']);
+        $this->assertEqualsCanonicalizing(['yes', 'no'], $result['winners']);
+    }
+
+    public function test_empty_votes_returns_empty_result(): void
+    {
+        $component = $this->makeComponent();
+
+        $result = $this->component->calculateResults(collect([]), $component)->toArray();
+
+        $this->assertEquals([], $result['state']);
+        $this->assertEquals(0, $result['total_votes']);
+        $this->assertNull($result['winner']);
+        $this->assertNull($result['winners']);
     }
 }

@@ -4,15 +4,12 @@ declare(strict_types=1);
 
 namespace App\BallotComponents\FirstPastThePost\v1;
 
-use App\Models\Ballot;
 use App\Models\BallotComponent;
 use App\Models\Election;
 use App\Models\Vote;
-use Illuminate\Support\Arr;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 use Tests\TestCase;
-
-use function PHPUnit\Framework\assertEquals;
 
 class FirstPastThePostTest extends TestCase
 {
@@ -24,59 +21,109 @@ class FirstPastThePostTest extends TestCase
         $this->component = new FirstPastThePost();
     }
 
-    public function test_get_submissions_validator(): void
+    private function makeComponent(array $options): BallotComponent
     {
-        $election = Election::factory()->make();
-        $ballotComponent = BallotComponent::factory()->make([
+        return BallotComponent::factory()->make([
             'type' => 'FirstPastThePost',
-            'options' => ['Ana', 'Betty', 'Charles', 'David', 'Ernest']
+            'version' => 'v1',
+            'options' => $options,
         ]);
+    }
 
-        $validator = $this->component->getSubmissionValidator($ballotComponent, $election);
+    /**
+     * @param array<int, string|null> $choices
+     */
+    private function votesFor(BallotComponent $component, array $choices): Collection
+    {
+        $votes = collect();
+        foreach ($choices as $choice) {
+            $votes->push(Vote::factory()->make([
+                'ballot_id' => 'ballot-x',
+                'values' => $choice === null ? null : [$component->id => $choice],
+            ]));
+        }
+        return $votes;
+    }
 
-        assertEquals([
-            $ballotComponent->id => [
-                'required',
-                Rule::in(['Ana', 'Betty', 'Charles', 'David', 'Ernest'])
-            ]
+    // ----------------------------------------------------------------
+    // Submission validator
+    // ----------------------------------------------------------------
+
+    public function test_submission_validator_non_abstainable(): void
+    {
+        $election = Election::factory()->make(['abstainable' => false]);
+        $component = $this->makeComponent(['Ana', 'Betty', 'Charles']);
+
+        $validator = $this->component->getSubmissionValidator($component, $election);
+
+        $this->assertEquals([
+            $component->id => ['required', Rule::in(['Ana', 'Betty', 'Charles'])],
         ], $validator->toArray());
     }
 
-    public function test_calculate_results(): void
+    public function test_submission_validator_abstainable_adds_abstain_option(): void
     {
-        $ballot = Ballot::factory()->make();
-        $ballotComponent = BallotComponent::factory()->make([
-            'type' => 'FirstPastThePost',
-            'options' => ['Ana', 'Betty', 'Charles', 'David', 'Ernest'],
-            'ballot' => $ballot
+        $election = Election::factory()->make(['abstainable' => true]);
+        $component = $this->makeComponent(['Ana', 'Betty']);
+
+        $validator = $this->component->getSubmissionValidator($component, $election);
+
+        $this->assertEquals([
+            $component->id => ['required', Rule::in(['Ana', 'Betty', 'abstain'])],
+        ], $validator->toArray());
+    }
+
+    // ----------------------------------------------------------------
+    // Result calculation (deterministic)
+    // ----------------------------------------------------------------
+
+    public function test_counts_votes_and_picks_plurality_winner(): void
+    {
+        $component = $this->makeComponent(['Ana', 'Betty', 'Charles']);
+        $votes = $this->votesFor($component, [
+            'Ana', 'Ana', 'Ana', 'Betty', 'Betty', 'Charles',
         ]);
 
-        $votes = Vote::factory()
-            ->count(30)
-            ->state([
-                'ballot_id' => $ballot->id,
-            ])->sequence(
-                function () use ($ballotComponent) {
-                    return [
-                        'values' => [
-                            $ballotComponent->id => Arr::random(['Ana', 'Betty', 'Charles', 'David', 'Ernest'])
-                        ]
-                    ];
-                },
-            )->make();
+        $result = $this->component->calculateResults($votes, $component)->toArray();
 
-        $groups = $votes->groupBy(function ($vote) use ($ballotComponent) {
-            return $vote->values[$ballotComponent->id];
-        });
+        $this->assertEquals(['Ana' => 3, 'Betty' => 2, 'Charles' => 1], $result['state']);
+        $this->assertEquals(6, $result['total_votes']);
+        $this->assertEquals('Ana', $result['winner']);
+        $this->assertEquals(['Ana'], $result['winners']);
+    }
 
-        $results = $this->component->calculateResults(collect($votes), $ballotComponent);
+    public function test_detects_a_tie(): void
+    {
+        $component = $this->makeComponent(['Ana', 'Betty']);
+        $votes = $this->votesFor($component, ['Ana', 'Ana', 'Betty', 'Betty']);
 
-        assertEquals([
-            'Ana' => $groups->get('Ana', collect())->count(),
-            'Betty' => $groups->get('Betty', collect())->count(),
-            'Charles' => $groups->get('Charles', collect())->count(),
-            'David' => $groups->get('David', collect())->count(),
-            'Ernest' => $groups->get('Ernest', collect())->count()
-        ], $results->toArray()['state']);
+        $result = $this->component->calculateResults($votes, $component)->toArray();
+
+        $this->assertEquals('tie', $result['winner']);
+        $this->assertEqualsCanonicalizing(['Ana', 'Betty'], $result['winners']);
+    }
+
+    public function test_only_options_with_votes_appear_in_state(): void
+    {
+        $component = $this->makeComponent(['Ana', 'Betty', 'Charles']);
+        $votes = $this->votesFor($component, ['Ana', 'Ana']);
+
+        $result = $this->component->calculateResults($votes, $component)->toArray();
+
+        // Charles/Betty received no votes and are absent from the tally.
+        $this->assertEquals(['Ana' => 2], $result['state']);
+        $this->assertEquals('Ana', $result['winner']);
+    }
+
+    public function test_empty_votes_returns_empty_result(): void
+    {
+        $component = $this->makeComponent(['Ana', 'Betty']);
+
+        $result = $this->component->calculateResults(collect([]), $component)->toArray();
+
+        $this->assertEquals([], $result['state']);
+        $this->assertEquals(0, $result['total_votes']);
+        $this->assertNull($result['winner']);
+        $this->assertNull($result['winners']);
     }
 }
