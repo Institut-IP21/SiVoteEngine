@@ -3,10 +3,13 @@
 namespace Tests\Feature\Ballot;
 
 use App\Models\Election;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class BallotCrudTest extends TestCase
 {
+    use RefreshDatabase;
+
     public $ballot_schema = [
         'id',
         'election_id',
@@ -32,11 +35,11 @@ class BallotCrudTest extends TestCase
 
         $this->postJson("/api/election/$el->id/ballot/create")->assertUnauthorized();
         $this->getJson("/api/election/$el->id/ballot/$ballot->id")->assertUnauthorized();
-        $this->postJson("/api/election/$el->id/ballot/$ballot->id")->assertUnauthorized();
+        $this->postJson("/api/election/$el->id/ballot/$ballot->id/update")->assertUnauthorized();
         $this->deleteJson("/api/election/$el->id/ballot/$ballot->id")->assertUnauthorized();
 
         $this->getJson("/api/election/$el->id/ballot/$ballot->id/result")->assertUnauthorized();
-        $this->getJson("/api/election/$el->id/ballot/$ballot->id/votes")->assertUnauthorized();
+        $this->getJson("/api/election/$el->id/ballot/$ballot->id/vote")->assertUnauthorized();
         $this->getJson("/api/election/$el->id/ballot/$ballot->id/votes.csv")->assertUnauthorized();
         $this->postJson("/api/election/$el->id/ballot/$ballot->id/activate")->assertUnauthorized();
         $this->postJson("/api/election/$el->id/ballot/$ballot->id/deactivate")->assertUnauthorized();
@@ -47,11 +50,11 @@ class BallotCrudTest extends TestCase
 
         $req->postJson("/api/election/$el->id/ballot/create")->assertForbidden()->assertJson($owner_error);
         $req->getJson("/api/election/$el->id/ballot/$ballot->id")->assertForbidden()->assertJson($owner_error);
-        $req->postJson("/api/election/$el->id/ballot/$ballot->id")->assertForbidden()->assertJson($owner_error);
+        $req->postJson("/api/election/$el->id/ballot/$ballot->id/update")->assertForbidden()->assertJson($owner_error);
         $req->deleteJson("/api/election/$el->id/ballot/$ballot->id")->assertForbidden()->assertJson($owner_error);
 
         $req->getJson("/api/election/$el->id/ballot/$ballot->id/result")->assertForbidden()->assertJson($owner_error);
-        $req->getJson("/api/election/$el->id/ballot/$ballot->id/votes")->assertForbidden()->assertJson($owner_error);
+        $req->getJson("/api/election/$el->id/ballot/$ballot->id/vote")->assertForbidden()->assertJson($owner_error);
         $req->getJson("/api/election/$el->id/ballot/$ballot->id/votes.csv")->assertForbidden()->assertJson($owner_error);
         $req->postJson("/api/election/$el->id/ballot/$ballot->id/activate")->assertForbidden()->assertJson($owner_error);
         $req->postJson("/api/election/$el->id/ballot/$ballot->id/deactivate")->assertForbidden()->assertJson($owner_error);
@@ -116,10 +119,10 @@ class BallotCrudTest extends TestCase
         $ballotFinished = $el->ballots[1];
 
         $req = $this->withHeaders(['Authorization' => '123123123', 'Owner' => $el->owner]);
-        $req->postJson("/api/election/$el->id/ballot/$ballotActive->id", [])
+        $req->postJson("/api/election/$el->id/ballot/$ballotActive->id/update", [])
             ->assertStatus(400);
 
-        $req->postJson("/api/election/$el->id/ballot/$ballotFinished->id", [])
+        $req->postJson("/api/election/$el->id/ballot/$ballotFinished->id/update", [])
             ->assertStatus(400);
     }
 
@@ -132,7 +135,7 @@ class BallotCrudTest extends TestCase
         $ballot = $el->ballots[0];
 
         $req = $this->withHeaders(['Authorization' => '123123123', 'Owner' => $el->owner]);
-        $req->postJson("/api/election/$el->id/ballot/$ballot->id", [
+        $req->postJson("/api/election/$el->id/ballot/$ballot->id/update", [
             'title' => 'I edited this title',
             'description' => 'I also edited the description',
             'email_template' => 'A new template, just for you',
