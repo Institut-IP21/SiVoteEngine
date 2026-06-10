@@ -8,7 +8,12 @@ use App\Models\Election;
 abstract class BallotComponentType
 {
     public static $livewireForm = false;
+    public static $needsOptions = false;
 
+    /** @var array<array-key, mixed> */
+    public static $optionsValidator = [];
+
+    abstract public static function strings();
     abstract public static function calculateResults(array $votes, BallotComponent $component);
     abstract public static function getSubmissionValidator(BallotComponent $component, Election $election);
     abstract public static function validateOptions($options);

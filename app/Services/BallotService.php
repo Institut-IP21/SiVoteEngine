@@ -14,6 +14,7 @@ use League\Csv\Writer;
 
 class BallotService
 {
+    /** @var array<string, array<string, class-string<BallotComponentType>>> */
     protected $components = [
         'YesNo' => [
             'v1' => YesNo::class

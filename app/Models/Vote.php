@@ -39,6 +39,7 @@ class Vote extends Model
         'values' => 'array'
     ];
 
+    /** @return BelongsTo<Ballot, $this> */
     public function ballot(): BelongsTo
     {
         return $this->belongsTo(Ballot::class);

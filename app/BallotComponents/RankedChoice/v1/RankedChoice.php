@@ -66,9 +66,9 @@ class RankedChoice extends BallotComponentType
             return $acc;
         }, []);
 
-        $number_of_votes_cast = collect($votes)->countBy(function ($vote) {
+        $number_of_votes_cast = collect($votes)->filter(function ($vote) {
             return !empty($vote['values']);
-        })->first();
+        })->count();
 
         $state = array_reduce($votes, function ($runningTotal, $vote) use ($component, $omit) {
             // Skip the votes that were never cast

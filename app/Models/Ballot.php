@@ -75,6 +75,7 @@ class Ballot extends Model
         'quorum' => 'integer',
     ];
 
+    /** @return HasMany<BallotComponent, $this> */
     public function components(): HasMany
     {
         return $this->hasMany(BallotComponent::class)->orderBy('order');
@@ -95,6 +96,7 @@ class Ballot extends Model
         return $this->active || $this->finished;
     }
 
+    /** @return HasMany<Vote, $this> */
     public function votes(): HasMany
     {
         return $this->hasMany(Vote::class);
@@ -115,6 +117,7 @@ class Ballot extends Model
         return $this->castVotes()->count();
     }
 
+    /** @return BelongsTo<Election, $this> */
     public function election(): BelongsTo
     {
         return $this->belongsTo(Election::class);

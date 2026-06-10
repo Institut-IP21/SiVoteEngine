@@ -55,6 +55,7 @@ class BallotComponent extends Model
 
     protected $appends = ['slug'];
 
+    /** @return BelongsTo<Ballot, $this> */
     public function ballot(): BelongsTo
     {
         return $this->belongsTo(Ballot::class);

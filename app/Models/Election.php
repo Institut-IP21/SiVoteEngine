@@ -52,6 +52,7 @@ class Election extends Model
         'abstainable' => 'boolean',
     ];
 
+    /** @return HasMany<Ballot, $this> */
     public function ballots(): HasMany
     {
         return $this->hasMany(Ballot::class)->orderBy('created_at', 'desc');
