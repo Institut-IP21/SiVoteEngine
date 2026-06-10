@@ -57,6 +57,8 @@ class ElectionCreate extends Command
 
         if (!in_array($abstainable, ['yes', 'no'])) {
             $abstainable = $this->confirm('Can the voters abstain on questions in this election?', true);
+        } else {
+            $abstainable = $abstainable === 'yes';
         }
 
         if (!in_array($level, ["2", "3"])) {
@@ -71,7 +73,7 @@ class ElectionCreate extends Command
         $election = Election::create([
             'title' => $title,
             'owner' => config('app.cli.default_owner'),
-            'abstainable' => $abstainable === 'Yes',
+            'abstainable' => $abstainable,
             'level' => $level
         ]);
 

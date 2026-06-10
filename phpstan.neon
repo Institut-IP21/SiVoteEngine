@@ -7,7 +7,7 @@ parameters:
         - app
 
     # The level 10 is the highest level
-    level: 3
+    level: 4
 
     excludePaths:
         - app/Http/Resources

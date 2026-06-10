@@ -55,12 +55,12 @@ class BallotComponentCreate extends Command
         $title = $this->option('title');
         $description = $this->option('description');
         $type = $this->option('type');
-        $version = $this->option('version');
+        $version = $this->option('variant');
         $options = $this->option('options');
 
-        while (!$ballotId || !Ballot::where(['id', $ballotId])->exists()) {
+        while (!$ballotId || !Ballot::where('id', $ballotId)->exists()) {
             $ballotId = $this->ask('Please enter the ID of an existing ballot');
-            if (!$ballotId || !Ballot::where(['id', $ballotId])->exists()) {
+            if (!$ballotId || !Ballot::where('id', $ballotId)->exists()) {
                 $this->info("Could not find ballot with ID {$ballotId}");
             }
         }
@@ -82,15 +82,16 @@ class BallotComponentCreate extends Command
 
         $ballotTypeVersions = $this->ballotService->getBallotVersions($type);
 
-        while (!$version || !$version == -1 || !in_array($version, $ballotTypeVersions)) {
-            $version = $this->choice("Please choose a valid version of the {$type} ballot type:", $ballotTypeVersions, "v1");
-            if (!$version || !$version == -1 || !in_array($version, $ballotTypeVersions)) {
-                $this->info("Not a valid version of {$type} ballot type");
-            }
+        // "-1" is a sentinel meaning "use the latest available version".
+        if (is_string($version) && $version === '-1') {
+            $version = array_key_last($ballotTypeVersions);
         }
 
-        if ($version == -1) {
-            $version = array_key_last($ballotTypeVersions);
+        while (!$version || !in_array($version, $ballotTypeVersions)) {
+            $version = $this->choice("Please choose a valid version of the {$type} ballot type:", $ballotTypeVersions, "v1");
+            if (!in_array($version, $ballotTypeVersions)) {
+                $this->info("Not a valid version of {$type} ballot type");
+            }
         }
 
         $ballotComponentClass = $this->ballotService->getBallotComponentClass($type, $version);
