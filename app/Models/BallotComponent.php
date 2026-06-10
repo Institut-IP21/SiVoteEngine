@@ -5,8 +5,27 @@ namespace App\Models;
 use App\Models\Concerns\HasUuidV4;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
+/**
+ * @property string $id
+ * @property string $ballot_id
+ * @property string $title
+ * @property string $description
+ * @property string $type
+ * @property int $order
+ * @property string $version
+ * @property array $options
+ * @property bool $active
+ * @property bool $finished
+ * @property-read \App\Models\Ballot $ballot
+ * @property-read string $slug
+ * @property-read string $component_path
+ * @property-read string $form_template
+ * @property-read string $form_template_livewire
+ * @property-read string $result_template
+ */
 class BallotComponent extends Model
 {
     use HasFactory;
@@ -36,7 +55,7 @@ class BallotComponent extends Model
 
     protected $appends = ['slug'];
 
-    public function ballot()
+    public function ballot(): BelongsTo
     {
         return $this->belongsTo(Ballot::class);
     }

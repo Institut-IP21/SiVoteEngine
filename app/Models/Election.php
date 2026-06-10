@@ -6,11 +6,22 @@ use Database\Factories\ElectionFactory;
 use App\Models\Concerns\HasUuidV4;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Dyrynda\Database\Support\CascadeSoftDeletes;
 
 /**
- * @method static ElectionFactory factory(mixed? $parameters)
+ * @property string $id
+ * @property string $owner
+ * @property string $title
+ * @property string $description
+ * @property int $level
+ * @property bool $abstainable
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Ballot> $ballots
+ * @property-read bool $active
+ * @property-read bool $locked
+ *
+ * @method static ElectionFactory factory($count = null, $state = [])
  */
 class Election extends Model
 {
@@ -41,7 +52,7 @@ class Election extends Model
         'abstainable' => 'boolean',
     ];
 
-    public function ballots()
+    public function ballots(): HasMany
     {
         return $this->hasMany(Ballot::class)->orderBy('created_at', 'desc');
     }

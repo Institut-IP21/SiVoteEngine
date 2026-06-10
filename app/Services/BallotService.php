@@ -98,7 +98,7 @@ class BallotService
     public function calculateResults(Ballot $ballot)
     {
         $votes = $ballot->cast_votes;
-        return $ballot->components()->get()->reduce(function ($acc, $component) use ($votes) {
+        return $ballot->components()->get()->reduce(function ($acc, BallotComponent $component) use ($votes) {
             $componentClass = $this->getBallotComponentClassInstance($component['type'], $component['version'], $component['settings']);
             $acc[$component->id] = [
                 'results' => $componentClass::calculateResults($votes, $component),
@@ -117,7 +117,7 @@ class BallotService
 
         $header = $components->pluck('title')->prepend(__('ballot.voteId'))->toArray();
 
-        $results_per_component = $components->map(function ($component) use ($votes) {
+        $results_per_component = $components->map(function (BallotComponent $component) use ($votes) {
             $componentClass = $this->getBallotComponentClassInstance($component['type'], $component['version'], $component['settings']);
             return $votes->map(function (Vote $vote) use ($componentClass, $component) {
                 return $componentClass::valuesToCsv($vote->values, $component->id);

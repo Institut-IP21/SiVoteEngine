@@ -3,6 +3,7 @@
 namespace App\Http\Livewire;
 
 use App\Models\Ballot;
+use App\Models\BallotComponent;
 use App\Models\Election;
 use App\Models\Vote;
 use App\Services\BallotService;
@@ -18,6 +19,7 @@ class Session extends Component
     public Ballot $ballot;
     public string $code;
     public Collection $activeComponents;
+    public array $componentTree = [];
 
     public function mount(Election $election, Ballot $ballot, Request $request, BallotService $service)
     {
@@ -35,12 +37,12 @@ class Session extends Component
 
     public function render()
     {
-        $this->activeComponents = $this->ballot->components()->get()->filter(function ($component) {
+        $this->activeComponents = $this->ballot->components()->get()->filter(function (BallotComponent $component) {
             return $component->active;
         });
 
         if ($this->code !== 'preview-mode') {
-            Redis::set("session:active-voters:{$this->ballot->id}:{$this->code}", 1, 'ex', 60);
+            Redis::setex("session:active-voters:{$this->ballot->id}:{$this->code}", 60, 1);
         }
 
         return view('livewire.session-ballot', ['ballot' => $this->ballot])->extends('layouts.main')->slot('content');

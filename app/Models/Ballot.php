@@ -5,11 +5,32 @@ namespace App\Models;
 use App\Models\Concerns\HasUuidV4;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Dyrynda\Database\Support\CascadeSoftDeletes;
 
 // Preview ballot can open engine URL <- /preview route
 
+/**
+ * @property string $id
+ * @property string $election_id
+ * @property string $title
+ * @property bool $active
+ * @property bool $finished
+ * @property string $description
+ * @property string $email_subject
+ * @property string $email_template
+ * @property bool $is_secret
+ * @property string $mode
+ * @property int|null $quorum
+ * @property-read \App\Models\Election $election
+ * @property-read \App\Models\BallotComponent[] $components
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Vote> $votes
+ * @property-read \App\Models\Vote[] $cast_votes
+ * @property-read int $votes_count
+ * @property-read bool $locked
+ */
 class Ballot extends Model
 {
     use HasFactory;
@@ -54,7 +75,7 @@ class Ballot extends Model
         'quorum' => 'integer',
     ];
 
-    public function components()
+    public function components(): HasMany
     {
         return $this->hasMany(BallotComponent::class)->orderBy('order');
     }
@@ -74,7 +95,7 @@ class Ballot extends Model
         return $this->active || $this->finished;
     }
 
-    public function votes()
+    public function votes(): HasMany
     {
         return $this->hasMany(Vote::class);
     }
@@ -94,7 +115,7 @@ class Ballot extends Model
         return $this->castVotes()->count();
     }
 
-    public function election()
+    public function election(): BelongsTo
     {
         return $this->belongsTo(Election::class);
     }

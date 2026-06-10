@@ -5,6 +5,9 @@ namespace Database\Factories;
 use App\Models\BallotComponent;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
+/**
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\BallotComponent>
+ */
 class BallotComponentFactory extends Factory
 {
     /**
