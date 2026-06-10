@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use App\Traits\Encryptable;
-use GoldSpecDigital\LaravelEloquentUUID\Database\Eloquent\Uuid;
+use App\Models\Concerns\HasUuidV4;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -11,7 +11,7 @@ class Vote extends Model
 {
     use Encryptable;
     use HasFactory;
-    use Uuid;
+    use HasUuidV4;
 
     protected $encryptable = [
         'values',

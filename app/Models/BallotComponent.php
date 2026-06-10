@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use GoldSpecDigital\LaravelEloquentUUID\Database\Eloquent\Uuid;
+use App\Models\Concerns\HasUuidV4;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
@@ -10,7 +10,7 @@ use Illuminate\Support\Str;
 class BallotComponent extends Model
 {
     use HasFactory;
-    use Uuid;
+    use HasUuidV4;
 
     protected $keyType = 'string';
     public $incrementing = false;
