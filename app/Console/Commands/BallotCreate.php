@@ -54,7 +54,9 @@ class BallotCreate extends Command
                 ->where('locked', false);
 
             $electionChoice = $this->choice('Please enter the ID of an existing election', array_values($elections->pluck('title')->toArray()));
-            $electionId = $elections->firstWhere('title', $electionChoice)->id;
+            /** @var Election $electionMatch */
+            $electionMatch = $elections->firstWhere('title', $electionChoice);
+            $electionId = $electionMatch->id;
             $electionExists = Election::where(['id', $electionId])->exists();
             if (!$electionExists) {
                 $this->info("Could not find election with ID {$electionId}");

@@ -33,6 +33,7 @@ use Dyrynda\Database\Support\CascadeSoftDeletes;
  */
 class Ballot extends Model
 {
+    /** @use HasFactory<\Database\Factories\BallotFactory> */
     use HasFactory;
     use SoftDeletes, CascadeSoftDeletes;
     use HasUuidV4;
@@ -44,6 +45,7 @@ class Ballot extends Model
     protected $keyType = 'string';
     public $incrementing = false;
 
+    /** @var list<string> */
     protected $cascadeDeletes = ['components', 'votes'];
 
     public $attributes = [
@@ -81,17 +83,18 @@ class Ballot extends Model
         return $this->hasMany(BallotComponent::class)->orderBy('order');
     }
 
-    public function getComponentsAttribute()
+    /** @return BallotComponent[] */
+    public function getComponentsAttribute(): array
     {
         return $this->components()->get()->all();
     }
 
-    public function disableComponents()
+    public function disableComponents(): void
     {
         $this->components()->where('active', true)->update(['active' => false]);
     }
 
-    public function getLockedAttribute()
+    public function getLockedAttribute(): bool
     {
         return $this->active || $this->finished;
     }
@@ -102,17 +105,19 @@ class Ballot extends Model
         return $this->hasMany(Vote::class);
     }
 
-    public function castVotes()
+    /** @return \Illuminate\Database\Eloquent\Collection<int, Vote> */
+    public function castVotes(): \Illuminate\Database\Eloquent\Collection
     {
         return $this->votes()->where('values', '!=', null)->get();
     }
 
-    public function getCastVotesAttribute()
+    /** @return Vote[] */
+    public function getCastVotesAttribute(): array
     {
         return $this->castVotes()->all();
     }
 
-    public function getVotesCountAttribute()
+    public function getVotesCountAttribute(): int
     {
         return $this->castVotes()->count();
     }
@@ -123,13 +128,13 @@ class Ballot extends Model
         return $this->belongsTo(Election::class);
     }
 
-    public function activate()
+    public function activate(): bool
     {
         $this->active = true;
         return $this->save();
     }
 
-    public function deactivate()
+    public function deactivate(): bool
     {
         $this->active = false;
         $this->finished = true;

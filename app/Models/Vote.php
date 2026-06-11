@@ -11,16 +11,18 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /**
  * @property string $id
  * @property string $ballot_id
- * @property array|null $values
+ * @property array<string, mixed>|null $values
  * @property string|null $cast_by
  * @property-read \App\Models\Ballot $ballot
  */
 class Vote extends Model
 {
     use Encryptable;
+    /** @use HasFactory<\Database\Factories\VoteFactory> */
     use HasFactory;
     use HasUuidV4;
 
+    /** @var list<string> */
     protected $encryptable = [
         'values',
         'cast_by'

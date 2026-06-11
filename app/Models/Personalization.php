@@ -28,7 +28,12 @@ class Personalization extends Model
 
     //
 
-    public function scopeOwner($query, $id)
+    /**
+     * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
+     * @param  mixed  $id
+     * @return \Illuminate\Database\Eloquent\Builder<static>
+     */
+    public function scopeOwner(\Illuminate\Database\Eloquent\Builder $query, mixed $id): \Illuminate\Database\Eloquent\Builder
     {
         return $query->where('owner', $id);
     }

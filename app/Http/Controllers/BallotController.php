@@ -8,7 +8,10 @@ use App\Models\Election;
 use App\Models\Personalization;
 use App\Models\Vote;
 use App\Services\BallotService;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Validator;
 
 class BallotController extends Controller
@@ -20,9 +23,10 @@ class BallotController extends Controller
         $this->ballotService = $ballotService;
     }
 
-    public function view(Election $election, Ballot $ballot, Request $request, BallotService $service)
+    public function view(Election $election, Ballot $ballot, Request $request, BallotService $service): View
     {
         $code = $request->query('code');
+        /** @var Vote|null $vote */
         $vote = Vote::find($code);
 
         if (!$vote || !$vote->ballot->id == $ballot->id) {
@@ -40,7 +44,7 @@ class BallotController extends Controller
         return view('ballot', ['election' => $election, 'ballot' => $ballot, 'code' => $code, 'pers' => $pers, 'componentTree' => $componentTree]);
     }
 
-    public function preview(Election $election, Ballot $ballot, Request $request, BallotService $service)
+    public function preview(Election $election, Ballot $ballot, Request $request, BallotService $service): View
     {
         $pers = Personalization::where('owner', $election->owner)->first();
         $componentTree = $service->getComponentTree();
@@ -48,13 +52,14 @@ class BallotController extends Controller
         return view('ballot-preview', ['election' => $election, 'ballot' => $ballot, 'pers' => $pers, 'componentTree' => $componentTree]);
     }
 
-    public function vote(Election $election, Ballot $ballot, Request $request)
+    public function vote(Election $election, Ballot $ballot, Request $request): View
     {
         if ($ballot->mode === Ballot::MODE_SESSION) {
             throw new \Exception("Can not vote SESSION ballots this way ");
         }
 
         $code = $request->input('code');
+        /** @var Vote|null $vote */
         $vote = Vote::find($code);
 
         if (!$vote || !$vote->ballot->id == $ballot->id) {
@@ -86,13 +91,14 @@ class BallotController extends Controller
         return view('voted', ['election' => $election, 'ballot' => $ballot, 'vote' => $vote, 'pers' => $pers]);
     }
 
-    public function voteComponent(Election $election, Ballot $ballot, BallotComponent $component, Request $request)
+    public function voteComponent(Election $election, Ballot $ballot, BallotComponent $component, Request $request): View|RedirectResponse
     {
         if ($ballot->mode !== Ballot::MODE_SESSION) {
             throw new \Exception("Only SESSION ballots can vote this way");
         }
 
         $code = $request->input('code');
+        /** @var Vote|null $vote */
         $vote = Vote::find($code);
 
         if (!$vote || !$vote->ballot->id == $ballot->id) {
@@ -130,7 +136,7 @@ class BallotController extends Controller
         return redirect()->back()->with('success', __('ballot.vote.registered'));
     }
 
-    public function result(Election $election, Ballot $ballot, Request $request)
+    public function result(Election $election, Ballot $ballot, Request $request): View|Response
     {
         if (!$ballot->finished) {
             return response(__('ballot.result.not_yet'), 403);

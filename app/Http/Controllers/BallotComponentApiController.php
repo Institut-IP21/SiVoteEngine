@@ -7,7 +7,9 @@ use App\Models\Ballot;
 use App\Models\BallotComponent;
 use App\Models\Election;
 use App\Services\BallotService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
 
 class BallotComponentApiController extends Controller
 {
@@ -18,13 +20,14 @@ class BallotComponentApiController extends Controller
         $this->ballotService = $ballotService;
     }
 
-    public function list(Election $election)
+    /** @return array{data: array<mixed>} */
+    public function list(Election $election): array
     {
         return [
             'data' => $this->ballotService->getComponentTree()
         ];
     }
-    public function create(Election $election, Ballot $ballot, Request $request)
+    public function create(Election $election, Ballot $ballot, Request $request): JsonResource|JsonResponse
     {
         $params = $request->all();
         $settings = [
@@ -83,12 +86,12 @@ class BallotComponentApiController extends Controller
         return new ComponentResource($component);
     }
 
-    public function read(Election $election, Ballot $ballot, BallotComponent $component, Request $request)
+    public function read(Election $election, Ballot $ballot, BallotComponent $component, Request $request): JsonResource
     {
         return new ComponentResource($component);
     }
 
-    public function update(Election $election, Ballot $ballot, BallotComponent $component, Request $request)
+    public function update(Election $election, Ballot $ballot, BallotComponent $component, Request $request): JsonResource|JsonResponse
     {
         $params = $request->all();
         $settings = [
@@ -161,17 +164,17 @@ class BallotComponentApiController extends Controller
         return new ComponentResource($component);
     }
 
-    public function delete(Election $election, Ballot $ballot, BallotComponent $component)
+    public function delete(Election $election, Ballot $ballot, BallotComponent $component): bool|null
     {
         return $component->delete();
     }
 
-    public function activate(Election $election, Ballot $ballot, BallotComponent $component)
+    public function activate(Election $election, Ballot $ballot, BallotComponent $component): bool
     {
         $component->active = true;
         return $component->save();
     }
-    public function deactivate(Election $election, Ballot $ballot, BallotComponent $component)
+    public function deactivate(Election $election, Ballot $ballot, BallotComponent $component): bool
     {
         $component->active = false;
         $component->finished = true;

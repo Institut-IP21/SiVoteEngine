@@ -6,10 +6,12 @@ use Illuminate\Support\Facades\Validator;
 use App\BallotComponents\BallotComponentType;
 use App\Models\BallotComponent;
 use App\Models\Election;
+use App\Models\Vote;
 use Illuminate\Validation\Rule;
 
 class FirstPastThePost extends BallotComponentType
 {
+    /** @var bool */
     public static $needsOptions = true;
 
     public static $optionsValidator = [
@@ -17,7 +19,8 @@ class FirstPastThePost extends BallotComponentType
         'options.*' => 'bail|required|string|distinct|min:1'
     ];
 
-    public static function strings()
+    /** @return array<string, mixed> */
+    public static function strings(): array
     {
         return [
             'name' => __('components.fptp.name'),
@@ -25,13 +28,17 @@ class FirstPastThePost extends BallotComponentType
         ];
     }
 
-    public static function calculateResults(array $votes, BallotComponent $component)
+    /**
+     * @param array<int, Vote> $votes
+     * @return array<string, mixed>
+     */
+    public static function calculateResults(array $votes, BallotComponent $component): array
     {
         $state = collect($votes)
-            ->groupBy(function ($vote) use ($component) {
-                return $vote->values[$component->id];
+            ->groupBy(function (Vote $vote) use ($component): string {
+                return ($vote->values ?? [])[$component->id] ?? 'abstain';
             })
-            ->map(function ($votes) {
+            ->map(function (mixed $votes): int {
                 return $votes->count();
             })
             ->toArray();
@@ -39,7 +46,11 @@ class FirstPastThePost extends BallotComponentType
         return self::annotateStateForVictory($state);
     }
 
-    public static function annotateStateForVictory($state)
+    /**
+     * @param array<string, int> $state
+     * @return array<string, mixed>
+     */
+    public static function annotateStateForVictory(array $state): array
     {
         if (count($state) === 0) {
             return [
@@ -63,7 +74,8 @@ class FirstPastThePost extends BallotComponentType
         ];
     }
 
-    public static function getSubmissionValidator(BallotComponent $component, Election $election)
+    /** @return array<string, mixed> */
+    public static function getSubmissionValidator(BallotComponent $component, Election $election): array
     {
         $id = $component->id;
         $options = $component->options;
@@ -78,7 +90,10 @@ class FirstPastThePost extends BallotComponentType
         ];
     }
 
-    public static function validateOptions($options)
+    /**
+     * @param mixed $options
+     */
+    public static function validateOptions($options): bool
     {
         //TODO since this is just for CLI, it could be removed and implemented there I think...
         $validator = Validator::make(['options' => $options], static::$optionsValidator);

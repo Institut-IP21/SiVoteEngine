@@ -25,6 +25,7 @@ use Dyrynda\Database\Support\CascadeSoftDeletes;
  */
 class Election extends Model
 {
+    /** @use HasFactory<\Database\Factories\ElectionFactory> */
     use HasFactory;
     use SoftDeletes, CascadeSoftDeletes;
     use HasUuidV4;
@@ -32,6 +33,7 @@ class Election extends Model
     protected $keyType = 'string';
     public $incrementing = false;
 
+    /** @var list<string> */
     protected $cascadeDeletes = ['ballots'];
 
     protected $attributes = [
@@ -58,14 +60,14 @@ class Election extends Model
         return $this->hasMany(Ballot::class)->orderBy('created_at', 'desc');
     }
 
-    public function getActiveAttribute()
+    public function getActiveAttribute(): bool
     {
         return $this->ballots()->get()->contains(function (Ballot $ballot) {
             return $ballot->active;
         });
     }
 
-    public function getLockedAttribute()
+    public function getLockedAttribute(): bool
     {
         return $this->ballots()->get()->contains(function (Ballot $ballot) {
             return $ballot->locked;

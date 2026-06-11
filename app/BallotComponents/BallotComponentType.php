@@ -4,21 +4,42 @@ namespace App\BallotComponents;
 
 use App\Models\BallotComponent;
 use App\Models\Election;
+use App\Models\Vote;
 
 abstract class BallotComponentType
 {
+    /** @var bool */
     public static $livewireForm = false;
+
+    /** @var bool */
     public static $needsOptions = false;
 
     /** @var array<array-key, mixed> */
     public static $optionsValidator = [];
 
-    abstract public static function strings();
-    abstract public static function calculateResults(array $votes, BallotComponent $component);
-    abstract public static function getSubmissionValidator(BallotComponent $component, Election $election);
-    abstract public static function validateOptions($options);
+    /** @return array<string, mixed> */
+    abstract public static function strings(): array;
 
-    public static function valuesToCsv($values, $component_id)
+    /**
+     * @param array<int, Vote> $votes
+     * @return array<string, mixed>
+     */
+    abstract public static function calculateResults(array $votes, BallotComponent $component): array;
+
+    /** @return array<string, mixed> */
+    abstract public static function getSubmissionValidator(BallotComponent $component, Election $election): array;
+
+    /**
+     * @param mixed $options
+     */
+    abstract public static function validateOptions($options): bool;
+
+    /**
+     * @param array<string, mixed> $values
+     * @param string $component_id
+     * @return mixed
+     */
+    public static function valuesToCsv(array $values, string $component_id): mixed
     {
         return $values[$component_id];
     }

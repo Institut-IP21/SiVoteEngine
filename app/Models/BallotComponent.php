@@ -16,7 +16,7 @@ use Illuminate\Support\Str;
  * @property string $type
  * @property int $order
  * @property string $version
- * @property array $options
+ * @property array<string, mixed> $options
  * @property bool $active
  * @property bool $finished
  * @property-read \App\Models\Ballot $ballot
@@ -28,6 +28,7 @@ use Illuminate\Support\Str;
  */
 class BallotComponent extends Model
 {
+    /** @use HasFactory<\Database\Factories\BallotComponentFactory> */
     use HasFactory;
     use HasUuidV4;
 
@@ -61,32 +62,33 @@ class BallotComponent extends Model
         return $this->belongsTo(Ballot::class);
     }
 
-    public function getSlugAttribute()
+    public function getSlugAttribute(): string
     {
         return Str::slug($this->title);
     }
 
-    public function getComponentPathAttribute()
+    public function getComponentPathAttribute(): string
     {
         return $this->type . '/' . $this->version;
     }
 
-    public function getFormTemplateAttribute()
+    public function getFormTemplateAttribute(): string
     {
         return $this->type . '/' . $this->version . '/form';
     }
 
-    public function getFormTemplateLivewireAttribute()
+    public function getFormTemplateLivewireAttribute(): string
     {
         return $this->type . '/' . $this->version . '/form_livewire';
     }
 
-    public function getResultTemplateAttribute()
+    public function getResultTemplateAttribute(): string
     {
         return $this->type . '/' . $this->version . '/result';
     }
 
-    public static function parseOptionsString($options)
+    /** @return array<int, string> */
+    public static function parseOptionsString(string $options): array
     {
         return array_filter(array_map(function ($option) {
             return trim($option);

@@ -43,7 +43,7 @@ class ElectionCreate extends Command
     public function handle()
     {
         $title = $this->option('title');
-        $abstainable = strtolower($this->option('abstainable'));
+        $abstainable = strtolower((string) $this->option('abstainable'));
         $level = $this->option('level');
         $description = $this->option('description');
 

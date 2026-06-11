@@ -16,7 +16,8 @@ class ApiUser extends Authenticatable
         'owner',
     ];
 
-    public function personalization()
+    /** @return \Illuminate\Database\Eloquent\Relations\HasOne<Personalization, $this> */
+    public function personalization(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         return $this->hasOne(Personalization::class, 'owner', 'owner');
     }

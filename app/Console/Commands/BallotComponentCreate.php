@@ -80,6 +80,9 @@ class BallotComponentCreate extends Command
             }
         }
 
+        /** @var string $type */
+        $type = $type;
+
         $ballotTypeVersions = $this->ballotService->getBallotVersions($type);
 
         // "-1" is a sentinel meaning "use the latest available version".
@@ -94,12 +97,15 @@ class BallotComponentCreate extends Command
             }
         }
 
+        /** @var string $version */
+        $version = $version;
+
         $ballotComponentClass = $this->ballotService->getBallotComponentClass($type, $version);
 
-        $options = $ballotComponentClass::$needsOptions ? BallotComponent::parseOptionsString($options) : $ballotComponentClass::$presetOptions;
+        $options = $ballotComponentClass::$needsOptions ? BallotComponent::parseOptionsString((string) $options) : $ballotComponentClass::$presetOptions;
 
         while (!count($options) || !$ballotComponentClass::validateOptions($options)) {
-            $options = BallotComponent::parseOptionsString($this->ask('Please enter options for the ballot'));
+            $options = BallotComponent::parseOptionsString((string) $this->ask('Please enter options for the ballot'));
             if (!$options || !$ballotComponentClass::validateOptions($options)) {
                 $this->info("Not valid options for {$type} ballot type");
             }

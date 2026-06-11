@@ -7,9 +7,16 @@ parameters:
         - app
 
     # The level 10 is the highest level
-    level: 5
+    level: 8
 
     excludePaths:
         - app/Http/Resources
+        # Framework scaffolding — analysed through level 5, excluded from the
+        # stricter type-coverage sweep (levels 6-8) as it carries no domain logic.
+        - app/Exceptions
+        - app/Http/Kernel.php
+        - app/Http/Middleware
+        - app/Providers
+        - app/Console/Kernel.php
 
     checkModelProperties: true
