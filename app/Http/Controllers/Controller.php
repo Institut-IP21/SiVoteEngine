@@ -53,6 +53,10 @@ class Controller extends BaseController
 
     protected function getOwner(): string
     {
-        return Auth::user()->owner;
+        // Routes calling getOwner() run behind the auth.api middleware, which
+        // logs in an ApiUser, so Auth::user() is never null here.
+        /** @var \App\Models\ApiUser $user */
+        $user = Auth::user();
+        return $user->owner;
     }
 }

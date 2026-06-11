@@ -29,7 +29,7 @@ class BallotController extends Controller
         /** @var Vote|null $vote */
         $vote = Vote::find($code);
 
-        if (!$vote || !$vote->ballot->id == $ballot->id) {
+        if (!$vote || $vote->ballot->id !== $ballot->id) {
             return view('404', ['code' => 404]);
         }
 
@@ -62,7 +62,7 @@ class BallotController extends Controller
         /** @var Vote|null $vote */
         $vote = Vote::find($code);
 
-        if (!$vote || !$vote->ballot->id == $ballot->id) {
+        if (!$vote || $vote->ballot->id !== $ballot->id) {
             return view('404', ['code' => 404]);
         }
 
@@ -81,9 +81,7 @@ class BallotController extends Controller
             return view('vote-failed', ['election' => $election, 'ballot' => $ballot, 'errors' => $errors]);
         }
 
-        $code = $request->input('code');
         $values = $request->except(['code', '_token']); // Could get the component slugs and say ->only
-        $vote = Vote::find(['code' => $code, 'ballot_id' => $ballot->id])->first();
         $vote->values = $values;
         $vote->save();
 
@@ -101,7 +99,7 @@ class BallotController extends Controller
         /** @var Vote|null $vote */
         $vote = Vote::find($code);
 
-        if (!$vote || !$vote->ballot->id == $ballot->id) {
+        if (!$vote || $vote->ballot->id !== $ballot->id) {
             return view('404', ['code' => 404]);
         }
 
@@ -119,9 +117,6 @@ class BallotController extends Controller
         if (!$errors->isEmpty()) {
             return view('vote-failed', ['election' => $election, 'ballot' => $ballot, 'errors' => $errors]);
         }
-
-        $code = $request->input('code');
-        $vote = Vote::find(['code' => $code, 'ballot_id' => $ballot->id])->first();
 
         $values = $request->except(['code', '_token']); // Could get the component slugs and say ->only
         $oldValues = $vote->values;

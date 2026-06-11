@@ -138,7 +138,7 @@ class BallotService
         $results_per_component = $components->map(function (BallotComponent $component) use ($votes) {
             $componentClass = $this->getBallotComponentClassInstance($component['type'], $component['version'], $component['settings']);
             return $votes->map(function (Vote $vote) use ($componentClass, $component) {
-                return $componentClass::valuesToCsv($vote->values, $component->id);
+                return $componentClass::valuesToCsv($vote->values ?? [], $component->id);
             });
         });
 
