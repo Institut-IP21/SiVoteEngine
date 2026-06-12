@@ -13,7 +13,9 @@ class OwnerController extends Controller
     {
         $params = $request->all();
         $settings = [
-            'photo_url' => 'required|string',
+            // Must be a real http(s) URL — this value is rendered on voter-facing
+            // ballot pages, so reject javascript:/data: and other scheme injection.
+            'photo_url' => ['required', 'url', 'regex:/^https?:\/\//i'],
         ];
 
         if ($errors = $this->findErrors($params, $settings)) {

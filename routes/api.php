@@ -31,7 +31,7 @@ Route::middleware('api')->prefix('election')->group(function () {
     Route::delete('/{election}', [ElectionApiController::class, 'delete'])->name('election.api.delete')->middleware('can:delete,election');
 });
 
-Route::middleware('api')->prefix('election/{election}/ballot')->group(function () {
+Route::middleware(['api', 'scope.bindings'])->prefix('election/{election}/ballot')->group(function () {
     Route::post('/create', [BallotApiController::class, 'create'])->name('ballot.api.create')->middleware('can:update,election');
     Route::get('/{ballot}', [BallotApiController::class, 'read'])->name('ballot.api.read')->middleware('can:view,election');
     Route::post('/{ballot}/update', [BallotApiController::class, 'update'])->name('ballot.api.update')->middleware('can:update,election');
@@ -44,7 +44,7 @@ Route::middleware('api')->prefix('election/{election}/ballot')->group(function (
     Route::post('/{ballot}/switch-order', [BallotApiController::class, 'switchOrder'])->name('ballot.api.switch-order')->middleware('can:update,election');
 });
 
-Route::middleware('api')->prefix('election/{election}/ballot/{ballot}/component')->group(function () {
+Route::middleware(['api', 'scope.bindings'])->prefix('election/{election}/ballot/{ballot}/component')->group(function () {
     Route::get('/', [BallotComponentApiController::class, 'list'])->name('componen.apit.list')->middleware('can:view,election');
     Route::post('/create', [BallotComponentApiController::class, 'create'])->name('component.api.create')->middleware('can:update,election');
     Route::get('/{component}', [BallotComponentApiController::class, 'read'])->name('component.api.read')->middleware('can:view,election');
@@ -54,7 +54,7 @@ Route::middleware('api')->prefix('election/{election}/ballot/{ballot}/component'
     Route::post('/{component}/deactivate', [BallotComponentApiController::class, 'deactivate'])->name('component.api.deactivate')->middleware('can:update,election');
 });
 
-Route::middleware('api')->prefix('election/{election}/ballot/{ballot}/vote')->group(function () {
+Route::middleware(['api', 'scope.bindings'])->prefix('election/{election}/ballot/{ballot}/vote')->group(function () {
     Route::get('/', [VoteApiController::class, 'show'])->name('vote.show')->middleware('can:view,election');
     Route::post('/generate', [VoteApiController::class, 'generate'])->name('vote.generate')->middleware('can:update,election');
 });
