@@ -515,12 +515,14 @@ class RankedChoiceTest extends TestCase
         // R1: A=6 B=3 C=3 D=4 E=2 (cont 18, need 10); E unique min eliminated.
         // E's [E,B] and [E,C] transfer -> R2: A=6 B=4 C=4 D=4; B,C,D tie 3-way for last.
         // Look-back to round 1 among {B,C,D}: 3,3,4 -> the lowest (3) is itself tied
-        // between B and C, so the distinguishing round cannot single one out -> null.
+        // between B and C. Under the backward-RECURSION refinement we narrow to {B,C}
+        // and look at even-earlier rounds -- but round 1 is the ONLY prior round, so
+        // there is no earlier round to separate B from C: they are symmetric through
+        // ALL prior rounds -> breakTieByLookback() returns null -> NON-CONCLUSIVE.
         //
-        // PHASE-2 BOUNDARY: this is the documented look-back-refinement edge. Recursing
-        // to even-earlier rounds to break such a tie is an open Phase-2 decision; do NOT
-        // "fix" this here. The test pins the CURRENT behaviour (non-conclusive, all three
-        // tied labels surfaced in roster order).
+        // This is the genuine-symmetry floor: recursion still bottoms out at null here
+        // because no earlier round exists. The test pins that the refinement does NOT
+        // wrongly resolve a truly symmetric tie (all three tied labels, roster order).
         $component = $this->makeComponent(['A', 'B', 'C', 'D', 'E']);
         $votes = $this->votes($component, [
             ['A'], ['A'], ['A'], ['A'], ['A'], ['A'],
@@ -544,6 +546,87 @@ class RankedChoiceTest extends TestCase
         assertNull($r['result']['conclussive_winner']);
         assertEquals(['B', 'C', 'D'], $r['result']['winners']);
         assertNotContains('tie', $r['result']['winners']);
+    }
+
+    // ----- D6.3 refinement: recurse to an EARLIER round to break a sub-tie -----
+
+    public function test_multiway_lookback_recurses_to_earlier_round_to_break_subtie(): void
+    {
+        // D6.3 backward-recursion refinement. A 3-way last-place tie at R3 whose
+        // most-recent distinguishing prior round (R2) narrows the elimination
+        // candidates to a 2-WAY sub-tie; an EVEN-EARLIER round (R1) then resolves that
+        // sub-tie uniquely -> a single deterministic elimination -> a CONCLUSIVE winner.
+        //
+        // Fixture (18 ballots, options [A,B,C,D,E,F]):
+        //   6x [A]      2x [B,A]   3x [C]   4x [D]
+        //   1x [E,B,A]  1x [E,C]   1x [F,B,A]
+        //
+        // R1 (omit {}):        A=6 B=2 C=3 D=4 E=2 F=1 (cont 18, need 10)
+        //                      -> F=1 is the unique min -> eliminate F.
+        // R2 (omit {F}):       A=6 B=3 C=3 D=4 E=2     ([F,B,A] -> B)
+        //                      -> E=2 is the unique min -> eliminate E.
+        // R3 (omit {F,E}):     A=6 B=4 C=4 D=4         ([E,B,A] -> B, [E,C] -> C)
+        //                      -> B,C,D tie 3-way for last (non-zero).
+        //     Look-back among {B,C,D}:
+        //       most-recent prior R2: B=3 C=3 D=4 -> min 3 -> {B,C} (2-way sub-tie);
+        //       recurse to EARLIER round R1 among {B,C}: B=2 C=3 -> min 2 -> B unique.
+        //       => eliminate B (resolved by recursion, NOT non-conclusive).
+        // R4 (omit {F,E,B}):   A=10 C=4 D=4            ([B,A],[F,B,A],[E,B,A] -> A)
+        //                      -> A holds the majority (10 >= 10) -> A wins conclusively.
+        $component = $this->makeComponent(['A', 'B', 'C', 'D', 'E', 'F']);
+        $rankings = [
+            ['A'], ['A'], ['A'], ['A'], ['A'], ['A'],
+            ['B', 'A'], ['B', 'A'],
+            ['C'], ['C'], ['C'],
+            ['D'], ['D'], ['D'], ['D'],
+            ['E', 'B', 'A'],
+            ['E', 'C'],
+            ['F', 'B', 'A'],
+        ];
+
+        $r = RankedChoice::calculateResults($this->votes($component, $rankings), $component);
+
+        assertCount(4, $r['rounds']);
+        // R1: F is the unique min, eliminated.
+        assertSame('F', $r['rounds'][0]['eliminated']);
+        // R2: E is the unique min, eliminated; B has risen to 3 via F's transfer.
+        assertSame(3, $r['rounds'][1]['B']);
+        assertSame('E', $r['rounds'][1]['eliminated']);
+        // R3: the 3-way tie B=C=D=4 that the backward RECURSION breaks by eliminating B
+        // (R2 narrows to {B,C}; R1 singles out B). The single deterministic elimination.
+        assertSame(4, $r['rounds'][2]['B']);
+        assertSame(4, $r['rounds'][2]['C']);
+        assertSame(4, $r['rounds'][2]['D']);
+        assertSame('B', $r['rounds'][2]['eliminated']);
+        // R4: A reaches the majority and wins CONCLUSIVELY.
+        assertSame(10, $r['rounds'][3]['A']);
+        assertTrue($r['result']['conclussive']);
+        assertSame('A', $r['result']['conclussive_winner']);
+        assertEquals(['A'], $r['result']['winners']);
+    }
+
+    public function test_lookback_recursion_resolved_case_is_reproducible(): void
+    {
+        // Reproducibility guard for the backward-recursion path: identical ballots yield
+        // an identical result (and identical rounds) on a second independent run. No RNG.
+        $component = $this->makeComponent(['A', 'B', 'C', 'D', 'E', 'F']);
+        $rankings = [
+            ['A'], ['A'], ['A'], ['A'], ['A'], ['A'],
+            ['B', 'A'], ['B', 'A'],
+            ['C'], ['C'], ['C'],
+            ['D'], ['D'], ['D'], ['D'],
+            ['E', 'B', 'A'],
+            ['E', 'C'],
+            ['F', 'B', 'A'],
+        ];
+
+        $r1 = RankedChoice::calculateResults($this->votes($component, $rankings), $component);
+        $r2 = RankedChoice::calculateResults($this->votes($component, $rankings), $component);
+
+        assertTrue($r1['result']['conclussive']);
+        assertSame('A', $r1['result']['conclussive_winner']);
+        assertEquals($r1['result'], $r2['result']);
+        assertEquals($r1['rounds'], $r2['rounds']);
     }
 
     // ----- D8/D9: invalid-only (never entered) vs eliminated-only (exhausted) -----

@@ -238,19 +238,28 @@ class RankedChoice extends BallotComponentType
     }
 
     /**
-     * Deterministic prior-round look-back (D6.2). Among the tied last-place options,
-     * find the most recent prior round whose tallies differ for them and eliminate the
-     * one lowest there. Returns null when they are identical through every prior round
-     * (genuinely symmetric, D6.3) or when the lowest in the distinguishing round is
-     * itself still tied.
+     * Deterministic prior-round look-back (D6.2 / D6.3), with backward RECURSION.
      *
-     * @param list<string> $omitees
+     * Among the tied last-place options, find the most recent prior round whose tallies
+     * differ for them: the option(s) holding the minimum tally there are the elimination
+     * candidates. If exactly one, eliminate it. If several share that minimum, NARROW to
+     * that subset and keep looking at EVEN-EARLIER rounds (rounds strictly before the
+     * distinguishing one) to break the sub-tie. Only return null when the candidates are
+     * tied through ALL still-earlier rounds (genuinely symmetric, D6.3) — i.e. no earlier
+     * round ever separates them.
+     *
+     * Deterministic and reproducible: no RNG, pure function of the prior tallies.
+     *
+     * @param list<string> $omitees - the options currently tied for last
      * @param array<int, array<string, mixed>> $rounds - prior rounds, oldest first
+     * @param int|null $before - exclusive upper bound on the round index to inspect
+     *                           (look only at rounds with index < $before); null = all
      * @return string|null
      */
-    private static function breakTieByLookback(array $omitees, array $rounds): ?string
+    private static function breakTieByLookback(array $omitees, array $rounds, ?int $before = null): ?string
     {
-        for ($r = count($rounds) - 1; $r >= 0; $r--) {
+        $start = $before === null ? count($rounds) - 1 : $before - 1;
+        for ($r = $start; $r >= 0; $r--) {
             $prior = $rounds[$r];
             /** @var array<string, int> $vals */
             $vals = [];
@@ -262,13 +271,16 @@ class RankedChoice extends BallotComponentType
                 continue;
             }
             $priorMin = min($vals);
-            $lowest = array_keys($vals, $priorMin, true);
+            /** @var list<string> $lowest */
+            $lowest = array_map('strval', array_keys($vals, $priorMin, true));
             if (count($lowest) === 1) {
-                return (string) $lowest[0];
+                return $lowest[0];
             }
-            // The distinguishing round still ties the lowest pair: cannot pick one.
-            return null;
+            // This distinguishing round leaves a SUBSET tied for the lowest tally:
+            // narrow to that subset and recurse on the rounds strictly before it.
+            return self::breakTieByLookback($lowest, $rounds, $r);
         }
+        // No (earlier) round ever separates the tied options: genuinely symmetric.
         return null;
     }
 
