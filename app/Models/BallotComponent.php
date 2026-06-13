@@ -17,6 +17,7 @@ use Illuminate\Support\Str;
  * @property int $order
  * @property string $version
  * @property array<string, mixed> $options
+ * @property array<string, mixed>|null $settings
  * @property bool $active
  * @property bool $finished
  * @property-read \App\Models\Ballot $ballot
@@ -42,6 +43,7 @@ class BallotComponent extends Model
         'order',
         'version',
         'options',
+        'settings',
         'ballot_id',
         'active',
         'finished',
@@ -49,6 +51,7 @@ class BallotComponent extends Model
 
     protected $casts = [
         'options' => 'array',
+        'settings' => 'array',
         'order' => 'integer',
         'active' => 'boolean',
         'finished' => 'boolean',

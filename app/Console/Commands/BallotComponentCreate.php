@@ -20,6 +20,7 @@ class BallotComponentCreate extends Command
                             {--D|description= : The description of the ballot component}
                             {--T|type= : The ballot component type}
                             {--R|variant=-1 : The version of the ballot. Defaults to latest}
+                            {--P|pass-threshold= : Optional YesNo pass threshold (e.g. 50, 70, two_thirds, three_quarters)}
                             {--O|options=} | The options to put on the ballot';
 
     /**
@@ -57,6 +58,7 @@ class BallotComponentCreate extends Command
         $type = $this->option('type');
         $version = $this->option('variant');
         $options = $this->option('options');
+        $passThreshold = $this->option('pass-threshold');
 
         while (!$ballotId || !Ballot::where('id', $ballotId)->exists()) {
             $ballotId = $this->ask('Please enter the ID of an existing ballot');
@@ -111,6 +113,20 @@ class BallotComponentCreate extends Command
             }
         }
 
+        // Optional pass threshold persists into settings['pass_threshold'].
+        // Backward-compatible: absent -> no settings -> component-type default (50).
+        // A numeric value is normalised to int/float so it round-trips as a number,
+        // not a string (preset strings like 'two_thirds' pass through untouched).
+        $settings = null;
+        if (is_string($passThreshold) && $passThreshold !== '') {
+            if (is_numeric($passThreshold)) {
+                $threshold = $passThreshold + 0; // int|float
+            } else {
+                $threshold = $passThreshold;
+            }
+            $settings = ['pass_threshold' => $threshold];
+        }
+
         $args = [
             'Ballot ID' => $ballotId,
             'Title' => $title,
@@ -118,20 +134,25 @@ class BallotComponentCreate extends Command
             'Component Type' => $type,
             'Version' => $version,
             'Options' => $options,
+            'Settings' => $settings,
         ];
 
         $argsStr = print_r($args, true);
         $confirm = $this->confirm("Please confirm the component: $argsStr");
 
         if ($confirm) {
-            $ballotComponent = BallotComponent::create([
+            $attributes = [
                 'ballot_id' => $ballotId,
                 'title' => $title,
                 'description' => $description,
                 'type' => $type,
                 'version' => $version,
                 'options' => $options,
-            ]);
+            ];
+            if ($settings !== null) {
+                $attributes['settings'] = $settings;
+            }
+            $ballotComponent = BallotComponent::create($attributes);
             $this->info("Created new {$type}:{$version} component titled {$ballotComponent->title} with ID {$ballotComponent->id}");
         } else {
             $this->warn('Cancelled');
