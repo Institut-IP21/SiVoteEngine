@@ -104,13 +104,24 @@ class RankedChoice extends BallotComponentType
             // The next first value is what we want
             $first = array_shift($values);
 
-            if (!$first) {
+            // array_shift returns null only when the ballot is exhausted (no
+            // surviving preferences left). Use a strict null check so an option
+            // whose label is a falsy string such as "0" is still counted.
+            if ($first === null) {
                 return $runningTotal;
             }
 
             $runningTotal[$first] += 1;
             return $runningTotal;
         }, $state);
+
+        // No surviving options remain (e.g. every ballot abstained, or all
+        // remaining options were eliminated together at zero votes). There is no
+        // winner; return the rounds accumulated so far rather than calling max()
+        // on an empty state, which would throw a ValueError.
+        if (count($state) === 0) {
+            return $rounds;
+        }
 
         $current_winner_has_majority = max($state) >= $number_of_votes_cast / 2 + 1;
 
@@ -162,18 +173,20 @@ class RankedChoice extends BallotComponentType
     public static function getTotals(array $votes, BallotComponent $component): array
     {
         return array_reduce($votes, function ($runningTotal, $vote) use ($component) {
-            if (empty($vote['values'])) {
+            if (empty($vote['values']) || !array_key_exists($component->id, $vote['values'])) {
                 return $runningTotal;
             }
             $values = $vote['values'][$component->id];
             foreach ($component->options as $i => $option) {
                 $pos = array_search($option, $values);
                 if ($pos !== false) {
-                    if (array_key_exists($option, $runningTotal)) {
-                        $runningTotal[$option][$pos] = ($runningTotal[$option][$pos] ?? 0) + 1;
-                    } else {
+                    if (!array_key_exists($option, $runningTotal)) {
                         $runningTotal[$option] = array_fill(0, count($component->options), 0);
                     }
+                    // Record this placement. Previously the first ballot to
+                    // mention each option only zero-filled and skipped the
+                    // increment, undercounting every option by one.
+                    $runningTotal[$option][$pos] = ($runningTotal[$option][$pos] ?? 0) + 1;
                 } else {
                     if (!array_key_exists($option, $runningTotal)) {
                         $runningTotal[$option] = array_fill(0, count($component->options), 0);
@@ -224,11 +237,29 @@ class RankedChoice extends BallotComponentType
                 $winners[] = $i;
             }
         });
-        $unique_winners = array_unique($winners);
+        $unique_winners = array_values(array_unique($winners));
+
+        // A final-round tie is recorded as the literal 'winner' => 'tie'. A tie is
+        // NOT a conclusive winner and must never be reported as one. When the only
+        // collected outcome is a tie, surface the actually-tied option labels from
+        // the final round so the "possible outcomes" banner lists the options
+        // rather than the literal string 'tie'.
+        if ($unique_winners === ['tie']) {
+            $final = end($rounds);
+            if (is_array($final)) {
+                $tallies = array_filter($final, fn ($v): bool => is_int($v));
+                if (count($tallies) > 0) {
+                    $unique_winners = array_keys($tallies, max($tallies));
+                }
+            }
+        }
+
+        $conclussive = count($unique_winners) === 1 && !in_array('tie', $unique_winners, true);
+
         return [
             'winners' => $unique_winners,
-            'conclussive' => count($unique_winners) === 1,
-            'conclussive_winner' => array_pop($unique_winners)
+            'conclussive' => $conclussive,
+            'conclussive_winner' => $conclussive ? ($unique_winners[0] ?? null) : null
         ];
     }
 
@@ -239,7 +270,7 @@ class RankedChoice extends BallotComponentType
     public static function valuesToCsv(array $values, string $component_id): string
     {
         if (array_key_exists($component_id, $values)) {
-            return implode(', ', $values[$component_id]);
+            return implode(', ', (array) $values[$component_id]);
         }
         return '';
     }

@@ -34,7 +34,9 @@ class ApprovalVote extends BallotComponentType
     public static function valuesToCsv(array $values, string $component_id): mixed
     {
         if (array_key_exists($component_id, $values)) {
-            return implode(', ', $values[$component_id]);
+            // calculateResults tolerates a scalar answer via (array); mirror that
+            // here so a single-option string does not raise a TypeError in implode.
+            return implode(', ', (array) $values[$component_id]);
         }
         return '';
     }

@@ -38,7 +38,11 @@ class YesNo extends BallotComponentType
     {
         /** @var array<string, int> $result */
         $result = array_reduce($votes, function (array $runningTotal, Vote $vote) use ($component): array {
-            if (empty($vote->values)) {
+            if (empty($vote->values) || !array_key_exists($component->id, $vote->values)) {
+                // Skip ballots that did not answer this component. Reading an
+                // absent key produced a null value that PHP cast to the empty
+                // string '', creating a phantom '' bucket that counted and could
+                // win.
                 return $runningTotal;
             }
             $value = $vote->values[$component->id];
