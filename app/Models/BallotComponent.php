@@ -2,15 +2,35 @@
 
 namespace App\Models;
 
-use GoldSpecDigital\LaravelEloquentUUID\Database\Eloquent\Uuid;
+use App\Models\Concerns\HasUuidV4;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
+/**
+ * @property string $id
+ * @property string $ballot_id
+ * @property string $title
+ * @property string $description
+ * @property string $type
+ * @property int $order
+ * @property string $version
+ * @property array<string, mixed> $options
+ * @property bool $active
+ * @property bool $finished
+ * @property-read \App\Models\Ballot $ballot
+ * @property-read string $slug
+ * @property-read string $component_path
+ * @property-read string $form_template
+ * @property-read string $form_template_livewire
+ * @property-read string $result_template
+ */
 class BallotComponent extends Model
 {
+    /** @use HasFactory<\Database\Factories\BallotComponentFactory> */
     use HasFactory;
-    use Uuid;
+    use HasUuidV4;
 
     protected $keyType = 'string';
     public $incrementing = false;
@@ -36,37 +56,39 @@ class BallotComponent extends Model
 
     protected $appends = ['slug'];
 
-    public function ballot()
+    /** @return BelongsTo<Ballot, $this> */
+    public function ballot(): BelongsTo
     {
         return $this->belongsTo(Ballot::class);
     }
 
-    public function getSlugAttribute()
+    public function getSlugAttribute(): string
     {
         return Str::slug($this->title);
     }
 
-    public function getComponentPathAttribute()
+    public function getComponentPathAttribute(): string
     {
         return $this->type . '/' . $this->version;
     }
 
-    public function getFormTemplateAttribute()
+    public function getFormTemplateAttribute(): string
     {
         return $this->type . '/' . $this->version . '/form';
     }
 
-    public function getFormTemplateLivewireAttribute()
+    public function getFormTemplateLivewireAttribute(): string
     {
         return $this->type . '/' . $this->version . '/form_livewire';
     }
 
-    public function getResultTemplateAttribute()
+    public function getResultTemplateAttribute(): string
     {
         return $this->type . '/' . $this->version . '/result';
     }
 
-    public static function parseOptionsString($options)
+    /** @return array<int, string> */
+    public static function parseOptionsString(string $options): array
     {
         return array_filter(array_map(function ($option) {
             return trim($option);

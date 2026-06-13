@@ -7,6 +7,7 @@ use App\Models\Election;
 use App\Models\Vote;
 use App\Services\BallotService;
 use App\Services\VoteService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class VoteApiController extends Controller
@@ -18,14 +19,16 @@ class VoteApiController extends Controller
         $this->ballotService = $ballotService;
     }
 
-    public function show(Election $election, Ballot $ballot, Request $request)
+    /** @return array<int, string> */
+    public function show(Election $election, Ballot $ballot, Request $request): array
     {
         return array_map(function ($vote) {
             return $vote['id'];
         }, $ballot->votes()->get()->toArray());
     }
 
-    public function generate(Election $election, Ballot $ballot, Request $request, VoteService $voteService)
+    /** @return array<mixed>|JsonResponse */
+    public function generate(Election $election, Ballot $ballot, Request $request, VoteService $voteService): array|JsonResponse
     {
         $params = $request->all();
 

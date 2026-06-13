@@ -14,7 +14,7 @@ use function PHPUnit\Framework\assertEquals;
 
 class RankedChoiceTest extends TestCase
 {
-    public function test_get_submissions_validator()
+    public function test_get_submissions_validator(): void
     {
         $election = Election::factory()->make();
         $component = BallotComponent::factory()->make([
@@ -33,7 +33,7 @@ class RankedChoiceTest extends TestCase
         ], $validator);
     }
 
-    public function test_calculate_results()
+    public function test_calculate_results(): void
     {
         $ballot = Ballot::factory()->make();
         $component = BallotComponent::factory()->make([

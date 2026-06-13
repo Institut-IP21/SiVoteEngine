@@ -6,10 +6,13 @@ use App\Models\Ballot;
 use App\Models\BallotComponent;
 use App\Models\Election;
 use Faker\Provider\Uuid;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class BallotComponentCrudTest extends TestCase
 {
+    use RefreshDatabase;
+
     public $component_schema = [
         "id",
         "ballot_id",

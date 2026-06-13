@@ -14,7 +14,7 @@ use function PHPUnit\Framework\assertEquals;
 
 class FirstPastThePostTest extends TestCase
 {
-    public function test_get_submissions_validator()
+    public function test_get_submissions_validator(): void
     {
         $election = Election::factory()->make();
         $component = BallotComponent::factory()->make([
@@ -30,7 +30,7 @@ class FirstPastThePostTest extends TestCase
         ], $validator);
     }
 
-    public function test_calculate_results()
+    public function test_calculate_results(): void
     {
         $ballot = Ballot::factory()->make();
         $component = BallotComponent::factory()->make([
@@ -53,17 +53,17 @@ class FirstPastThePostTest extends TestCase
                 },
             )->make();
 
-        $groups = $votes->groupBy(function ($vote) use ($component) {
-            return $vote->values[$component->id];
+        $groups = $votes->groupBy(function (Vote $vote) use ($component): string {
+            return (string) (($vote->values ?? [])[$component->id] ?? '');
         });
         $results = FirstPastThePost::calculateResults($votes->values()->all(), $component);
 
         assertEquals([
-            'Ana' => $groups['Ana']->count(),
-            'Betty' => $groups['Betty']->count(),
-            'Charles' => $groups['Charles']->count(),
-            'David' => $groups['David']->count(),
-            'Ernest' => $groups['Ernest']->count()
+            'Ana' => ($groups['Ana'] ?? collect())->count(),
+            'Betty' => ($groups['Betty'] ?? collect())->count(),
+            'Charles' => ($groups['Charles'] ?? collect())->count(),
+            'David' => ($groups['David'] ?? collect())->count(),
+            'Ernest' => ($groups['Ernest'] ?? collect())->count()
         ], $results['state']);
     }
 }

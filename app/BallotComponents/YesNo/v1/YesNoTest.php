@@ -14,7 +14,7 @@ use function PHPUnit\Framework\assertEquals;
 
 class YesNoTest extends TestCase
 {
-    public function test_get_submissions_validator()
+    public function test_get_submissions_validator(): void
     {
         $election = Election::factory()->make();
         $component = BallotComponent::factory()->make([
@@ -30,7 +30,7 @@ class YesNoTest extends TestCase
         ], $validator);
     }
 
-    public function test_calculate_results()
+    public function test_calculate_results(): void
     {
         $ballot = Ballot::factory()->make();
         $component = BallotComponent::factory()->make([
@@ -53,8 +53,8 @@ class YesNoTest extends TestCase
                 },
             )->make();
 
-        $countYes = $votes->filter(function ($vote) use ($component) {
-            return $vote->values[$component->id] === 'yes';
+        $countYes = $votes->filter(function (Vote $vote) use ($component): bool {
+            return ($vote->values[$component->id] ?? null) === 'yes';
         })->count();
         $countNo = 30 - $countYes;
         $results = YesNo::calculateResults($votes->values()->all(), $component);

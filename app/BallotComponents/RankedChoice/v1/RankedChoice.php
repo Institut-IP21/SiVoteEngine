@@ -6,11 +6,15 @@ use Illuminate\Support\Facades\Validator;
 use App\BallotComponents\BallotComponentType;
 use App\Models\BallotComponent;
 use App\Models\Election;
+use App\Models\Vote;
 use Illuminate\Validation\Rule;
 
 class RankedChoice extends BallotComponentType
 {
+    /** @var bool */
     public static $needsOptions = true;
+
+    /** @var bool */
     public static $livewireForm = true;
 
     public static $optionsValidator = [
@@ -18,7 +22,8 @@ class RankedChoice extends BallotComponentType
         'options.*' => 'bail|required|string|distinct|min:1'
     ];
 
-    public static function strings()
+    /** @return array<string, mixed> */
+    public static function strings(): array
     {
         return [
             'name' => __('components.rankedchoice.name'),
@@ -27,7 +32,12 @@ class RankedChoice extends BallotComponentType
     }
 
 
-    public static function calculateResults($votes, $component)
+    /**
+     * @param array<int, Vote> $votes
+     * @param BallotComponent $component
+     * @return array<string, mixed>
+     */
+    public static function calculateResults(array $votes, BallotComponent $component): array
     {
         if (count($votes) === 0) {
             return [
@@ -50,13 +60,13 @@ class RankedChoice extends BallotComponentType
      * Calculates one round of Ranked Choice elimination, and decides whether to do another,
      * or return the list of all rounds.
      *
-     * @param array $votes - The list of all votes cast for this component on a Ballot
+     * @param array<int, Vote> $votes - The list of all votes cast for this component on a Ballot
      * @param BallotComponent $component
-     * @param array $rounds - The elimination rounds, each containing one fewer options than the last
-     * @param array $omit - The options that have been eliminated in previous rounds
-     * @return array - The list of all rounds
+     * @param array<int, array<string, mixed>> $rounds - The elimination rounds, each containing one fewer options than the last
+     * @param list<string> $omit - The options that have been eliminated in previous rounds
+     * @return array<int, array<string, mixed>> - The list of all rounds
      */
-    public static function runIteration($votes, $component, $rounds = [], $omit = [])
+    public static function runIteration(array $votes, BallotComponent $component, array $rounds = [], array $omit = []): array
     {
         // Only loop over non-omited options
         $options = array_diff($component->options, $omit);
@@ -66,9 +76,9 @@ class RankedChoice extends BallotComponentType
             return $acc;
         }, []);
 
-        $number_of_votes_cast = collect($votes)->countBy(function ($vote) {
+        $number_of_votes_cast = collect($votes)->filter(function ($vote) {
             return !empty($vote['values']);
-        })->first();
+        })->count();
 
         $state = array_reduce($votes, function ($runningTotal, $vote) use ($component, $omit) {
             // Skip the votes that were never cast
@@ -108,6 +118,7 @@ class RankedChoice extends BallotComponentType
         if (count($state) > 2 && !$current_winner_has_majority) {
             // The current least voted for option is added to the omit list.
             // If there is a tie for last place, we run through both scenarios of eliminating those.
+            /** @var list<string> $omitees */
             $omitees = array_keys($state, min($state));
             if (count($omitees) > 1) {
                 // The special case is for options that got 0 votes, where we choose to eliminate them all.
@@ -127,6 +138,7 @@ class RankedChoice extends BallotComponentType
                 }
                 return [...$rounds, $splits];
             }
+            /** @var string $omitee */
             $omitee = array_pop($omitees);
             $state = self::annotateStateForOmission($state, $omit, $omitee);
             $nextOmit = [...$omit, $omitee];
@@ -143,11 +155,11 @@ class RankedChoice extends BallotComponentType
     /**
      * Returns a matrix containing the frequencies of each option being in each possible place in the ranking
      *
-     * @param array $votes
+     * @param array<int, Vote> $votes
      * @param BallotComponent $component
-     * @return array - The frequencies of each option being in each place in the ranking
+     * @return array<string, list<int>> - The frequencies of each option being in each place in the ranking
      */
-    public static function getTotals($votes, $component)
+    public static function getTotals(array $votes, BallotComponent $component): array
     {
         return array_reduce($votes, function ($runningTotal, $vote) use ($component) {
             if (empty($vote['values'])) {
@@ -172,7 +184,11 @@ class RankedChoice extends BallotComponentType
         }, []);
     }
 
-    public static function annotateStateForVictory($state)
+    /**
+     * @param non-empty-array<string, mixed> $state
+     * @return array<string, mixed>
+     */
+    public static function annotateStateForVictory(array $state): array
     {
         $winners = array_keys($state, max($state));
         if (count($winners) > 1) {
@@ -183,14 +199,24 @@ class RankedChoice extends BallotComponentType
         return $state;
     }
 
-    public static function annotateStateForOmission($state, $omit, $omitee)
+    /**
+     * @param array<string, mixed> $state
+     * @param list<string> $omit
+     * @param string|list<string> $omitee
+     * @return array<string, mixed>
+     */
+    public static function annotateStateForOmission(array $state, array $omit, string|array $omitee): array
     {
         $state['eliminated'] = is_array($omitee) ? implode(', ', $omitee) : $omitee;
         $state['eliminated_previously'] = $omit;
         return $state;
     }
 
-    public static function annotateFinalState($rounds)
+    /**
+     * @param array<int, array<string, mixed>> $rounds
+     * @return array{winners: array<string>, conclussive: bool, conclussive_winner: string|null}
+     */
+    public static function annotateFinalState(array $rounds): array
     {
         $winners = [];
         array_walk_recursive($rounds, function ($i, $el) use (&$winners) {
@@ -206,7 +232,11 @@ class RankedChoice extends BallotComponentType
         ];
     }
 
-    public static function valuesToCsv($values, $component_id)
+    /**
+     * @param array<string, mixed> $values
+     * @param string $component_id
+     */
+    public static function valuesToCsv(array $values, string $component_id): string
     {
         if (array_key_exists($component_id, $values)) {
             return implode(', ', $values[$component_id]);
@@ -214,7 +244,8 @@ class RankedChoice extends BallotComponentType
         return '';
     }
 
-    public static function getSubmissionValidator(BallotComponent $component, Election $election)
+    /** @return array<string, mixed> */
+    public static function getSubmissionValidator(BallotComponent $component, Election $election): array
     {
         $id = $component->id;
         $options = $component->options;
@@ -228,7 +259,10 @@ class RankedChoice extends BallotComponentType
         ];
     }
 
-    public static function validateOptions($options)
+    /**
+     * @param mixed $options
+     */
+    public static function validateOptions($options): bool
     {
         //TODO since this is just for CLI, it could be removed and implemented there I think...
         $validator = Validator::make(['options' => $options], static::$optionsValidator);

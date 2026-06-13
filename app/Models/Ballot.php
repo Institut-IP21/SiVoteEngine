@@ -2,19 +2,41 @@
 
 namespace App\Models;
 
-use GoldSpecDigital\LaravelEloquentUUID\Database\Eloquent\Uuid;
+use App\Models\Concerns\HasUuidV4;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Dyrynda\Database\Support\CascadeSoftDeletes;
 
 // Preview ballot can open engine URL <- /preview route
 
+/**
+ * @property string $id
+ * @property string $election_id
+ * @property string $title
+ * @property bool $active
+ * @property bool $finished
+ * @property string $description
+ * @property string $email_subject
+ * @property string $email_template
+ * @property bool $is_secret
+ * @property string $mode
+ * @property int|null $quorum
+ * @property-read \App\Models\Election $election
+ * @property-read \App\Models\BallotComponent[] $components
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Vote> $votes
+ * @property-read \App\Models\Vote[] $cast_votes
+ * @property-read int $votes_count
+ * @property-read bool $locked
+ */
 class Ballot extends Model
 {
+    /** @use HasFactory<\Database\Factories\BallotFactory> */
     use HasFactory;
     use SoftDeletes, CascadeSoftDeletes;
-    use Uuid;
+    use HasUuidV4;
 
     const MODE_BASIC = 'basic';
     const MODE_SESSION = 'session';
@@ -23,6 +45,7 @@ class Ballot extends Model
     protected $keyType = 'string';
     public $incrementing = false;
 
+    /** @var list<string> */
     protected $cascadeDeletes = ['components', 'votes'];
 
     public $attributes = [
@@ -54,58 +77,64 @@ class Ballot extends Model
         'quorum' => 'integer',
     ];
 
-    public function components()
+    /** @return HasMany<BallotComponent, $this> */
+    public function components(): HasMany
     {
         return $this->hasMany(BallotComponent::class)->orderBy('order');
     }
 
-    public function getComponentsAttribute()
+    /** @return BallotComponent[] */
+    public function getComponentsAttribute(): array
     {
         return $this->components()->get()->all();
     }
 
-    public function disableComponents()
+    public function disableComponents(): void
     {
         $this->components()->where('active', true)->update(['active' => false]);
     }
 
-    public function getLockedAttribute()
+    public function getLockedAttribute(): bool
     {
         return $this->active || $this->finished;
     }
 
-    public function votes()
+    /** @return HasMany<Vote, $this> */
+    public function votes(): HasMany
     {
         return $this->hasMany(Vote::class);
     }
 
-    public function castVotes()
+    /** @return \Illuminate\Database\Eloquent\Collection<int, Vote> */
+    public function castVotes(): \Illuminate\Database\Eloquent\Collection
     {
         return $this->votes()->where('values', '!=', null)->get();
     }
 
-    public function getCastVotesAttribute()
+    /** @return Vote[] */
+    public function getCastVotesAttribute(): array
     {
         return $this->castVotes()->all();
     }
 
-    public function getVotesCountAttribute()
+    public function getVotesCountAttribute(): int
     {
         return $this->castVotes()->count();
     }
 
-    public function election()
+    /** @return BelongsTo<Election, $this> */
+    public function election(): BelongsTo
     {
         return $this->belongsTo(Election::class);
     }
 
-    public function activate()
+    public function activate(): bool
     {
         $this->active = true;
         return $this->save();
     }
 
-    public function deactivate()
+    public function deactivate(): bool
     {
         $this->active = false;
         $this->finished = true;

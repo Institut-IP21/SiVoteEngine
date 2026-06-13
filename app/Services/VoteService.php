@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\URL;
 
 class VoteService
 {
+    /** @return array<int, string> */
     public function generateSecretVotes(Ballot $ballot, int $quantity): array
     {
         $codes = [];
@@ -26,6 +27,10 @@ class VoteService
         return $codes;
     }
 
+    /**
+     * @param array<int, string> $voters
+     * @return array<int, array{code: string, voter: string, access_url: string}>
+     */
     public function generatePublicVotes(Election $election, Ballot $ballot, array $voters): array
     {
         $codes = [];

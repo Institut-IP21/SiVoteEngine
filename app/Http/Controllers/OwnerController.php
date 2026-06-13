@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 
 class OwnerController extends Controller
 {
-    public function updatePersonalization(Request $request)
+    public function updatePersonalization(Request $request): \Illuminate\Http\JsonResponse|\Illuminate\Http\Resources\Json\JsonResource
     {
         $params = $request->all();
         $settings = [

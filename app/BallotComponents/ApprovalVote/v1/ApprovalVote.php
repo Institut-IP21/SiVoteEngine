@@ -6,10 +6,12 @@ use Illuminate\Support\Facades\Validator;
 use App\BallotComponents\BallotComponentType;
 use App\Models\BallotComponent;
 use App\Models\Election;
+use App\Models\Vote;
 use Illuminate\Validation\Rule;
 
 class ApprovalVote extends BallotComponentType
 {
+    /** @var bool */
     public static $needsOptions = true;
 
     public static $optionsValidator = [
@@ -17,7 +19,8 @@ class ApprovalVote extends BallotComponentType
         'options.*' => 'bail|required|string|distinct|min:1'
     ];
 
-    public static function strings()
+    /** @return array<string, mixed> */
+    public static function strings(): array
     {
         return [
             'name' => __('components.approval.name'),
@@ -25,7 +28,10 @@ class ApprovalVote extends BallotComponentType
         ];
     }
 
-    public static function valuesToCsv($values, $component_id)
+    /**
+     * @param array<string, mixed> $values
+     */
+    public static function valuesToCsv(array $values, string $component_id): mixed
     {
         if (array_key_exists($component_id, $values)) {
             return implode(', ', $values[$component_id]);
@@ -33,16 +39,20 @@ class ApprovalVote extends BallotComponentType
         return '';
     }
 
-    public static function calculateResults(array $votes, BallotComponent $component)
+    /**
+     * @param array<int, Vote> $votes
+     * @return array<string, mixed>
+     */
+    public static function calculateResults(array $votes, BallotComponent $component): array
     {
         $state = collect($votes)
-            ->groupBy(function ($vote) use ($component) {
-                if (array_key_exists($component->id, $vote->values)) {
+            ->groupBy(function (Vote $vote) use ($component): string {
+                if (is_array($vote->values) && array_key_exists($component->id, $vote->values)) {
                     return $vote->values[$component->id];
                 }
                 return 'abstain';
             })
-            ->map(function ($votes) {
+            ->map(function (mixed $votes): int {
                 return $votes->count();
             })
             ->toArray();
@@ -50,7 +60,11 @@ class ApprovalVote extends BallotComponentType
         return self::annotateStateForVictory($state);
     }
 
-    public static function annotateStateForVictory($state)
+    /**
+     * @param array<string, int> $state
+     * @return array<string, mixed>
+     */
+    public static function annotateStateForVictory(array $state): array
     {
         if (count($state) === 0) {
             return [
@@ -74,7 +88,8 @@ class ApprovalVote extends BallotComponentType
         ];
     }
 
-    public static function getSubmissionValidator(BallotComponent $component, Election $election)
+    /** @return array<string, mixed> */
+    public static function getSubmissionValidator(BallotComponent $component, Election $election): array
     {
         $id = $component->id;
         $options = $component->options;
@@ -88,7 +103,10 @@ class ApprovalVote extends BallotComponentType
         ];
     }
 
-    public static function validateOptions($options)
+    /**
+     * @param mixed $options
+     */
+    public static function validateOptions($options): bool
     {
         //TODO since this is just for CLI, it could be removed and implemented there I think...
         $validator = Validator::make(['options' => $options], static::$optionsValidator);

@@ -3,16 +3,26 @@
 namespace App\Models;
 
 use App\Traits\Encryptable;
-use GoldSpecDigital\LaravelEloquentUUID\Database\Eloquent\Uuid;
+use App\Models\Concerns\HasUuidV4;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property string $id
+ * @property string $ballot_id
+ * @property array<string, mixed>|null $values
+ * @property string|null $cast_by
+ * @property-read \App\Models\Ballot $ballot
+ */
 class Vote extends Model
 {
     use Encryptable;
+    /** @use HasFactory<\Database\Factories\VoteFactory> */
     use HasFactory;
-    use Uuid;
+    use HasUuidV4;
 
+    /** @var list<string> */
     protected $encryptable = [
         'values',
         'cast_by'
@@ -31,7 +41,8 @@ class Vote extends Model
         'values' => 'array'
     ];
 
-    public function ballot()
+    /** @return BelongsTo<Ballot, $this> */
+    public function ballot(): BelongsTo
     {
         return $this->belongsTo(Ballot::class);
     }

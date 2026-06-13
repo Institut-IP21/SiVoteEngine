@@ -3,24 +3,37 @@
 namespace App\Models;
 
 use Database\Factories\ElectionFactory;
-use GoldSpecDigital\LaravelEloquentUUID\Database\Eloquent\Uuid;
+use App\Models\Concerns\HasUuidV4;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Dyrynda\Database\Support\CascadeSoftDeletes;
 
 /**
- * @method static ElectionFactory factory(mixed? $parameters)
+ * @property string $id
+ * @property string $owner
+ * @property string $title
+ * @property string $description
+ * @property int $level
+ * @property bool $abstainable
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Ballot> $ballots
+ * @property-read bool $active
+ * @property-read bool $locked
+ *
+ * @method static ElectionFactory factory($count = null, $state = [])
  */
 class Election extends Model
 {
+    /** @use HasFactory<\Database\Factories\ElectionFactory> */
     use HasFactory;
     use SoftDeletes, CascadeSoftDeletes;
-    use Uuid;
+    use HasUuidV4;
 
     protected $keyType = 'string';
     public $incrementing = false;
 
+    /** @var list<string> */
     protected $cascadeDeletes = ['ballots'];
 
     protected $attributes = [
@@ -41,19 +54,20 @@ class Election extends Model
         'abstainable' => 'boolean',
     ];
 
-    public function ballots()
+    /** @return HasMany<Ballot, $this> */
+    public function ballots(): HasMany
     {
         return $this->hasMany(Ballot::class)->orderBy('created_at', 'desc');
     }
 
-    public function getActiveAttribute()
+    public function getActiveAttribute(): bool
     {
         return $this->ballots()->get()->contains(function (Ballot $ballot) {
             return $ballot->active;
         });
     }
 
-    public function getLockedAttribute()
+    public function getLockedAttribute(): bool
     {
         return $this->ballots()->get()->contains(function (Ballot $ballot) {
             return $ballot->locked;
