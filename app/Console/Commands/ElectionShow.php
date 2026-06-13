@@ -35,6 +35,7 @@ class ElectionShow extends Command
             $election = $elections->firstWhere('title', $choice);
         }
 
+        /** @var Election $election */
         $this->table(['Field', 'Value'], [
             ['ID', $election->id],
             ['Title', $election->title],

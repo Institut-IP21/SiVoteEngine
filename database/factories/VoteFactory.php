@@ -6,6 +6,9 @@ use App\Models\Ballot;
 use App\Models\Vote;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
+/**
+ * @extends Factory<Vote>
+ */
 class VoteFactory extends Factory
 {
     /**

@@ -9,11 +9,12 @@ use App\Models\Concerns\HasUuidV4;
 use Database\Factories\ElectionFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Dyrynda\Database\Support\CascadeSoftDeletes;
 
 /**
- * @method static ElectionFactory factory(mixed? $parameters)
+ * @method static ElectionFactory factory($count = null, $state = [])
  * @property string $id
  * @property string $title
  * @property string|null $description
@@ -25,8 +26,8 @@ use Dyrynda\Database\Support\CascadeSoftDeletes;
  * @property Carbon|null $updated_at
  * @property-read Collection<int, Ballot> $ballots
  * @property-read int|null $ballots_count
- * @property-read mixed $active
- * @property-read mixed $locked
+ * @property-read bool $active
+ * @property-read bool $locked
  * @method static Builder<static>|Election newModelQuery()
  * @method static Builder<static>|Election newQuery()
  * @method static Builder<static>|Election onlyTrashed()
@@ -46,6 +47,7 @@ use Dyrynda\Database\Support\CascadeSoftDeletes;
  */
 class Election extends Model
 {
+    /** @use HasFactory<ElectionFactory> */
     use HasFactory;
     use SoftDeletes, CascadeSoftDeletes;
     use HasUuidV4;
@@ -54,6 +56,7 @@ class Election extends Model
 
     public $incrementing = false;
 
+    /** @var list<string> */
     protected $cascadeDeletes = ['ballots'];
 
     protected $attributes = [
@@ -75,17 +78,18 @@ class Election extends Model
         'abstainable' => 'boolean',
     ];
 
-    public function ballots()
+    /** @return HasMany<Ballot, $this> */
+    public function ballots(): HasMany
     {
         return $this->hasMany(Ballot::class)->orderBy('created_at', 'desc');
     }
 
-    public function getActiveAttribute()
+    public function getActiveAttribute(): bool
     {
         return $this->ballots()->get()->contains(fn(Ballot $ballot) => $ballot->active);
     }
 
-    public function getLockedAttribute()
+    public function getLockedAttribute(): bool
     {
         return $this->ballots()->get()->contains(fn(Ballot $ballot) => $ballot->locked);
     }

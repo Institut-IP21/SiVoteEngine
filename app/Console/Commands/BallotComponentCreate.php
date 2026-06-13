@@ -75,6 +75,7 @@ class BallotComponentCreate extends Command
             }
         }
 
+        /** @var string $type */
         $ballotTypeVersions = $this->ballotService->getBallotVersions($type);
 
         while ($version == -1 || !in_array($version, $ballotTypeVersions)) {
@@ -88,6 +89,7 @@ class BallotComponentCreate extends Command
             $version = array_key_last($ballotTypeVersions);
         }
 
+        /** @var string $version */
         $componentInstance = $this->ballotService->resolveComponent($type, $version);
         $metadata = $componentInstance->getMetadata();
 
@@ -96,7 +98,9 @@ class BallotComponentCreate extends Command
         // is a scalar `in:` rule that an array of options can never satisfy, so the
         // loop would spin forever. Use the preset list instead.
         if ($metadata->needsOptions) {
-            $options = BallotComponent::parseOptionsString($options);
+            /** @var string $optionsInput */
+            $optionsInput = $options;
+            $options = BallotComponent::parseOptionsString($optionsInput);
 
             while (!count($options) || !$componentInstance->validateOptions($options)) {
                 $options = BallotComponent::parseOptionsString($this->ask('Please enter options for the ballot'));

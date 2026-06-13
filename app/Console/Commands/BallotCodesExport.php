@@ -37,6 +37,7 @@ class BallotCodesExport extends Command
             $ballot = $ballots->firstWhere('title', $choice);
         }
 
+        /** @var Ballot $ballot */
         $votes = Vote::where('ballot_id', $ballot->id)
             ->whereNull('values')
             ->get();

@@ -5,6 +5,7 @@ namespace App\Livewire;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
 use App\Models\Ballot;
+use App\Models\BallotComponent;
 use App\Models\Election;
 use App\Models\Vote;
 use App\Services\BallotService;
@@ -21,7 +22,10 @@ class Session extends Component
     public Election $election;
     public Ballot $ballot;
     public string $code;
+    /** @var Collection<int, BallotComponent> */
     public Collection $activeComponents;
+    /** @var array<string, array<string, array<string, mixed>>> */
+    public array $componentTree;
 
     public function mount(Election $election, Ballot $ballot, Request $request, BallotService $service): void
     {

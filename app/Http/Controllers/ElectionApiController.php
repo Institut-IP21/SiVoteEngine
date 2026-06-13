@@ -4,12 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\Election as ElectionResource;
 use App\Models\Election;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Resources\Json\JsonResource;
 
 class ElectionApiController extends Controller
 {
 
-    public function list(Request $request)
+    public function list(Request $request): AnonymousResourceCollection|JsonResponse
     {
         $params = $request->all();
         $settings = [
@@ -43,7 +46,7 @@ class ElectionApiController extends Controller
         );
     }
 
-    public function create(Request $request)
+    public function create(Request $request): JsonResponse
     {
         $params = $request->all();
         $settings = [
@@ -81,7 +84,7 @@ class ElectionApiController extends Controller
         return new ElectionResource($election);
     }
 
-    public function update(Election $election, Request $request)
+    public function update(Election $election, Request $request): JsonResource|JsonResponse
     {
         $params = $request->all();
         $settings = [
@@ -121,7 +124,7 @@ class ElectionApiController extends Controller
         return new ElectionResource($election);
     }
 
-    public function delete(Election $election, Request $request)
+    public function delete(Election $election, Request $request): bool|null
     {
         return $election->delete();
     }

@@ -18,6 +18,7 @@ class BallotComponentApiController extends Controller
         protected readonly BallotService $ballotService,
     ) {}
 
+    /** @return array{data: array<mixed>} */
     public function list(Election $election): array
     {
         return [
@@ -231,18 +232,18 @@ class BallotComponentApiController extends Controller
         return ['pass_threshold' => $value];
     }
 
-    public function delete(Election $election, Ballot $ballot, BallotComponent $component)
+    public function delete(Election $election, Ballot $ballot, BallotComponent $component): bool|null
     {
         return $component->delete();
     }
 
-    public function activate(Election $election, Ballot $ballot, BallotComponent $component)
+    public function activate(Election $election, Ballot $ballot, BallotComponent $component): bool
     {
         $component->active = true;
         return $component->save();
     }
 
-    public function deactivate(Election $election, Ballot $ballot, BallotComponent $component)
+    public function deactivate(Election $election, Ballot $ballot, BallotComponent $component): bool
     {
         $component->active = false;
         $component->finished = true;

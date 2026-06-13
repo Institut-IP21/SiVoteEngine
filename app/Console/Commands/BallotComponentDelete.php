@@ -35,6 +35,7 @@ class BallotComponentDelete extends Command
             $component = $components->firstWhere('title', $choice);
         }
 
+        /** @var BallotComponent $component */
         if (!$this->confirm("Are you sure you want to delete component '{$component->title}'?")) {
             $this->warn('Cancelled');
             return 0;

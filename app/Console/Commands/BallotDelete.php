@@ -37,6 +37,7 @@ class BallotDelete extends Command
             $ballot = $ballots->firstWhere('title', $choice);
         }
 
+        /** @var Ballot $ballot */
         if ($ballot->active) {
             $this->error('Cannot delete an active ballot. Deactivate it first.');
             return 1;

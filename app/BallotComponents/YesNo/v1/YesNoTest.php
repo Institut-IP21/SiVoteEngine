@@ -42,6 +42,7 @@ class YesNoTest extends TestCase
 
     /**
      * @param array<int, string|null> $answers a null entry models a ballot with no answer for this component
+     * @return Collection<int, Vote>
      */
     private function votes(BallotComponent $component, array $answers): Collection
     {
@@ -55,7 +56,10 @@ class YesNoTest extends TestCase
         return $votes;
     }
 
-    /** @return array<string, mixed> */
+    /**
+     * @param Collection<int, Vote> $votes
+     * @return array<string, mixed>
+     */
     private function calc(BallotComponent $c, Collection $votes, bool $abstainable = false): array
     {
         return $this->component->calculateResults($votes, $c, $abstainable)->toArray();

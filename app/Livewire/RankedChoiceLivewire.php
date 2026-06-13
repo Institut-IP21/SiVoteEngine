@@ -15,8 +15,11 @@ class RankedChoiceLivewire extends Component
 
     public Ballot $ballot;
     public BallotComponent $component;
+    /** @var Collection<array-key, mixed> */
     public Collection $rankees;
+    /** @var Collection<array-key, mixed> */
     public Collection $selected;
+    /** @var Collection<array-key, mixed> */
     public Collection $unselected;
 
     public function mount(Ballot $ballot, BallotComponent $component): void
@@ -29,7 +32,7 @@ class RankedChoiceLivewire extends Component
         ]);
     }
 
-    public function select($option): void
+    public function select(string $option): void
     {
         $this->rankees = $this->rankees->map(function (array $rankee) use ($option): array {
             if ($rankee['name'] === $option) {
@@ -39,8 +42,9 @@ class RankedChoiceLivewire extends Component
         });
     }
 
-    public function up($option): void
+    public function up(string $option): void
     {
+        /** @var array<string, mixed> $targetRankee */
         $targetRankee = $this->rankees->where('name', $option)->first();
 
         $this->rankees = $this->rankees->map(function (array $rankee) use ($targetRankee): array {
@@ -55,8 +59,9 @@ class RankedChoiceLivewire extends Component
         });
     }
 
-    public function down($option): void
+    public function down(string $option): void
     {
+        /** @var array<string, mixed> $targetRankee */
         $targetRankee = $this->rankees->where('name', $option)->first();
 
         $this->rankees = $this->rankees->map(function (array $rankee) use ($targetRankee): array {
@@ -72,8 +77,9 @@ class RankedChoiceLivewire extends Component
         });
     }
 
-    public function remove($option): void
+    public function remove(string $option): void
     {
+        /** @var array<string, mixed> $targetRankee */
         $targetRankee = $this->rankees->where('name', $option)->first();
 
         $this->rankees = $this->rankees->map(function (array $rankee) use ($targetRankee): array {
@@ -89,9 +95,13 @@ class RankedChoiceLivewire extends Component
 
     public function render(): Factory|View
     {
+        /** @var Collection<array-key, mixed> $selected */
+        /** @var Collection<array-key, mixed> $unselected */
         [$selected, $unselected] = $this->rankees->partition(fn($rankee) => $rankee['rank'] !== null);
         $this->selected = $selected->sortBy('rank')->values();
         $this->unselected = $unselected;
-        return view($this->component->form_template_livewire);
+        /** @var view-string $template */
+        $template = $this->component->form_template_livewire;
+        return view($template);
     }
 }

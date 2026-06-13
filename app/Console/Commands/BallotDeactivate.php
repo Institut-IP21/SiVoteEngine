@@ -37,6 +37,7 @@ class BallotDeactivate extends Command
             $ballot = $ballots->firstWhere('title', $choice);
         }
 
+        /** @var Ballot $ballot */
         if (!$ballot->active) {
             $this->error('Ballot is not currently active');
             return 1;

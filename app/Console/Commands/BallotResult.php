@@ -44,6 +44,7 @@ class BallotResult extends Command
             $ballot = $ballots->firstWhere('title', $choice);
         }
 
+        /** @var Ballot $ballot */
         if (!$ballot->finished) {
             $this->error('Results are only available for finished ballots');
             return 1;
@@ -59,6 +60,7 @@ class BallotResult extends Command
             $this->newLine();
             $this->info($componentResult['title']);
 
+            /** @var array<array-key, mixed> $resultData */
             $resultData = $componentResult['results'];
 
             // Handle state-based results (SimpleVoteResult format)

@@ -8,6 +8,7 @@ use App\BallotComponents\Contracts\BallotComponentInterface;
 use App\BallotComponents\Support\ComponentRegistry;
 use App\Models\Ballot;
 use App\Models\BallotComponent;
+use App\Models\Election;
 use App\Models\Vote;
 use League\Csv\Writer;
 
@@ -69,9 +70,12 @@ final readonly class BallotService
     {
         $validators = [];
 
+        /** @var Election $election */
+        $election = $ballot->election;
+
         foreach ($ballot->components as $componentModel) {
             $component = $this->registry->resolve($componentModel->type, $componentModel->version);
-            $rules = $component->getSubmissionValidator($componentModel, $ballot->election);
+            $rules = $component->getSubmissionValidator($componentModel, $election);
             $validators = array_merge($validators, $rules->toArray());
         }
 
@@ -88,13 +92,16 @@ final readonly class BallotService
     {
         $validators = [];
 
+        /** @var Election $election */
+        $election = $ballot->election;
+
         foreach ($ballot->components as $componentModel) {
             if (!array_key_exists($componentModel->id, $params)) {
                 continue;
             }
 
             $component = $this->registry->resolve($componentModel->type, $componentModel->version);
-            $rules = $component->getSubmissionValidator($componentModel, $ballot->election);
+            $rules = $component->getSubmissionValidator($componentModel, $election);
             $validators = array_merge($validators, $rules->toArray());
         }
 
@@ -109,7 +116,11 @@ final readonly class BallotService
     public function getComponentValidators(BallotComponent $componentModel): array
     {
         $component = $this->registry->resolve($componentModel->type, $componentModel->version);
-        return $component->getSubmissionValidator($componentModel, $componentModel->ballot->election)->toArray();
+        /** @var Ballot $ballot */
+        $ballot = $componentModel->ballot;
+        /** @var Election $election */
+        $election = $ballot->election;
+        return $component->getSubmissionValidator($componentModel, $election)->toArray();
     }
 
     /**

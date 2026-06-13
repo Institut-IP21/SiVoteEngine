@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use App\Models\Concerns\HasUuidV4;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 /**
@@ -26,11 +27,11 @@ use Illuminate\Support\Str;
  * @property bool $active
  * @property bool $finished
  * @property-read Ballot|null $ballot
- * @property-read mixed $component_path
- * @property-read mixed $form_template
- * @property-read mixed $form_template_livewire
- * @property-read mixed $result_template
- * @property-read mixed $slug
+ * @property-read string $component_path
+ * @property-read string $form_template
+ * @property-read string $form_template_livewire
+ * @property-read string $result_template
+ * @property-read string $slug
  * @method static BallotComponentFactory factory($count = null, $state = [])
  * @method static Builder<static>|BallotComponent newModelQuery()
  * @method static Builder<static>|BallotComponent newQuery()
@@ -53,6 +54,7 @@ use Illuminate\Support\Str;
  */
 class BallotComponent extends Model
 {
+    /** @use HasFactory<BallotComponentFactory> */
     use HasFactory;
     use HasUuidV4;
 
@@ -83,12 +85,13 @@ class BallotComponent extends Model
 
     protected $appends = ['slug'];
 
-    public function ballot()
+    /** @return BelongsTo<Ballot, $this> */
+    public function ballot(): BelongsTo
     {
         return $this->belongsTo(Ballot::class);
     }
 
-    public function getSlugAttribute()
+    public function getSlugAttribute(): string
     {
         return Str::slug($this->title);
     }
@@ -113,7 +116,8 @@ class BallotComponent extends Model
         return $this->type . '/' . $this->version . '/result';
     }
 
-    public static function parseOptionsString($options): array
+    /** @return array<int, string> */
+    public static function parseOptionsString(string $options): array
     {
         return array_filter(array_map(fn($option) => trim((string) $option), explode(',', $options)));
     }

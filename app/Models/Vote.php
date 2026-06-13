@@ -9,6 +9,7 @@ use App\Models\Concerns\HasUuidV4;
 use App\Traits\Encryptable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * @property string $id
@@ -33,6 +34,7 @@ use Illuminate\Database\Eloquent\Model;
 class Vote extends Model
 {
     use Encryptable;
+    /** @use HasFactory<VoteFactory> */
     use HasFactory;
     use HasUuidV4;
 
@@ -41,6 +43,7 @@ class Vote extends Model
 
     public $incrementing = false;
 
+    /** @var list<string> */
     protected $encryptable = [
         'values',
         'cast_by'
@@ -56,7 +59,8 @@ class Vote extends Model
         'values' => 'array'
     ];
 
-    public function ballot()
+    /** @return BelongsTo<Ballot, $this> */
+    public function ballot(): BelongsTo
     {
         return $this->belongsTo(Ballot::class);
     }

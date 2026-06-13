@@ -38,6 +38,7 @@ class BallotActivate extends Command
             $ballot = $ballots->firstWhere('title', $choice);
         }
 
+        /** @var Ballot $ballot */
         if ($ballot->finished) {
             $this->error('Cannot reactivate a finished ballot');
             return 1;

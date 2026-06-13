@@ -35,6 +35,7 @@ class ElectionDelete extends Command
             $election = $elections->firstWhere('title', $choice);
         }
 
+        /** @var Election $election */
         if ($election->active) {
             $this->error('Cannot delete an election with active ballots');
             return 1;

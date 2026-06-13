@@ -175,6 +175,9 @@ final class RankedChoice extends AbstractBallotComponent
         foreach ($votes as $vote) {
             $values = $vote->values ?? null;
 
+            // Defensive is_array kept; Vote::$values is typed array|null so PHPStan
+            // already narrows it after empty(), but the runtime guard is retained.
+            // @phpstan-ignore-next-line function.alreadyNarrowedType
             if (empty($values) || !is_array($values) || !array_key_exists($component->id, $values)) {
                 continue;
             }

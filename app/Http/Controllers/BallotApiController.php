@@ -60,6 +60,9 @@ class BallotApiController extends Controller
         return new BallotResource($ballot);
     }
 
+    /**
+     * @return array<string, array<string, mixed>>|ResponseFactory|Response
+     */
     public function result(Election $election, Ballot $ballot, Request $request): ResponseFactory|Response|array
     {
         if (!$ballot->finished) {
@@ -153,7 +156,7 @@ class BallotApiController extends Controller
         return new BallotResource($ballot);
     }
 
-    public function delete(Election $election, Ballot $ballot, Request $request)
+    public function delete(Election $election, Ballot $ballot, Request $request): Response|bool|null
     {
         if ($ballot->active) {
             return response('Active ballots cannot be deleted', 403);
@@ -178,7 +181,9 @@ class BallotApiController extends Controller
             return $errors;
         }
 
+        /** @var BallotComponent $component1 */
         $component1 = BallotComponent::find($params['component1']);
+        /** @var BallotComponent $component2 */
         $component2 = BallotComponent::find($params['component2']);
 
         $temp = $component1->order;

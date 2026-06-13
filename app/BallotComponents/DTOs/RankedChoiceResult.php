@@ -47,6 +47,9 @@ final readonly class RankedChoiceResult implements ComponentResult
         }
 
         $final = end($rounds);
+        // Defensive guard kept intentionally: $rounds is typed array-of-arrays so
+        // PHPStan sees this as always-true, but the runtime check is retained.
+        // @phpstan-ignore-next-line function.alreadyNarrowedType
         if (!is_array($final)) {
             return new self(rounds: $rounds, winners: [], conclusive: false, conclusiveWinner: null);
         }

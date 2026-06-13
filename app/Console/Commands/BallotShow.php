@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Ballot;
+use App\Models\Election;
 use Illuminate\Console\Command;
 
 class BallotShow extends Command
@@ -35,10 +36,13 @@ class BallotShow extends Command
             $ballot = $ballots->firstWhere('title', $choice);
         }
 
+        /** @var Ballot $ballot */
+        /** @var Election $ballotElection */
+        $ballotElection = $ballot->election;
         $this->table(['Field', 'Value'], [
             ['ID', $ballot->id],
             ['Title', $ballot->title],
-            ['Election', $ballot->election->title],
+            ['Election', $ballotElection->title],
             ['Active', $ballot->active ? 'Yes' : 'No'],
             ['Finished', $ballot->finished ? 'Yes' : 'No'],
             ['Locked', $ballot->locked ? 'Yes' : 'No'],

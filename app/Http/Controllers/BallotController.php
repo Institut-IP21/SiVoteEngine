@@ -6,6 +6,7 @@ use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Contracts\Routing\ResponseFactory;
 use Illuminate\Http\Response;
+use Illuminate\Http\RedirectResponse;
 use App\Models\Ballot;
 use App\Models\BallotComponent;
 use App\Models\Election;
@@ -60,6 +61,7 @@ class BallotController extends Controller
         $this->applyElectionLocale($election);
 
         $code = $request->query('code');
+        /** @var Vote|null $vote */
         $vote = Vote::find($code);
 
         if (!$vote || $vote->ballot_id !== $ballot->id) {
@@ -96,6 +98,7 @@ class BallotController extends Controller
         }
 
         $code = $request->input('code');
+        /** @var Vote|null $vote */
         $vote = Vote::find($code);
 
         if (!$vote || $vote->ballot_id !== $ballot->id) {
@@ -119,6 +122,7 @@ class BallotController extends Controller
 
         $code = $request->input('code');
         $values = $request->except(['code', '_token']); // Could get the component slugs and say ->only
+        /** @var Vote $vote */
         $vote = Vote::find(['code' => $code, 'ballot_id' => $ballot->id])->first();
         $vote->values = $values;
         $vote->save();
@@ -127,7 +131,7 @@ class BallotController extends Controller
         return view('voted', ['election' => $election, 'ballot' => $ballot, 'vote' => $vote, 'pers' => $pers]);
     }
 
-    public function voteComponent(Election $election, Ballot $ballot, BallotComponent $component, Request $request)
+    public function voteComponent(Election $election, Ballot $ballot, BallotComponent $component, Request $request): View|RedirectResponse
     {
         $this->applyElectionLocale($election);
 
@@ -136,6 +140,7 @@ class BallotController extends Controller
         }
 
         $code = $request->input('code');
+        /** @var Vote|null $vote */
         $vote = Vote::find($code);
 
         if (!$vote || $vote->ballot_id !== $ballot->id) {
@@ -158,6 +163,7 @@ class BallotController extends Controller
         }
 
         $code = $request->input('code');
+        /** @var Vote $vote */
         $vote = Vote::find(['code' => $code, 'ballot_id' => $ballot->id])->first();
 
         $values = $request->except(['code', '_token']); // Could get the component slugs and say ->only

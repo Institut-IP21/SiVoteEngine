@@ -14,8 +14,6 @@ class ElectionPolicy
 
     /**
      * Determine whether the user can view any models.
-     *
-     * @return mixed
      */
     public function viewAny(User $user): bool
     {
@@ -36,8 +34,6 @@ class ElectionPolicy
 
     /**
      * Determine whether the user can create models.
-     *
-     * @return mixed
      */
     public function create(User $user): bool
     {

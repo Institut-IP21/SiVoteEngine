@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Builder;
 use App\Models\Concerns\HasUuidV4;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Dyrynda\Database\Support\CascadeSoftDeletes;
 
@@ -24,7 +26,7 @@ use Dyrynda\Database\Support\CascadeSoftDeletes;
  * @property string|null $email_template
  * @property string|null $description
  * @property bool $active
- * @property int $finished
+ * @property bool $finished
  * @property Carbon|null $deleted_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -34,8 +36,8 @@ use Dyrynda\Database\Support\CascadeSoftDeletes;
  * @property-read Collection<int, BallotComponent> $components
  * @property-read int|null $components_count
  * @property-read Election|null $election
- * @property-read mixed $cast_votes
- * @property-read mixed $locked
+ * @property-read array<int, Vote> $cast_votes
+ * @property-read bool $locked
  * @property-read Collection<int, Vote> $votes
  * @method static BallotFactory factory($count = null, $state = [])
  * @method static Builder<static>|Ballot newModelQuery()
@@ -62,6 +64,7 @@ use Dyrynda\Database\Support\CascadeSoftDeletes;
  */
 class Ballot extends Model
 {
+    /** @use HasFactory<BallotFactory> */
     use HasFactory;
     use SoftDeletes, CascadeSoftDeletes;
     use HasUuidV4;
@@ -74,6 +77,7 @@ class Ballot extends Model
     const MODE_SESSION = 'session';
     const MODES = [self::MODE_BASIC, self::MODE_SESSION];
 
+    /** @var list<string> */
     protected $cascadeDeletes = ['components', 'votes'];
 
     public $attributes = [
@@ -105,12 +109,14 @@ class Ballot extends Model
         'quorum' => 'integer',
     ];
 
-    public function components()
+    /** @return HasMany<BallotComponent, $this> */
+    public function components(): HasMany
     {
         return $this->hasMany(BallotComponent::class)->orderBy('order');
     }
 
-    public function getComponentsAttribute()
+    /** @return array<int, BallotComponent> */
+    public function getComponentsAttribute(): array
     {
         return $this->components()->get()->all();
     }
@@ -125,22 +131,25 @@ class Ballot extends Model
         return $this->active || $this->finished;
     }
 
-    public function votes()
+    /** @return HasMany<Vote, $this> */
+    public function votes(): HasMany
     {
         return $this->hasMany(Vote::class);
     }
 
-    public function castVotes()
+    /** @return Collection<int, Vote> */
+    public function castVotes(): Collection
     {
         return $this->votes()->where('values', '!=', null)->get();
     }
 
-    public function getCastVotesAttribute()
+    /** @return array<int, Vote> */
+    public function getCastVotesAttribute(): array
     {
         return $this->castVotes()->all();
     }
 
-    public function getVotesCountAttribute()
+    public function getVotesCountAttribute(): int
     {
         return $this->castVotes()->count();
     }
@@ -163,18 +172,19 @@ class Ballot extends Model
         return $this->quorum === null || $this->votes_count >= $this->quorum;
     }
 
-    public function election()
+    /** @return BelongsTo<Election, $this> */
+    public function election(): BelongsTo
     {
         return $this->belongsTo(Election::class);
     }
 
-    public function activate()
+    public function activate(): bool
     {
         $this->active = true;
         return $this->save();
     }
 
-    public function deactivate()
+    public function deactivate(): bool
     {
         $this->active = false;
         $this->finished = true;
