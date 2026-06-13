@@ -41,7 +41,7 @@
     <div class="h-full flex flex-col mt-3 sm:mt-8">
         @foreach ($ballot->components as $component)
         <div class="w-full rounded overflow-hidden shadow bg-white mb-10 p-5 sm:px-8 sm:pt-7 sm:pb-8">
-            <x-ballot-component.title :component="$component" />
+            <x-ballot-component.title :component="$component" :show-type="true" />
 
             <x-ballot-component.desc :component="$component" />
             <div class="px-7">
