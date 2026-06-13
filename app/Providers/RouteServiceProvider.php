@@ -35,6 +35,17 @@ class RouteServiceProvider extends ServiceProvider
     {
         $this->configureRateLimiting();
 
+        // Explicit binds so {election} and {ballot} always resolve to models even
+        // on routes where they are not method-typed (e.g. component listing),
+        // which the ScopeRouteBindings middleware relies on to scope nested access.
+        Route::bind('election', function ($value) {
+            return Election::findOrFail($value);
+        });
+
+        Route::bind('ballot', function ($value) {
+            return Ballot::findOrFail($value);
+        });
+
         Route::bind('component', function ($value) {
             return BallotComponent::findOrFail($value);
         });
@@ -60,6 +71,14 @@ class RouteServiceProvider extends ServiceProvider
     {
         RateLimiter::for('api', function (Request $request) {
             return Limit::perMinute(60)->by(optional($request->user())->id ?: $request->ip());
+        });
+
+        // Public voter-facing ballot submission. Codes are 122-bit random UUIDs so
+        // guessing is already infeasible; this limiter is abuse/DoS protection. Kept
+        // generous and keyed by IP — note voters behind a shared corporate NAT share
+        // the bucket, so tune if large orgs vote from one egress IP.
+        RateLimiter::for('votes', function (Request $request) {
+            return Limit::perMinute(60)->by($request->ip());
         });
     }
 }
