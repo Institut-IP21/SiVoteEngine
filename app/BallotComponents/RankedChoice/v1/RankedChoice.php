@@ -37,7 +37,7 @@ class RankedChoice extends BallotComponentType
      * @param BallotComponent $component
      * @return array<string, mixed>
      */
-    public static function calculateResults(array $votes, BallotComponent $component): array
+    public static function calculateResults(array $votes, BallotComponent $component, bool $abstainable = false): array
     {
         if (count($votes) === 0) {
             return [
@@ -57,110 +57,241 @@ class RankedChoice extends BallotComponentType
     }
 
     /**
-     * Calculates one round of Ranked Choice elimination, and decides whether to do another,
-     * or return the list of all rounds.
+     * Runs the full (now LINEAR) Ranked Choice elimination. Each round tallies first
+     * preferences for surviving options against CONTINUING ballots (D7), tracks the
+     * count of exhausted ballots (D8), and either declares a winner, eliminates a
+     * last-place option (deterministic prior-round look-back per D6), or reports a
+     * non-conclusive tie. No branching / splitElimination — the rounds list is flat.
      *
      * @param array<int, Vote> $votes - The list of all votes cast for this component on a Ballot
      * @param BallotComponent $component
-     * @param array<int, array<string, mixed>> $rounds - The elimination rounds, each containing one fewer options than the last
-     * @param list<string> $omit - The options that have been eliminated in previous rounds
+     * @param array<int, array<string, mixed>> $rounds - Accumulated rounds (recursion carry)
+     * @param list<string> $omit - The options eliminated in previous rounds
      * @return array<int, array<string, mixed>> - The list of all rounds
      */
     public static function runIteration(array $votes, BallotComponent $component, array $rounds = [], array $omit = []): array
     {
-        // Only loop over non-omited options
-        $options = array_diff($component->options, $omit);
-        // Preset all the options to value 0
-        $state = array_reduce($options, function ($acc, $option) {
-            $acc[$option] = 0;
-            return $acc;
-        }, []);
+        // Surviving options, preserving the roster order from $component->options (D10).
+        $options = array_values(array_filter(
+            $component->options,
+            fn ($option): bool => !in_array($option, $omit, true)
+        ));
 
-        $number_of_votes_cast = collect($votes)->filter(function ($vote) {
-            return !empty($vote['values']);
-        })->count();
+        $tally = self::tallyRound($votes, $component, $omit, $options);
+        /** @var array<string, int> $state */
+        $state = $tally['state'];
+        $continuing = $tally['continuing'];
+        $exhausted = $tally['exhausted'];
 
-        $state = array_reduce($votes, function ($runningTotal, $vote) use ($component, $omit) {
-            // Skip the votes that were never cast
-            if (empty($vote['values'])) {
-                return $runningTotal;
-            }
-
-            if (!array_key_exists($component->id, $vote['values'])) {
-                return $runningTotal;
-            }
-
-            $values = $vote['values'][$component->id];
-
-            if (!count($values)) {
-                return $runningTotal;
-            }
-
-            // Remove all omited options from the beginning of the array
-            while (count($values) && in_array($values[0], $omit)) {
-                array_shift($values);
-            }
-
-            // The next first value is what we want
-            $first = array_shift($values);
-
-            // array_shift returns null only when the ballot is exhausted (no
-            // surviving preferences left). Use a strict null check so an option
-            // whose label is a falsy string such as "0" is still counted.
-            if ($first === null) {
-                return $runningTotal;
-            }
-
-            $runningTotal[$first] += 1;
-            return $runningTotal;
-        }, $state);
-
-        // No surviving options remain (e.g. every ballot abstained, or all
-        // remaining options were eliminated together at zero votes). There is no
-        // winner; return the rounds accumulated so far rather than calling max()
-        // on an empty state, which would throw a ValueError.
+        // No surviving options at all (over-omitted / empty roster). No winner.
         if (count($state) === 0) {
             return $rounds;
         }
 
-        $current_winner_has_majority = max($state) >= $number_of_votes_cast / 2 + 1;
+        // Integer strict majority over CONTINUING ballots (D7). All min/max/array_keys
+        // below operate on the PURE tally ($state holds only option => int here); audit
+        // keys are merged in by decorateRound at the very end so they never pollute it.
+        $needed = intdiv($continuing, 2) + 1;
+        $hasMajority = $continuing > 0 && max($state) >= $needed;
 
-        // Continue running elimination rounds if there are still more than 2 options, and none of the options have a majority.
-        if (count($state) > 2 && !$current_winner_has_majority) {
-            // The current least voted for option is added to the omit list.
-            // If there is a tie for last place, we run through both scenarios of eliminating those.
-            /** @var list<string> $omitees */
-            $omitees = array_keys($state, min($state));
-            if (count($omitees) > 1) {
-                // The special case is for options that got 0 votes, where we choose to eliminate them all.
-                if (min($state) === 0) {
-                    $state = self::annotateStateForOmission($state, $omit, $omitees);
-                    $nextOmit = [...$omit, ...$omitees];
-                    $rounds = [...$rounds, $state];
-                    return self::runIteration($votes, $component, $rounds, $nextOmit);
-                }
-                $splits = [
-                    '_state' => $state,
-                    'splitElimination' => []
-                ];
-                foreach ($omitees as $omitee) {
-                    $splitOmit = [...$omit, $omitee];
-                    $splits['splitElimination'][$omitee] = self::runIteration($votes, $component, [], $splitOmit);
-                }
-                return [...$rounds, $splits];
+        // Win condition: an option holds a continuing-ballot majority, OR we are down
+        // to the final two (plurality decides, the down-to-two termination).
+        if ($hasMajority || count($state) <= 2) {
+            $top = max($state);
+            $round = self::decorateRound($state, $continuing, $exhausted);
+            if ($top === 0) {
+                // No valid votes for any surviving option (e.g. a sole option that
+                // nobody ranked): there is no winner.
+                $round['winner'] = null;
+                return [...$rounds, $round];
             }
-            /** @var string $omitee */
-            $omitee = array_pop($omitees);
-            $state = self::annotateStateForOmission($state, $omit, $omitee);
-            $nextOmit = [...$omit, $omitee];
-            $rounds = [...$rounds, $state];
-            return self::runIteration($votes, $component, $rounds, $nextOmit);
+            $winners = array_keys($state, $top, true);
+            // A tie for the top tally is recorded as winner=null + tied labels (D6);
+            // the literal 'tie' sentinel is never stored.
+            if (count($winners) > 1) {
+                $round['winner'] = null;
+                $round['tied'] = array_map('strval', $winners);
+            } else {
+                $round['winner'] = (string) $winners[0];
+            }
+            return [...$rounds, $round];
         }
 
-        $state = self::annotateStateForVictory($state);
-        $rounds = [...$rounds, $state];
+        // Otherwise eliminate a last-place option and recurse.
+        $min = min($state);
+        /** @var list<string> $omitees */
+        $omitees = array_keys($state, $min, true);
 
-        return $rounds;
+        if ($min === 0) {
+            // Zero-vote batch elimination (D6.1): drop every zero-vote option together.
+            // If EVERY surviving option is at zero (e.g. all ballots abstained or
+            // exhausted), nothing is winnable — stop here, non-conclusive (no crash).
+            if (count($omitees) === count($state)) {
+                $round = self::decorateRound($state, $continuing, $exhausted);
+                $round['winner'] = null;
+                return [...$rounds, $round];
+            }
+            $eliminate = $omitees;
+        } elseif (count($omitees) === 1) {
+            $eliminate = $omitees[0];
+        } else {
+            // Non-zero last-place tie (D6.2/D6.3): deterministic prior-round look-back.
+            $eliminate = self::breakTieByLookback($omitees, $rounds);
+            if ($eliminate === null) {
+                // Genuinely symmetric through every prior round (D6.3): cannot break
+                // deterministically -> non-conclusive tie among the tied options.
+                $round = self::decorateRound($state, $continuing, $exhausted);
+                $round['winner'] = null;
+                $round['tied'] = array_map('strval', $omitees);
+                return [...$rounds, $round];
+            }
+        }
+
+        $round = self::decorateRound($state, $continuing, $exhausted);
+        $round = self::annotateStateForOmission($round, $omit, $eliminate);
+        $nextOmit = is_array($eliminate) ? [...$omit, ...$eliminate] : [...$omit, $eliminate];
+        $rounds = [...$rounds, $round];
+
+        return self::runIteration($votes, $component, $rounds, $nextOmit);
+    }
+
+    /**
+     * Tally first preferences for the surviving options over the full vote set,
+     * reconciling each ballot against $component->options (D9: out-of-options ranks
+     * are skipped, never transferred to). Returns the per-option state plus the
+     * CONTINUING and EXHAUSTED ballot counts for this round (D7/D8).
+     *
+     * @param array<int, Vote> $votes
+     * @param BallotComponent $component
+     * @param list<string> $omit
+     * @param list<string> $options - surviving options, roster order
+     * @return array{state: array<string, int>, continuing: int, exhausted: int}
+     */
+    private static function tallyRound(array $votes, BallotComponent $component, array $omit, array $options): array
+    {
+        /** @var array<string, int> $state */
+        $state = [];
+        foreach ($options as $option) {
+            $state[$option] = 0;
+        }
+
+        $continuing = 0;
+        $exhausted = 0;
+        /** @var list<string> $valid */
+        $valid = array_values(array_map('strval', $component->options));
+
+        foreach ($votes as $vote) {
+            $values = $vote['values'] ?? null;
+
+            // Unanswered ballot / no answer for this component: not a continuing ballot,
+            // not an exhausted one either (it never entered the contest).
+            if (empty($values) || !is_array($values) || !array_key_exists($component->id, $values)) {
+                continue;
+            }
+
+            $ranking = $values[$component->id];
+            if (!is_array($ranking) || count($ranking) === 0) {
+                continue;
+            }
+
+            // Walk the ranking for the highest surviving, valid preference. Ranks not in
+            // $component->options are invalid and skipped (D9); eliminated options are
+            // skipped (transferred past). A ballot whose only surviving preferences are
+            // exhausted counts as exhausted (D8).
+            $first = null;
+            foreach ($ranking as $pref) {
+                if (!is_scalar($pref)) {
+                    continue;
+                }
+                $label = (string) $pref;
+                if (!in_array($label, $valid, true)) {
+                    continue;
+                }
+                if (in_array($label, $omit, true)) {
+                    continue;
+                }
+                $first = $label;
+                break;
+            }
+
+            if ($first === null) {
+                // The ballot ranked at least one valid option but all such options have
+                // been eliminated: it is exhausted this round.
+                $rankedAnyValid = false;
+                foreach ($ranking as $pref) {
+                    if (is_scalar($pref) && in_array($pref, $valid, true)) {
+                        $rankedAnyValid = true;
+                        break;
+                    }
+                }
+                if ($rankedAnyValid) {
+                    $exhausted++;
+                }
+                continue;
+            }
+
+            $state[$first] += 1;
+            $continuing++;
+        }
+
+        return ['state' => $state, 'continuing' => $continuing, 'exhausted' => $exhausted];
+    }
+
+    /**
+     * Deterministic prior-round look-back (D6.2). Among the tied last-place options,
+     * find the most recent prior round whose tallies differ for them and eliminate the
+     * one lowest there. Returns null when they are identical through every prior round
+     * (genuinely symmetric, D6.3) or when the lowest in the distinguishing round is
+     * itself still tied.
+     *
+     * @param list<string> $omitees
+     * @param array<int, array<string, mixed>> $rounds - prior rounds, oldest first
+     * @return string|null
+     */
+    private static function breakTieByLookback(array $omitees, array $rounds): ?string
+    {
+        for ($r = count($rounds) - 1; $r >= 0; $r--) {
+            $prior = $rounds[$r];
+            /** @var array<string, int> $vals */
+            $vals = [];
+            foreach ($omitees as $option) {
+                $vals[$option] = is_int($prior[$option] ?? null) ? $prior[$option] : 0;
+            }
+            if (count($vals) === 0 || count(array_unique($vals)) === 1) {
+                // Identical for the tied options in this prior round: keep looking back.
+                continue;
+            }
+            $priorMin = min($vals);
+            $lowest = array_keys($vals, $priorMin, true);
+            if (count($lowest) === 1) {
+                return (string) $lowest[0];
+            }
+            // The distinguishing round still ties the lowest pair: cannot pick one.
+            return null;
+        }
+        return null;
+    }
+
+    /**
+     * Attach the per-round audit figures (D7/D8) to a round's tally. Exhaustion is
+     * recomputed from scratch each round over the full vote set, so the running total
+     * equals this round's count.
+     *
+     * @param array<string, int> $state
+     * @return array<string, mixed>
+     */
+    private static function decorateRound(array $state, int $continuing, int $exhausted): array
+    {
+        $decorated = $state;
+        $decorated['continuing'] = $continuing;
+        $decorated['exhausted'] = $exhausted;
+        // Cumulative-by-construction: under the current full-recompute model, exhaustion
+        // is re-tallied over the ENTIRE vote set every round, so the running total is
+        // identical to this round's per-round count. If a future maintainer switches to
+        // incremental tallying (accumulating only the delta each round), this must be
+        // changed to carry the running sum across rounds instead of mirroring $exhausted.
+        $decorated['exhausted_running'] = $exhausted;
+        return $decorated;
     }
 
     /**
@@ -198,21 +329,6 @@ class RankedChoice extends BallotComponentType
     }
 
     /**
-     * @param non-empty-array<string, mixed> $state
-     * @return array<string, mixed>
-     */
-    public static function annotateStateForVictory(array $state): array
-    {
-        $winners = array_keys($state, max($state));
-        if (count($winners) > 1) {
-            $state['winner'] = 'tie';
-        } else {
-            $state['winner'] = array_pop($winners);
-        }
-        return $state;
-    }
-
-    /**
      * @param array<string, mixed> $state
      * @param list<string> $omit
      * @param string|list<string> $omitee
@@ -226,40 +342,50 @@ class RankedChoice extends BallotComponentType
     }
 
     /**
+     * Derive the final result from the LINEAR rounds list (D6). The terminal round
+     * carries either a single `winner` label (conclusive) or `winner === null` plus a
+     * `tied` list of the genuinely-tied option labels (non-conclusive). The literal
+     * 'tie' sentinel never appears, so it can never leak into `winners` (#14 guard).
+     *
      * @param array<int, array<string, mixed>> $rounds
      * @return array{winners: array<string>, conclussive: bool, conclussive_winner: string|null}
      */
     public static function annotateFinalState(array $rounds): array
     {
-        $winners = [];
-        array_walk_recursive($rounds, function ($i, $el) use (&$winners) {
-            if ($el === 'winner') {
-                $winners[] = $i;
-            }
-        });
-        $unique_winners = array_values(array_unique($winners));
+        $final = end($rounds);
 
-        // A final-round tie is recorded as the literal 'winner' => 'tie'. A tie is
-        // NOT a conclusive winner and must never be reported as one. When the only
-        // collected outcome is a tie, surface the actually-tied option labels from
-        // the final round so the "possible outcomes" banner lists the options
-        // rather than the literal string 'tie'.
-        if ($unique_winners === ['tie']) {
-            $final = end($rounds);
-            if (is_array($final)) {
-                $tallies = array_filter($final, fn ($v): bool => is_int($v));
-                if (count($tallies) > 0) {
-                    $unique_winners = array_keys($tallies, max($tallies));
-                }
-            }
+        // No terminal round at all (every option eliminated with no decision) — treat
+        // as non-conclusive with no winners.
+        if (!is_array($final)) {
+            return [
+                'winners' => [],
+                'conclussive' => false,
+                'conclussive_winner' => null,
+            ];
         }
 
-        $conclussive = count($unique_winners) === 1 && !in_array('tie', $unique_winners, true);
+        $winner = $final['winner'] ?? null;
+
+        if (is_string($winner)) {
+            // A single conclusive winner.
+            return [
+                'winners' => [$winner],
+                'conclussive' => true,
+                'conclussive_winner' => $winner,
+            ];
+        }
+
+        // Non-conclusive: surface the tied option labels (if any were recorded).
+        /** @var list<string> $tied */
+        $tied = [];
+        if (isset($final['tied']) && is_array($final['tied'])) {
+            $tied = array_values(array_map('strval', $final['tied']));
+        }
 
         return [
-            'winners' => $unique_winners,
-            'conclussive' => $conclussive,
-            'conclussive_winner' => $conclussive ? ($unique_winners[0] ?? null) : null
+            'winners' => $tied,
+            'conclussive' => false,
+            'conclussive_winner' => null,
         ];
     }
 

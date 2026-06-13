@@ -13,11 +13,16 @@ return [
         'abstain' => 'Vzdržan',
         'name' => 'Da/Ne vprašanje',
         'tie' => 'Izid je neodločen.',
-        'description' => 'Glasovalci izbirajo med Da, Ne, in glede na nastavitve, Vzdržano.'
+        'description' => 'Glasovalci izbirajo med Da, Ne, in glede na nastavitve, Vzdržano.',
+        'invalid' => 'Neveljavno',
+        'carried' => 'Predlog sprejet',
+        'not_carried' => 'Predlog ni sprejet',
+        'not_carried_tied' => 'Predlog ni sprejet (neodločeno :yes–:no)'
     ],
     'fptp' => [
         'name' => 'Izbira ene vrednosti izmed večih',
         'abstain' => 'Vzdržan',
+        'invalid' => 'Neveljavno',
         'tie' => 'Izid je neodločen. Isto število glasov so prejeli: ',
         'description' => 'Glasovalci izberejo natančno eno izmed izbir.'
     ],

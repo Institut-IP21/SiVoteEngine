@@ -13,11 +13,16 @@ return [
         'abstain' => 'Abstain',
         'name' => 'Yes/No question',
         'tie' => 'The outcome is a tie.',
-        'description' => 'Voters choose whether they support or oppose a single item.'
+        'description' => 'Voters choose whether they support or oppose a single item.',
+        'invalid' => 'Invalid',
+        'carried' => 'Motion carried',
+        'not_carried' => 'Motion not carried',
+        'not_carried_tied' => 'Motion not carried (tied :yes–:no)'
     ],
     'fptp' => [
         'name' => 'First past the post / Plurality question',
         'abstain' => 'Abstain',
+        'invalid' => 'Invalid',
         'tie' => 'The outcome is a tie. The following options received the same number of votes: ',
         'description' => 'Voters choose one item from a list of options.'
     ],

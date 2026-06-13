@@ -115,10 +115,11 @@ class BallotService
     {
         $votes = $ballot->cast_votes;
         /** @var array<string, array<string, mixed>> $result */
-        $result = $ballot->components()->get()->reduce(function ($acc, BallotComponent $component) use ($votes) {
+        $result = $ballot->components()->get()->reduce(function ($acc, BallotComponent $component) use ($votes, $ballot) {
             $componentClass = $this->getBallotComponentClassInstance($component['type'], $component['version'], $component['settings']);
+            $abstainable = (bool) $ballot->election->abstainable;
             $acc[$component->id] = [
-                'results' => $componentClass::calculateResults($votes, $component),
+                'results' => $componentClass::calculateResults($votes, $component, $abstainable),
                 'title' => $component->title,
                 'description' => $component->description,
                 'type' => $component->type

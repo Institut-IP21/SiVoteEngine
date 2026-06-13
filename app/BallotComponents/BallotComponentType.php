@@ -22,9 +22,11 @@ abstract class BallotComponentType
 
     /**
      * @param array<int, Vote> $votes
+     * @param bool $abstainable Whether the election permits abstentions (lets the
+     *   calculator tell a legitimate abstention from an invalid/out-of-options value).
      * @return array<string, mixed>
      */
-    abstract public static function calculateResults(array $votes, BallotComponent $component): array;
+    abstract public static function calculateResults(array $votes, BallotComponent $component, bool $abstainable = false): array;
 
     /** @return array<string, mixed> */
     abstract public static function getSubmissionValidator(BallotComponent $component, Election $election): array;
