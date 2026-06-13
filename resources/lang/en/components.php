@@ -31,7 +31,7 @@ return [
         'name' => 'Ranked choice question',
         'description' => 'Voters rank multiple options in order of their preference.',
         'intro' => 'There are :options options. Rank the options in order of your choice. You may rank as few or as many as you wish.',
-        'state' => 'You have ranked {{ selected.length }}, you may rank {{ rankees.length - selected.length }} more.',
+        'state' => 'You have ranked :selected, you may rank :remaining more.',
         'UP' => 'UP',
         'DOWN' => 'DOWN',
         'round' => 'Round',
