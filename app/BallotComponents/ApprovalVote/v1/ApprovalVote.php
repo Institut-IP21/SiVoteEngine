@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\BallotComponents\ApprovalVote\v1;
 
+use App\BallotComponents\DTOs\ApprovalVoteResult;
 use App\BallotComponents\DTOs\ComponentResult;
-use App\BallotComponents\DTOs\SimpleVoteResult;
 use App\BallotComponents\DTOs\ValidationRules;
 use App\BallotComponents\Support\AbstractBallotComponent;
 use App\Models\BallotComponent;
@@ -44,13 +44,74 @@ final class ApprovalVote extends AbstractBallotComponent
         ];
     }
 
+    /**
+     * Approval voting (D1/D2/D9/D10). Per ballot: an absent key or null value is
+     * an abstention when abstainable, else an invalid/blank ballot — neither is a
+     * participant (`voters`) nor winnable. Otherwise the ballot participates and
+     * each approved label is reconciled against options: known labels increment
+     * `state`, anything else is `invalid` (never winnable). Rate is per-voter (D2).
+     */
     #[\Override]
-    public function calculateResults(Collection $votes, BallotComponent $component): ComponentResult
+    public function calculateResults(Collection $votes, BallotComponent $component, bool $abstainable = false): ComponentResult
     {
-        // Approval ballots store an array of selections; tallyValues() counts
-        // each selected option once (scalar values are treated as a single
-        // selection).
-        return SimpleVoteResult::fromTallies($this->tallyValues($votes, $component));
+        /** @var array<int, string> $options */
+        $options = $component->options ?? [];
+
+        // D10: full roster — seed every option at 0, in options order.
+        $state = [];
+        foreach ($options as $option) {
+            $state[(string) $option] = 0;
+        }
+        $allowed = array_flip(array_map('strval', $options));
+
+        $voters = 0;
+        $abstentions = 0;
+        $invalid = 0;
+
+        foreach ($votes as $vote) {
+            $values = is_array($vote->values) ? $vote->values : [];
+            $hasKey = array_key_exists($component->id, $values);
+            $answer = $hasKey ? $values[$component->id] : null;
+
+            // Absent key or null: not a participant. Abstention only when
+            // abstainable (D9); otherwise invalid/blank. Neither counts in voters.
+            if (!$hasKey || $answer === null) {
+                $abstainable ? $abstentions++ : $invalid++;
+                continue;
+            }
+
+            $voters++;
+            $approvals = is_array($answer) ? $answer : [$answer];
+
+            foreach ($approvals as $label) {
+                if (is_scalar($label) && isset($allowed[(string) $label])) {
+                    $state[(string) $label]++;
+                } else {
+                    $invalid++;
+                }
+            }
+        }
+
+        $totalApprovals = array_sum($state);
+
+        if ($totalApprovals === 0 || $state === []) {
+            $winner = null;
+            $winners = [];
+        } else {
+            $winners = array_map('strval', array_keys($state, max($state), true));
+            $winner = count($winners) > 1 ? 'tie' : $winners[0];
+        }
+
+        return new ApprovalVoteResult(
+            state: $state,
+            voters: $voters,
+            totalApprovals: $totalApprovals,
+            abstentions: $abstentions,
+            invalid: $invalid,
+            totalBallots: $voters + $abstentions,
+            winner: $winner,
+            winners: $winners,
+        );
     }
 
     #[\Override]

@@ -2,15 +2,22 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use App\Models\Concerns\HasUuidV4;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
+/**
+ * @property array<string, mixed>|null $settings Per-component settings payload (e.g. YesNo's pass_threshold).
+ */
 class BallotComponent extends Model
 {
     use HasFactory;
-    use HasUuids;
+    use HasUuidV4;
+
+    protected $keyType = 'string';
+
+    public $incrementing = false;
 
     public $fillable = [
         'title',
@@ -19,6 +26,7 @@ class BallotComponent extends Model
         'order',
         'version',
         'options',
+        'settings',
         'ballot_id',
         'active',
         'finished',
@@ -26,6 +34,7 @@ class BallotComponent extends Model
 
     protected $casts = [
         'options' => 'array',
+        'settings' => 'array',
         'order' => 'integer',
         'active' => 'boolean',
         'finished' => 'boolean',

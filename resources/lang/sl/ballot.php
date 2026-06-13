@@ -23,7 +23,8 @@ return [
     'quorum' => [
         'label' => 'Kvorum',
         'met' => 'Kvorum dosežen',
-        'not_met' => 'Kvorum ni dosežen',
+        'status_failed' => 'Kvorum ni dosežen',
+        'not_met' => 'Sklepčnost ni dosežena — udeležba :turnout od zahtevanih :quorum; izid ni zavezujoč.',
         'status' => ':votes / :quorum glasov',
     ],
 ];

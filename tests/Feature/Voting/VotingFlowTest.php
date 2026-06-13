@@ -504,16 +504,17 @@ class VotingFlowTest extends TestCase
             $components[1]->id => 'Option 2',
         ])->assertViewIs('voted');
 
-        // Verify abstain votes are counted
+        // Verify abstain votes are counted. D9: abstentions are tallied apart from
+        // the option state (never winnable), not as an 'abstain' state row.
         $results = $this->ballotService->calculateResults($ballot);
 
         $yesNoResult = $results[$components[0]->id]['results'];
-        $this->assertArrayHasKey('abstain', $yesNoResult['state']);
-        $this->assertEquals(1, $yesNoResult['state']['abstain']);
+        $this->assertArrayNotHasKey('abstain', $yesNoResult['state']);
+        $this->assertEquals(1, $yesNoResult['abstentions']);
 
         $fptpResult = $results[$components[1]->id]['results'];
-        $this->assertArrayHasKey('abstain', $fptpResult['state']);
-        $this->assertEquals(1, $fptpResult['state']['abstain']);
+        $this->assertArrayNotHasKey('abstain', $fptpResult['state']);
+        $this->assertEquals(1, $fptpResult['abstentions']);
     }
 
     /**

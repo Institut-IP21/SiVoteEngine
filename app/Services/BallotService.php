@@ -128,17 +128,19 @@ final class BallotService
     public function calculateResults(Ballot $ballot): array
     {
         $votes = collect($ballot->cast_votes);
+        $abstainable = (bool) ($ballot->election->abstainable ?? false);
         $results = [];
 
+        // D11: delegate quorum to the Ballot accessor (our canonical semantics).
         $results['_meta'] = [
             'quorum' => $ballot->quorum,
             'votes_cast' => $ballot->votes_count,
-            'quorum_met' => $ballot->quorum === null || $ballot->votes_count >= $ballot->quorum,
+            'quorum_met' => $ballot->quorum_met,
         ];
 
         foreach ($ballot->components()->get() as $componentModel) {
             $component = $this->registry->resolve($componentModel->type, $componentModel->version);
-            $result = $component->calculateResults($votes, $componentModel);
+            $result = $component->calculateResults($votes, $componentModel, $abstainable);
 
             $results[$componentModel->id] = [
                 'results' => $result->toArray(),

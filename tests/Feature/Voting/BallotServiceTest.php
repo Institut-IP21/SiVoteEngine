@@ -51,7 +51,10 @@ class BallotServiceTest extends TestCase
 
         $this->assertEquals(0, $results['_meta']['votes_cast']);
         foreach ($components as $component) {
-            $this->assertEquals([], $results[$component->id]['results']['state']);
+            // D10 full roster: every declared option is present, seeded at 0 (YesNo
+            // falls back to its yes/no preset). No votes -> all-zero, no winner.
+            $state = $results[$component->id]['results']['state'];
+            $this->assertSame(0, array_sum($state));
             $this->assertNull($results[$component->id]['results']['winner']);
         }
     }

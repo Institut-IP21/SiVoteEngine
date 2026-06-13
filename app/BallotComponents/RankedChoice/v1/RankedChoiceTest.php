@@ -4,14 +4,19 @@ declare(strict_types=1);
 
 namespace App\BallotComponents\RankedChoice\v1;
 
-use App\Models\Ballot;
 use App\Models\BallotComponent;
 use App\Models\Election;
 use App\Models\Vote;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Tests\TestCase;
 
+/**
+ * Instant-runoff semantics with deterministic prior-round look-back (D6/D7/D8/D9/D10)
+ * on his instance API + DTO ->toArray(). Expected values are our master
+ * RankedChoiceTest, adapted to instance calls (no branching/splitElimination).
+ */
 class RankedChoiceTest extends TestCase
 {
     private RankedChoice $component;
@@ -23,257 +28,403 @@ class RankedChoiceTest extends TestCase
     }
 
     /**
-     * Build a collection of votes from a list of rankings for a component.
-     *
-     * @param array<int, array<string>|null> $rankings
+     * @param array<string> $options
      */
-    private function votesFor(BallotComponent $component, array $rankings): Collection
-    {
-        $votes = collect();
-        foreach ($rankings as $ranking) {
-            $votes->push(Vote::factory()->make([
-                'ballot_id' => 'ballot-x',
-                'values' => $ranking === null ? null : [$component->id => $ranking],
-            ]));
-        }
-        return $votes;
-    }
-
     private function makeComponent(array $options): BallotComponent
     {
         return BallotComponent::factory()->make([
             'type' => 'RankedChoice',
-            'version' => 'v1',
             'options' => $options,
+            'ballot_id' => (string) Str::uuid(),
         ]);
     }
 
-    // ----------------------------------------------------------------
-    // Submission validator
-    // ----------------------------------------------------------------
-
-    public function test_submission_validator_non_abstainable_requires_array_of_options(): void
+    /**
+     * @param list<list<string>|null> $rankings null => unanswered ballot
+     * @return array<int, Vote>
+     */
+    private function votes(BallotComponent $component, array $rankings): array
     {
-        $election = Election::factory()->make(['abstainable' => false]);
-        $component = $this->makeComponent(['Ana', 'Betty', 'Charles']);
+        $votes = [];
+        foreach ($rankings as $ranking) {
+            if ($ranking === null) {
+                $votes[] = Vote::factory()->make(['ballot_id' => 'ballot-x', 'values' => null]);
+                continue;
+            }
+            $votes[] = Vote::factory()->make([
+                'ballot_id' => 'ballot-x',
+                'values' => [$component->id => $ranking],
+            ]);
+        }
+        return $votes;
+    }
 
-        $validator = $this->component->getSubmissionValidator($component, $election);
+    /**
+     * @param array<int, Vote> $votes
+     * @return array<string, mixed>
+     */
+    private function calc(array $votes, BallotComponent $component): array
+    {
+        return $this->component->calculateResults(new Collection($votes), $component)->toArray();
+    }
 
+    public function test_get_submissions_validator(): void
+    {
+        $election = Election::factory()->make();
+        $component = $this->makeComponent(['Ana', 'Betty', 'Charles', 'David', 'Ernest']);
+
+        $validator = $this->component->getSubmissionValidator($component, $election)->toArray();
         $this->assertEquals([
             $component->id => ['required', 'array'],
-            "{$component->id}.*" => ['distinct', Rule::in(['Ana', 'Betty', 'Charles'])],
-        ], $validator->toArray());
+            "$component->id.*" => ['distinct', Rule::in(['Ana', 'Betty', 'Charles', 'David', 'Ernest'])],
+        ], $validator);
     }
 
-    public function test_submission_validator_abstainable_is_nullable(): void
+    public function test_first_round_absolute_majority_wins_immediately_even_n(): void
     {
-        $election = Election::factory()->make(['abstainable' => true]);
-        $component = $this->makeComponent(['Ana', 'Betty', 'Charles']);
+        $c = $this->makeComponent(['A', 'B', 'C']);
+        $r = $this->calc($this->votes($c, [['A'], ['A'], ['A'], ['B']]), $c);
 
-        $validator = $this->component->getSubmissionValidator($component, $election);
-
-        $this->assertEquals([
-            $component->id => ['nullable', 'array'],
-            "{$component->id}.*" => ['distinct', Rule::in(['Ana', 'Betty', 'Charles'])],
-        ], $validator->toArray());
+        $this->assertCount(1, $r['rounds']);
+        $this->assertTrue($r['result']['conclussive']);
+        $this->assertSame('A', $r['result']['conclussive_winner']);
+        $this->assertEquals(['A'], $r['result']['winners']);
     }
 
-    // ----------------------------------------------------------------
-    // Result calculation
-    // ----------------------------------------------------------------
-
-    public function test_empty_votes_returns_empty_result(): void
+    public function test_odd_n_true_majority_recognised_in_round_one(): void
     {
-        $component = $this->makeComponent(['A', 'B', 'C']);
+        $c = $this->makeComponent(['A', 'B', 'C']);
+        $r = $this->calc($this->votes($c, [['A'], ['A'], ['B']]), $c);
 
-        $result = $this->component->calculateResults(collect([]), $component)->toArray();
-
-        $this->assertSame([], $result['rounds']);
-        $this->assertSame([], $result['result']['winners']);
-        $this->assertFalse($result['result']['conclussive']);
-        $this->assertNull($result['result']['conclussive_winner']);
+        $this->assertCount(1, $r['rounds']);
+        $this->assertTrue($r['result']['conclussive']);
+        $this->assertSame('A', $r['result']['conclussive_winner']);
+        $round = $r['rounds'][0];
+        $this->assertSame(0, $round['C']);
+        $this->assertSame(2, $round['A']);
+        $this->assertSame(1, $round['B']);
+        $this->assertSame(3, $round['continuing']);
     }
 
-    public function test_round_one_majority_is_detected_in_a_single_round(): void
+    public function test_multi_round_transfer_flips_the_leader(): void
     {
-        // 3 of 5 first-choice votes is a true majority and must be recognised
-        // immediately (regression guard for the off-by-one threshold fix).
-        $component = $this->makeComponent(['A', 'B', 'C']);
-        $votes = $this->votesFor($component, [
-            ['A', 'B', 'C'],
-            ['A', 'B', 'C'],
-            ['A', 'C', 'B'],
-            ['B', 'A', 'C'],
-            ['B', 'C', 'A'],
-        ]);
+        $c = $this->makeComponent(['A', 'B', 'C']);
+        $r = $this->calc($this->votes($c, [
+            ['A'], ['A'], ['A'], ['A'],
+            ['B'], ['B'], ['B'],
+            ['C', 'B'], ['C', 'B'],
+        ]), $c);
 
-        $result = $this->component->calculateResults($votes, $component)->toArray();
-
-        $this->assertCount(1, $result['rounds']);
-        $this->assertEquals('A', $result['rounds'][0]['winner']);
-        $this->assertEquals(3, $result['rounds'][0]['A']);
-        $this->assertEquals(2, $result['rounds'][0]['B']);
-        $this->assertEquals(0, $result['rounds'][0]['C']);
-        $this->assertEquals(['A'], $result['result']['winners']);
-        $this->assertTrue($result['result']['conclussive']);
-        $this->assertEquals('A', $result['result']['conclussive_winner']);
+        $this->assertCount(2, $r['rounds']);
+        $this->assertSame(4, $r['rounds'][0]['A']);
+        $this->assertSame(3, $r['rounds'][0]['B']);
+        $this->assertSame(2, $r['rounds'][0]['C']);
+        $this->assertSame('C', $r['rounds'][0]['eliminated']);
+        $this->assertSame(4, $r['rounds'][1]['A']);
+        $this->assertSame(5, $r['rounds'][1]['B']);
+        $this->assertSame(9, $r['rounds'][1]['continuing']);
+        $this->assertTrue($r['result']['conclussive']);
+        $this->assertSame('B', $r['result']['conclussive_winner']);
     }
 
-    public function test_elimination_redistributes_to_next_preference(): void
+    public function test_zero_votes_returns_empty_shape(): void
     {
-        // First choices: A=2, B=2, C=1. No majority -> C eliminated.
-        // C's single ballot ([C,B,A]) redistributes to B -> B=3 wins.
-        $component = $this->makeComponent(['A', 'B', 'C']);
-        $votes = $this->votesFor($component, [
-            ['A', 'B', 'C'],
-            ['A', 'C', 'B'],
-            ['B', 'C', 'A'],
-            ['B', 'A', 'C'],
-            ['C', 'B', 'A'],
-        ]);
+        $c = $this->makeComponent(['A', 'B', 'C']);
+        $r = $this->calc([], $c);
 
-        $result = $this->component->calculateResults($votes, $component)->toArray();
-
-        $this->assertCount(2, $result['rounds']);
-        $this->assertEquals('C', $result['rounds'][0]['eliminated']);
-        $this->assertEquals([], $result['rounds'][0]['eliminated_previously']);
-        $this->assertEquals('B', $result['rounds'][1]['winner']);
-        $this->assertEquals(3, $result['rounds'][1]['B']);
-        $this->assertEquals(2, $result['rounds'][1]['A']);
-        $this->assertEquals(['B'], $result['result']['winners']);
-        $this->assertTrue($result['result']['conclussive']);
+        $this->assertEquals([], $r['rounds']);
+        $this->assertEquals([], $r['result']['winners']);
+        // His DTO contract: conclussive is a bool (false), not null.
+        $this->assertFalse($r['result']['conclussive']);
+        $this->assertNull($r['result']['conclussive_winner']);
     }
 
-    public function test_two_option_tie_is_reported(): void
+    public function test_all_abstain_three_options_non_conclusive_no_crash(): void
     {
-        $component = $this->makeComponent(['A', 'B']);
-        $votes = $this->votesFor($component, [
-            ['A', 'B'],
-            ['A', 'B'],
-            ['B', 'A'],
-            ['B', 'A'],
-        ]);
+        $c = $this->makeComponent(['A', 'B', 'C']);
+        $r = $this->calc($this->votes($c, [null, null, null]), $c);
 
-        $result = $this->component->calculateResults($votes, $component)->toArray();
-
-        $this->assertCount(1, $result['rounds']);
-        $this->assertEquals('tie', $result['rounds'][0]['winner']);
-        $this->assertEquals(['tie'], $result['result']['winners']);
+        $this->assertFalse($r['result']['conclussive']);
+        $this->assertEquals([], $r['result']['winners']);
+        $this->assertNull($r['result']['conclussive_winner']);
     }
 
-    public function test_exhausted_ballot_does_not_count_after_its_options_eliminated(): void
+    public function test_lookback_distinguishes_non_zero_last_place_tie(): void
     {
-        // The 5th ballot only ranks C. When C is eliminated it is exhausted
-        // and contributes to no further round, leaving A=2 / B=2 -> tie.
-        $component = $this->makeComponent(['A', 'B', 'C']);
-        $votes = $this->votesFor($component, [
-            ['A', 'B', 'C'],
-            ['A', 'B', 'C'],
-            ['B', 'A', 'C'],
-            ['B', 'A', 'C'],
-            ['C'],
-        ]);
+        $c = $this->makeComponent(['A', 'B', 'C', 'D']);
+        $r = $this->calc($this->votes($c, [
+            ['A'], ['A'], ['A'], ['A'],
+            ['B', 'A'], ['B', 'A'],
+            ['C'], ['C'], ['C'],
+            ['D', 'B'],
+        ]), $c);
 
-        $result = $this->component->calculateResults($votes, $component)->toArray();
-
-        $this->assertEquals('C', $result['rounds'][0]['eliminated']);
-        $finalRound = $result['rounds'][count($result['rounds']) - 1];
-        $this->assertEquals(2, $finalRound['A']);
-        $this->assertEquals(2, $finalRound['B']);
-        $this->assertEquals('tie', $finalRound['winner']);
+        $this->assertCount(3, $r['rounds']);
+        $this->assertSame('D', $r['rounds'][0]['eliminated']);
+        $this->assertSame(4, $r['rounds'][1]['A']);
+        $this->assertSame(3, $r['rounds'][1]['B']);
+        $this->assertSame(3, $r['rounds'][1]['C']);
+        $this->assertSame('B', $r['rounds'][1]['eliminated']);
+        $this->assertTrue($r['result']['conclussive']);
+        $this->assertSame('A', $r['result']['conclussive_winner']);
+        $this->assertEquals(['A'], $r['result']['winners']);
     }
 
-    public function test_multiple_options_tied_at_zero_are_eliminated_together(): void
+    public function test_genuinely_symmetric_tie_is_non_conclusive_and_reproducible(): void
     {
-        // A=2, B=2, C=0, D=0, no majority. C and D (both zero) are eliminated
-        // in a single round.
-        $component = $this->makeComponent(['A', 'B', 'C', 'D']);
-        $votes = $this->votesFor($component, [
-            ['A', 'B', 'C', 'D'],
-            ['A', 'B', 'C', 'D'],
-            ['B', 'A', 'C', 'D'],
-            ['B', 'A', 'C', 'D'],
-        ]);
+        $c = $this->makeComponent(['A', 'B', 'C']);
+        $rankings = [
+            ['A'], ['A'], ['A'], ['A'],
+            ['B', 'C'], ['B', 'C'],
+            ['C', 'B'], ['C', 'B'],
+        ];
 
-        $result = $this->component->calculateResults($votes, $component)->toArray();
+        $r1 = $this->calc($this->votes($c, $rankings), $c);
+        $r2 = $this->calc($this->votes($c, $rankings), $c);
 
-        $this->assertEquals('C, D', $result['rounds'][0]['eliminated']);
-        $finalRound = $result['rounds'][count($result['rounds']) - 1];
-        $this->assertEquals('tie', $finalRound['winner']);
+        $this->assertFalse($r1['result']['conclussive']);
+        $this->assertNull($r1['result']['conclussive_winner']);
+        $this->assertEquals(['B', 'C'], $r1['result']['winners']);
+        $this->assertEquals($r1['result'], $r2['result']);
     }
 
-    public function test_tie_for_last_with_votes_produces_split_elimination(): void
+    public function test_existing_fixture_resolves_to_symmetric_non_conclusive_tie(): void
     {
-        // A=2, B=2, C=1, D=1, no majority. C and D are tied for last *with*
-        // votes, so the algorithm branches into a split elimination scenario.
-        $component = $this->makeComponent(['A', 'B', 'C', 'D']);
-        $votes = $this->votesFor($component, [
-            ['A', 'B', 'C', 'D'],
-            ['A', 'B', 'C', 'D'],
-            ['B', 'A', 'C', 'D'],
-            ['B', 'A', 'C', 'D'],
-            ['C', 'A', 'B', 'D'],
-            ['D', 'A', 'B', 'C'],
-        ]);
+        $c = $this->makeComponent(['Ana', 'Betty', 'Charles', 'David', 'Ernest']);
+        $r = $this->calc($this->votes($c, [
+            ['Ana', 'Betty', 'Charles', 'David', 'Ernest'],
+            ['Charles', 'Betty', 'Ernest', 'Ana', 'David'],
+            ['Ernest', 'Betty', 'David', 'Charles', 'Ana'],
+            ['Ana', 'Betty', 'David', 'Charles', 'Ernest'],
+            ['Ernest', 'Betty', 'David', 'Charles', 'Ana'],
+            ['Charles', 'Ana', 'David', 'Betty', 'Ernest'],
+            ['Betty', 'Ana', 'David', 'Charles', 'Ernest'],
+            ['Ana', 'Charles', 'David', 'Ernest', 'Betty'],
+        ]), $c);
 
-        $result = $this->component->calculateResults($votes, $component)->toArray();
-
-        $lastRound = $result['rounds'][count($result['rounds']) - 1];
-        $this->assertArrayHasKey('splitElimination', $lastRound);
-        $this->assertArrayHasKey('C', $lastRound['splitElimination']);
-        $this->assertArrayHasKey('D', $lastRound['splitElimination']);
-        $this->assertNotEmpty($result['result']['winners']);
+        $this->assertFalse($r['result']['conclussive']);
+        $this->assertNull($r['result']['conclussive_winner']);
+        $this->assertEquals(['Charles', 'Ernest'], $r['result']['winners']);
+        $this->assertNotContains('tie', $r['result']['winners']);
     }
 
-    public function test_all_votes_abstaining_on_component_does_not_crash(): void
+    public function test_all_zero_multi_elimination_drops_options_together(): void
     {
-        // Multi-component abstainable ballot: voters answer another component
-        // but omit this ranked component entirely. calculateResults must not
-        // blow up (max() of an empty option set) when no option has any vote.
-        $component = $this->makeComponent(['A', 'B', 'C']);
-        $other = 'other-component-id';
-        $votes = collect([
-            Vote::factory()->make(['ballot_id' => 'ballot-x', 'values' => [$other => 'yes']]),
-            Vote::factory()->make(['ballot_id' => 'ballot-x', 'values' => [$other => 'no']]),
-            Vote::factory()->make(['ballot_id' => 'ballot-x', 'values' => [$other => 'yes']]),
-        ]);
+        $c = $this->makeComponent(['A', 'B', 'C', 'D']);
+        $r = $this->calc($this->votes($c, [['A'], ['A'], ['B'], ['B']]), $c);
 
-        $result = $this->component->calculateResults($votes, $component)->toArray();
-
-        // No effective votes for this component -> no conclusive winner, no crash.
-        $this->assertIsArray($result['rounds']);
-        $finalRound = $result['rounds'][count($result['rounds']) - 1];
-        $this->assertEquals(0, $finalRound['A']);
-        $this->assertEquals(0, $finalRound['B']);
-        $this->assertEquals(0, $finalRound['C']);
+        $this->assertSame(0, $r['rounds'][0]['C']);
+        $this->assertSame(0, $r['rounds'][0]['D']);
+        $this->assertSame('C, D', $r['rounds'][0]['eliminated']);
+        $this->assertFalse($r['result']['conclussive']);
+        $this->assertEquals(['A', 'B'], $r['result']['winners']);
     }
 
-    public function test_get_totals_builds_position_frequency_matrix(): void
+    public function test_final_two_way_tie_is_non_conclusive_tie_token_not_in_winners(): void
     {
-        $component = $this->makeComponent(['A', 'B', 'C']);
-        $votes = $this->votesFor($component, [
-            ['A', 'B', 'C'],
-            ['A', 'C', 'B'],
-            ['B', 'A', 'C'],
-        ]);
+        $c = $this->makeComponent(['A', 'B']);
+        $r = $this->calc($this->votes($c, [['A'], ['B']]), $c);
 
-        $totals = $this->component->getTotals($votes, $component);
-
-        // A is ranked first twice, second once.
-        $this->assertEquals([2, 1, 0], $totals['A']);
-        // B: first once, second once, third once.
-        $this->assertEquals([1, 1, 1], $totals['B']);
-        // C: first zero, second once, third twice.
-        $this->assertEquals([0, 1, 2], $totals['C']);
+        $this->assertFalse($r['result']['conclussive']);
+        $this->assertNull($r['result']['conclussive_winner']);
+        $this->assertEquals(['A', 'B'], $r['result']['winners']);
+        $this->assertNotContains('tie', $r['result']['winners']);
     }
 
-    public function test_values_to_csv_joins_ranking(): void
+    public function test_exhausted_ballot_leaves_pool_with_per_round_count(): void
     {
-        $component = $this->makeComponent(['A', 'B', 'C']);
+        $c = $this->makeComponent(['A', 'B', 'C']);
+        $r = $this->calc($this->votes($c, [['A'], ['A'], ['B'], ['B'], ['C']]), $c);
 
-        $csv = $this->component->valuesToCsv([$component->id => ['B', 'A', 'C']], $component->id);
-        $this->assertEquals('B, A, C', $csv);
+        $this->assertSame(0, $r['rounds'][0]['exhausted']);
+        $this->assertSame(5, $r['rounds'][0]['continuing']);
+        $this->assertSame('C', $r['rounds'][0]['eliminated']);
+        $this->assertSame(1, $r['rounds'][1]['exhausted']);
+        $this->assertSame(4, $r['rounds'][1]['continuing']);
+        $this->assertSame(2, $r['rounds'][1]['A']);
+        $this->assertSame(2, $r['rounds'][1]['B']);
+        $this->assertFalse($r['result']['conclussive']);
+        $this->assertEquals(['A', 'B'], $r['result']['winners']);
+    }
 
-        $this->assertEquals('', $this->component->valuesToCsv([], $component->id));
+    public function test_ranks_not_in_options_are_skipped_as_invalid(): void
+    {
+        $c = $this->makeComponent(['A', 'B', 'C']);
+        $r = $this->calc($this->votes($c, [['Z', 'A'], ['A'], ['B']]), $c);
+
+        $this->assertSame(2, $r['rounds'][0]['A']);
+        $this->assertSame(1, $r['rounds'][0]['B']);
+        $this->assertSame(0, $r['rounds'][0]['C']);
+        $this->assertNotContains('Z', array_keys($r['rounds'][0]));
+        $this->assertTrue($r['result']['conclussive']);
+        $this->assertSame('A', $r['result']['conclussive_winner']);
+    }
+
+    public function test_option_labelled_zero_is_counted(): void
+    {
+        $c = $this->makeComponent(['0', 'B', 'C']);
+        $r = $this->calc($this->votes($c, [['0'], ['0'], ['B']]), $c);
+
+        $this->assertSame(2, $r['rounds'][0]['0']);
+        $this->assertTrue($r['result']['conclussive']);
+        $this->assertEquals('0', $r['result']['conclussive_winner']);
+    }
+
+    public function test_single_option_with_votes_crowns_it(): void
+    {
+        $c = $this->makeComponent(['Only']);
+        $r = $this->calc($this->votes($c, [['Only'], ['Only']]), $c);
+
+        $this->assertTrue($r['result']['conclussive']);
+        $this->assertSame('Only', $r['result']['conclussive_winner']);
+    }
+
+    public function test_no_valid_votes_yields_no_winner(): void
+    {
+        $c = $this->makeComponent(['A', 'B']);
+        $r = $this->calc($this->votes($c, [null, null]), $c);
+
+        $this->assertFalse($r['result']['conclussive']);
+        $this->assertNull($r['result']['conclussive_winner']);
+        $this->assertEquals([], $r['result']['winners']);
+    }
+
+    public function test_ballot_answering_other_component_id_is_excluded(): void
+    {
+        $c = $this->makeComponent(['A', 'B', 'C']);
+        $other = $this->makeComponent(['X', 'Y']);
+
+        $votes = $this->votes($c, [['A'], ['A']]);
+        $votes[] = Vote::factory()->make(['ballot_id' => 'ballot-x', 'values' => [$other->id => ['X']]]);
+        $votes[] = Vote::factory()->make(['ballot_id' => 'ballot-x', 'values' => [$other->id => ['Y']]]);
+
+        $r = $this->calc($votes, $c);
+
+        $this->assertSame(2, $r['rounds'][0]['continuing']);
+        $this->assertSame(2, $r['rounds'][0]['A']);
+        $this->assertSame(0, $r['rounds'][0]['B']);
+        $this->assertSame(0, $r['rounds'][0]['C']);
+        $this->assertTrue($r['result']['conclussive']);
+        $this->assertSame('A', $r['result']['conclussive_winner']);
+        $this->assertEquals(['A'], $r['result']['winners']);
+    }
+
+    public function test_invalid_rank_never_appears_in_winners(): void
+    {
+        $c = $this->makeComponent(['A', 'B', 'C']);
+        $r = $this->calc($this->votes($c, [['Z', 'A'], ['Z', 'A'], ['A'], ['B'], ['C']]), $c);
+
+        $this->assertSame(3, $r['rounds'][0]['A']);
+        $this->assertNotContains('Z', array_keys($r['rounds'][0]));
+        $this->assertTrue($r['result']['conclussive']);
+        $this->assertSame('A', $r['result']['conclussive_winner']);
+        $this->assertEquals(['A'], $r['result']['winners']);
+        $this->assertNotContains('Z', $r['result']['winners']);
+        $this->assertNotSame('Z', $r['result']['conclussive_winner']);
+    }
+
+    public function test_non_conclusive_tie_winners_follow_roster_order(): void
+    {
+        $c = $this->makeComponent(['B', 'A']);
+        $r = $this->calc($this->votes($c, [['A'], ['B']]), $c);
+
+        $this->assertFalse($r['result']['conclussive']);
+        $this->assertNull($r['result']['conclussive_winner']);
+        $this->assertSame(['B', 'A'], $r['result']['winners']);
+    }
+
+    public function test_conclusive_lookback_eliminates_single_option(): void
+    {
+        $c = $this->makeComponent(['A', 'B', 'C', 'D']);
+        $r = $this->calc($this->votes($c, [
+            ['A'], ['A'], ['A'], ['A'],
+            ['B', 'A'], ['B', 'A'],
+            ['C'], ['C'], ['C'],
+            ['D', 'B'],
+        ]), $c);
+
+        $this->assertSame('B', $r['rounds'][1]['eliminated']);
+        $this->assertTrue($r['result']['conclussive']);
+        $this->assertSame('A', $r['result']['conclussive_winner']);
+        $this->assertEquals(['A'], $r['result']['winners']);
+    }
+
+    public function test_multiway_lookback_unresolved_lowest_tie_is_non_conclusive(): void
+    {
+        $c = $this->makeComponent(['A', 'B', 'C', 'D', 'E']);
+        $r = $this->calc($this->votes($c, [
+            ['A'], ['A'], ['A'], ['A'], ['A'], ['A'],
+            ['B'], ['B'], ['B'],
+            ['C'], ['C'], ['C'],
+            ['D'], ['D'], ['D'], ['D'],
+            ['E', 'B'], ['E', 'C'],
+        ]), $c);
+
+        $this->assertSame('E', $r['rounds'][0]['eliminated']);
+        $this->assertSame(4, $r['rounds'][1]['B']);
+        $this->assertSame(4, $r['rounds'][1]['C']);
+        $this->assertSame(4, $r['rounds'][1]['D']);
+        $this->assertEquals(['B', 'C', 'D'], $r['rounds'][1]['tied']);
+        $this->assertFalse($r['result']['conclussive']);
+        $this->assertNull($r['result']['conclussive_winner']);
+        $this->assertEquals(['B', 'C', 'D'], $r['result']['winners']);
+        $this->assertNotContains('tie', $r['result']['winners']);
+    }
+
+    public function test_multiway_lookback_recurses_to_earlier_round_to_break_subtie(): void
+    {
+        $c = $this->makeComponent(['A', 'B', 'C', 'D', 'E', 'F']);
+        $rankings = [
+            ['A'], ['A'], ['A'], ['A'], ['A'], ['A'],
+            ['B', 'A'], ['B', 'A'],
+            ['C'], ['C'], ['C'],
+            ['D'], ['D'], ['D'], ['D'],
+            ['E', 'B', 'A'],
+            ['E', 'C'],
+            ['F', 'B', 'A'],
+        ];
+
+        $r = $this->calc($this->votes($c, $rankings), $c);
+
+        $this->assertCount(4, $r['rounds']);
+        $this->assertSame('F', $r['rounds'][0]['eliminated']);
+        $this->assertSame(3, $r['rounds'][1]['B']);
+        $this->assertSame('E', $r['rounds'][1]['eliminated']);
+        $this->assertSame(4, $r['rounds'][2]['B']);
+        $this->assertSame(4, $r['rounds'][2]['C']);
+        $this->assertSame(4, $r['rounds'][2]['D']);
+        $this->assertSame('B', $r['rounds'][2]['eliminated']);
+        $this->assertSame(10, $r['rounds'][3]['A']);
+        $this->assertTrue($r['result']['conclussive']);
+        $this->assertSame('A', $r['result']['conclussive_winner']);
+        $this->assertEquals(['A'], $r['result']['winners']);
+    }
+
+    public function test_invalid_only_ballot_never_entered_vs_eliminated_only_exhausted(): void
+    {
+        $c = $this->makeComponent(['A', 'B', 'C']);
+        $r = $this->calc($this->votes($c, [
+            ['A'], ['A'], ['B'], ['B'], ['C'],
+            ['Z'], ['Z'],
+        ]), $c);
+
+        $this->assertSame(5, $r['rounds'][0]['continuing']);
+        $this->assertSame(0, $r['rounds'][0]['exhausted']);
+        $this->assertSame('C', $r['rounds'][0]['eliminated']);
+        $this->assertSame(4, $r['rounds'][1]['continuing']);
+        $this->assertSame(1, $r['rounds'][1]['exhausted']);
+        $this->assertNotContains('Z', array_keys($r['rounds'][0]));
+    }
+
+    public function test_calculate_results_shape(): void
+    {
+        $c = $this->makeComponent(['A', 'B', 'C']);
+        $r = $this->calc($this->votes($c, [['A'], ['A'], ['A'], ['B'], ['C']]), $c);
+
+        $this->assertEquals(['rounds', 'result'], array_keys($r));
+        $this->assertEquals(['winners', 'conclussive', 'conclussive_winner'], array_keys($r['result']));
+        $this->assertTrue($r['result']['conclussive']);
+        $this->assertSame('A', $r['result']['conclussive_winner']);
+        $this->assertEquals(['A'], $r['result']['winners']);
     }
 }

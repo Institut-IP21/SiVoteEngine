@@ -5,6 +5,9 @@ namespace Database\Factories;
 use App\Models\BallotComponent;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
+/**
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\BallotComponent>
+ */
 class BallotComponentFactory extends Factory
 {
     /**
@@ -29,5 +32,20 @@ class BallotComponentFactory extends Factory
             'version' => 'v1',
             'options' => [$this->faker->name(), $this->faker->name(), $this->faker->name()],
         ];
+    }
+
+    /**
+     * Persist a YesNo component carrying a `pass_threshold` in its settings.
+     *
+     * @param int|float|string $threshold
+     * @return $this
+     */
+    public function withPassThreshold($threshold): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'type' => 'YesNo',
+            'options' => ['yes', 'no'],
+            'settings' => ['pass_threshold' => $threshold],
+        ]);
     }
 }

@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasUuidV4;
 use Database\Factories\ElectionFactory;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -16,7 +16,11 @@ class Election extends Model
 {
     use HasFactory;
     use SoftDeletes, CascadeSoftDeletes;
-    use HasUuids;
+    use HasUuidV4;
+
+    protected $keyType = 'string';
+
+    public $incrementing = false;
 
     protected $cascadeDeletes = ['ballots'];
 

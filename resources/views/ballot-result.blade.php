@@ -15,18 +15,27 @@
         </div>
     </div>
 
+    {{-- His richer quorum-status panel (turnout figures, green when met). --}}
     @if ($ballot->quorum)
     <div class="w-full max-w-xl mx-auto mb-6 rounded-lg p-4 text-center font-semibold
-        {{ $ballot->votes_count >= $ballot->quorum ? 'bg-green-100 text-green-800 border border-green-300' : 'bg-red-100 text-red-800 border border-red-300' }}">
+        {{ $ballot->quorum_met ? 'bg-green-100 text-green-800 border border-green-300' : 'bg-red-100 text-red-800 border border-red-300' }}">
         <div class="text-lg">
             {{ __('ballot.quorum.label') }}:
             {{ trans_choice('ballot.quorum.status', $ballot->votes_count, ['votes' => $ballot->votes_count, 'quorum' => $ballot->quorum]) }}
         </div>
         <div>
-            {{ $ballot->votes_count >= $ballot->quorum ? __('ballot.quorum.met') : __('ballot.quorum.not_met') }}
+            {{ $ballot->quorum_met ? __('ballot.quorum.met') : __('ballot.quorum.status_failed') }}
         </div>
     </div>
     @endif
+
+    {{-- D11: prominent "result not binding" banner; the component result views
+         suppress the winner verdict when $quorumMet is false. --}}
+    @unless ($ballot->quorum_met)
+    <div class="w-full rounded bg-red-100 border border-red-400 text-red-800 font-bold text-center p-4 mb-8">
+        {{ __('ballot.quorum.not_met', ['turnout' => $ballot->votes_count, 'quorum' => $ballot->quorum]) }}
+    </div>
+    @endunless
 
     @if ($ballot->components)
     <div class="h-full flex flex-col mt-3 sm:mt-8">
@@ -36,7 +45,7 @@
 
             <x-ballot-component.desc :component="$component" />
             <div class="px-7">
-                @include($component->result_template, ['component' => $component, 'election' => $election])
+                @include($component->result_template, ['component' => $component, 'election' => $election, 'quorumMet' => $ballot->quorum_met])
             </div>
         </div>
         @endforeach

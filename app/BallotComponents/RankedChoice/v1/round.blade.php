@@ -1,66 +1,47 @@
+@php
+    // Audit/meta keys are not option tallies and must not render as option rows.
+    $meta = ['continuing', 'exhausted', 'exhausted_running', 'eliminated', 'eliminated_previously', 'winner', 'tied'];
+    $tallies = array_filter($round, fn ($v, $k) => is_int($v) && !in_array($k, $meta, true), ARRAY_FILTER_USE_BOTH);
+    $minTally = count($tallies) ? min($tallies) : null;
+    $winner = $round['winner'] ?? null;
+    $eliminated = $round['eliminated'] ?? null;
+@endphp
 <div class="round px-1 pt-2 flex">
-    @if (array_key_exists('_state', $round))
     <div class="round_state flex flex-col justify-center w-full">
         <b class="border bg-gray-200 row px-8 py-2">{{ __('components.rankedchoice.round') }}
             {{ $round_prefix . ($i + 1) }}</b>
-        @foreach ($round['_state'] as $name => $votes)
+        @foreach ($tallies as $name => $votes)
         <div class="border-t row px-2 py-1
-                    {{ $name === 'winner' ? 'bg-green-200' : '' }}
-                    {{ !in_array($name, ['winner', 'eliminated']) && min($round['_state']) === $votes ? 'bg-yellow-200' : '' }}
-                    {{ $name === 'eliminated' ? 'bg-red-200' : '' }}">
-            <span class=" flex-1">
-                @if ($name === 'winner')
-                {{ __('components.winner') }}
-                @elseif ($name === 'eliminated')
-                {{ __('components.eliminated') }}
-                @else
-                {{ $name }}
-                @endif
-            </span>
-            <span class="flex-1 text-right">{{ $votes === 'tie' ? __('components.tie') : $votes }} </span>
+                    {{ $winner !== null && (string) $name === (string) $winner ? 'bg-green-200' : '' }}
+                    {{ $eliminated !== null && in_array((string) $name, array_map('trim', explode(',', (string) $eliminated)), true) ? 'bg-red-200' : '' }}
+                    {{ ($winner === null && $eliminated === null && $minTally === $votes) ? 'bg-yellow-200' : '' }}">
+            <span class="flex-1">{{ $name }}</span>
+            <span class="flex-1 text-right">{{ $votes }}</span>
         </div>
         @endforeach
-    </div>
-    <div class="sub_rounds flex flex-col">
-        @foreach ($round['splitElimination'] as $choice => $rounds)
-        <div class="sub_round border flex">
-            <b class="bg-yellow-200 tie-header row px-4 py-2 m-1">{{ __('components.rankedchoice.tie_elimination') }}
-                {{ $choice }}</b>
-            @foreach ($rounds as $j => $sub_round)
-            @include($component->component_path . '/round', ['round' => $sub_round, 'component' =>
-            $component ,
-            'i'
-            => $loop->parent->index,
-            'round_prefix' => $round_prefix . ($i+$j+2) . '.'])
-            @endforeach
-        </div>
-        @endforeach
-    </div>
-    @else
-    <div class="round_state flex flex-col justify-center w-full">
-        <b class="border bg-gray-200 row px-8 py-2">{{ __('components.rankedchoice.round') }}
-            {{ $round_prefix . ($i + 1) }}</b>
-        @foreach ($round as $name => $votes)
-        @if ($name !== 'eliminated_previously')
-        <div class="border-t row px-2 py-1
-                            {{ $name === 'winner' ? 'bg-green-200' : '' }}
-                            {{ !array_diff(array_keys($round), ['winner', 'eliminated']) && min($round) === $votes ? 'bg-yellow-200' : '' }}
-                            {{ $name === 'eliminated' ? 'bg-red-200' : '' }}">
-            <span class="flex-1">
-                @if ($name === 'winner')
-                <strong>{{ __('components.winner') }}:</strong>
-                @elseif ($name === 'eliminated')
-                <strong>{{ __('components.eliminated') }}:</strong>
-                @else
-                {{ $name }}
-                @endif
-            </span>
-            <span class="flex-1 text-right">
-                ({{ $votes === 'tie' ? __('components.tie') : $votes }})
-            </span>
+
+        @if ($eliminated !== null)
+        <div class="border-t row px-2 py-1 bg-red-200">
+            <span class="flex-1"><strong>{{ __('components.eliminated') }}:</strong></span>
+            <span class="flex-1 text-right">{{ $eliminated }}</span>
         </div>
         @endif
-        @endforeach
+
+        @if (is_string($winner))
+        <div class="border-t row px-2 py-1 bg-green-200">
+            <span class="flex-1"><strong>{{ __('components.winner') }}:</strong></span>
+            <span class="flex-1 text-right">{{ $winner }}</span>
+        </div>
+        @endif
+
+        {{-- Continuing/exhausted figures (D7/D8). --}}
+        <div class="border-t row px-2 py-1 text-sm text-gray-600">
+            <span class="flex-1">{{ __('components.rankedchoice.continuing') }}</span>
+            <span class="flex-1 text-right">{{ $round['continuing'] ?? 0 }}</span>
+        </div>
+        <div class="row px-2 py-1 text-sm text-gray-600">
+            <span class="flex-1">{{ __('components.rankedchoice.exhausted') }}</span>
+            <span class="flex-1 text-right">{{ $round['exhausted'] ?? 0 }}</span>
+        </div>
     </div>
-    @endif
 </div>

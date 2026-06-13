@@ -28,7 +28,8 @@ class BallotApiController extends Controller
             'email_template' => 'nullable|string|min:5',
             'email_subject'  => 'nullable|string|min:5',
             'is_secret'      => 'sometimes|boolean',
-            'quorum'         => 'sometimes|integer',
+            // D11: a quorum, when set, must be a positive turnout threshold.
+            'quorum'         => 'sometimes|nullable|integer|min:1',
             'mode'           => 'sometimes|string|in:' . implode(',', Ballot::MODES),
         ];
 
@@ -97,7 +98,7 @@ class BallotApiController extends Controller
             'description' => 'nullable|string|min:5',
             'email_template' => 'nullable|string|min:5',
             'email_subject' => 'nullable|string|min:5',
-            'quorum' => 'nullable|integer|min:0',
+            'quorum' => 'nullable|integer|min:1',
         ];
 
         if ($errors = $this->findErrors($params, $settings)) {

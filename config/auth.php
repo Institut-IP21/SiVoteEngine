@@ -68,7 +68,10 @@ return [
     'providers' => [
         'users' => [
             'driver' => 'eloquent',
-            'model' => App\Models\User::class,
+            // web_engine has no User model; auth is header-token based and the
+            // authenticated user is an ApiUser instance (see ApiAuth middleware).
+            // This provider model is never used to retrieve users from a DB here.
+            'model' => App\Models\ApiUser::class,
         ],
 
         // 'users' => [

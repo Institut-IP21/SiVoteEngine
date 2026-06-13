@@ -24,6 +24,7 @@ class BallotComponentCreateTest extends TestCase
             'Component Type' => 'FirstPastThePost',
             'Version' => 'v1',
             'Options' => ['Alice', 'Bob', 'Charlie'],
+            'Settings' => null,
         ];
         $confirmText = "Please confirm the component: " . print_r($args, true);
 
@@ -59,6 +60,7 @@ class BallotComponentCreateTest extends TestCase
             'Component Type' => 'ApprovalVote',
             'Version' => 'v1',
             'Options' => ['Alice', 'Bob'],
+            'Settings' => null,
         ];
         $confirmText = "Please confirm the component: " . print_r($args, true);
 

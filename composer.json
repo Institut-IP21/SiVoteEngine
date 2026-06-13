@@ -8,7 +8,7 @@
     ],
     "license": "MIT",
     "require": {
-        "php": "^8.3",
+        "php": "^8.4",
         "brianium/paratest": "^7.0",
         "deployer/deployer": "^7.0",
         "dyrynda/laravel-cascade-soft-deletes": "^4.1",
@@ -21,8 +21,10 @@
     },
     "require-dev": {
         "fakerphp/faker": "^1.9.1",
+        "larastan/larastan": "^3.0",
         "mockery/mockery": "^1.4.2",
         "nunomaduro/collision": "^8.0",
+        "phpstan/phpstan": "^2.0",
         "phpunit/phpunit": "^13.0",
         "spatie/laravel-ignition": "^2.0",
         "spatie/laravel-tail": "^4.3"

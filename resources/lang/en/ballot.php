@@ -23,7 +23,9 @@ return [
     'quorum' => [
         'label' => 'Quorum',
         'met' => 'Quorum met',
-        'not_met' => 'Quorum not met',
+        'status_failed' => 'Quorum not met',
+        // The "result not binding" banner (D11): suppresses the winner verdict.
+        'not_met' => 'Quorum not met — turnout :turnout of required :quorum; result not binding.',
         'status' => ':votes / :quorum votes',
     ],
 ];

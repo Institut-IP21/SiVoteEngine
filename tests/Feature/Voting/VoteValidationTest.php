@@ -182,7 +182,9 @@ class VoteValidationTest extends TestCase
         $this->assertEquals('yes', $vote->values[$components[1]->id]);
 
         $results = app(BallotService::class)->calculateResults($ballot);
-        // The approval component has no tallies (nobody selected anything).
-        $this->assertEquals([], $results[$components[0]->id]['results']['state']);
+        // D10 full roster: every option present, seeded at 0; nobody selected
+        // anything, so all tallies are zero.
+        $state = $results[$components[0]->id]['results']['state'];
+        $this->assertSame(['X' => 0, 'Y' => 0], $state);
     }
 }

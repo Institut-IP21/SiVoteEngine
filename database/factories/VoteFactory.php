@@ -22,11 +22,13 @@ class VoteFactory extends Factory
      */
     public function definition()
     {
+        // `values`/`cast_by` are Encryptable: the setter encrypts EVERY value,
+        // so an explicit `null` default would store a non-null ciphertext and be
+        // miscounted as a cast vote by Ballot::castVotes(). Omit them so an
+        // unset value stays a genuine DB NULL (an issued-but-uncast code).
         return [
             'id' => $this->faker->uuid,
             'ballot_id' => Ballot::factory(),
-            'values' => null,
-            'cast_by' => null,
         ];
     }
 

@@ -37,6 +37,8 @@ class Ballot extends JsonResource
             'active' => $this->active,
             'mode' => $this->mode,
             'votes_count' => $this->votes_count,
+            'electorate_size' => $this->electorate_size,
+            'quorum_met' => $this->quorum_met,
             'finished' => $this->finished,
             'description' => $this->description,
             'email_subject' => $this->email_subject,

@@ -13,7 +13,11 @@ class Controller extends BaseController
 {
     use AuthorizesRequests, DispatchesJobs, ValidatesRequests;
 
-    public function findErrors($params, $settings)
+    /**
+     * @param array<string, mixed> $params
+     * @param array<string, mixed> $settings
+     */
+    public function findErrors(array $params, array $settings): \Illuminate\Http\JsonResponse|null
     {
         $validator = Validator::make($params, $settings);
         $messages = $validator->errors();
@@ -31,7 +35,10 @@ class Controller extends BaseController
         return null;
     }
 
-    public function basicResponse($code = 200, $extra = [])
+    /**
+     * @param array<string, mixed> $extra
+     */
+    public function basicResponse(int $code = 200, array $extra = []): \Illuminate\Http\JsonResponse
     {
         $data = [
             'success' => $code == 200,
@@ -44,8 +51,12 @@ class Controller extends BaseController
         );
     }
 
-    protected function getOwner()
+    protected function getOwner(): string
     {
-        return Auth::user()->owner;
+        // Routes calling getOwner() run behind the auth.api middleware, which
+        // logs in an ApiUser, so Auth::user() is never null here.
+        /** @var \App\Models\ApiUser $user */
+        $user = Auth::user();
+        return $user->owner;
     }
 }

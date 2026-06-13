@@ -17,8 +17,10 @@ interface BallotComponentInterface
      * Calculate the results for this component based on cast votes.
      *
      * @param Collection<int, \App\Models\Vote> $votes
+     * @param bool $abstainable Whether the election permits abstentions (lets the
+     *   calculator tell a legitimate abstention from an invalid/out-of-options value, D9).
      */
-    public function calculateResults(Collection $votes, BallotComponent $component): ComponentResult;
+    public function calculateResults(Collection $votes, BallotComponent $component, bool $abstainable = false): ComponentResult;
 
     /**
      * Get validation rules for vote submission.

@@ -1,16 +1,20 @@
 includes:
-    - ./vendor/nunomaduro/larastan/extension.neon
+    - ./vendor/larastan/larastan/extension.neon
 
 parameters:
 
     paths:
         - app
 
-    # The level 9 is the highest level
-    level: 5
+    # The level 10 is the highest level
+    level: 8
 
     excludePaths:
         - app/Http/Resources
+        # Framework scaffolding — carries no domain logic. The slim L13 skeleton
+        # removed the Http/Console Kernels and Exceptions/Handler (now in
+        # bootstrap/app.php), so only the surviving scaffolding dirs are listed.
+        - app/Http/Middleware
+        - app/Providers
 
-    checkMissingIterableValueType: false
     checkModelProperties: true

@@ -44,10 +44,64 @@ final class FirstPastThePost extends AbstractBallotComponent
         ];
     }
 
+    /** The literal token a voter's stored answer carries for a deliberate abstention. */
+    private const ABSTAIN = 'abstain';
+
+    /**
+     * Single-selection plurality tally (D1/D9/D10). state seeds the full roster
+     * at 0 (D10). A scalar answer matching an option is a valid vote; a missing
+     * answer or the abstain token is an abstention when abstainable, else invalid;
+     * an unknown label or a non-scalar is invalid and never winnable (D9).
+     */
     #[\Override]
-    public function calculateResults(Collection $votes, BallotComponent $component): ComponentResult
+    public function calculateResults(Collection $votes, BallotComponent $component, bool $abstainable = false): ComponentResult
     {
-        return SimpleVoteResult::fromTallies($this->tallyValues($votes, $component));
+        /** @var array<string, int> $state */
+        $state = [];
+        foreach (($component->options ?? []) as $option) {
+            if (is_scalar($option)) {
+                $state[(string) $option] = 0;
+            }
+        }
+
+        $abstentions = 0;
+        $invalid = 0;
+
+        foreach ($votes as $vote) {
+            $values = $vote->values;
+            $answer = is_array($values) && array_key_exists($component->id, $values)
+                ? $values[$component->id]
+                : null;
+
+            if ($answer === null) {
+                $abstainable ? $abstentions++ : $invalid++;
+                continue;
+            }
+            if ($answer === '') {
+                // empty string is never a legitimate abstention token (D9).
+                $invalid++;
+                continue;
+            }
+            if (!is_scalar($answer)) {
+                $invalid++;
+                continue;
+            }
+
+            $answer = (string) $answer;
+
+            if ($answer === self::ABSTAIN) {
+                $abstainable ? $abstentions++ : $invalid++;
+                continue;
+            }
+
+            if (array_key_exists($answer, $state)) {
+                $state[$answer]++;
+            } else {
+                $invalid++;
+            }
+        }
+
+        return SimpleVoteResult::fromState($state, $abstentions, $invalid);
     }
 
     #[\Override]

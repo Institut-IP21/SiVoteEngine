@@ -7,17 +7,23 @@ return [
     'eliminated' => 'Eliminated',
     'tie' => 'Tie',
     'oftotal' => 'Share (%)',
+    'share_valid' => 'Share of valid votes (%)',
     'yesno' => [
         'yes' => 'Yes',
         'no' => 'No',
         'abstain' => 'Abstain',
         'name' => 'Yes/No question',
         'tie' => 'The outcome is a tie.',
-        'description' => 'Voters choose whether they support or oppose a single item.'
+        'description' => 'Voters choose whether they support or oppose a single item.',
+        'invalid' => 'Invalid',
+        'carried' => 'Motion carried',
+        'not_carried' => 'Motion not carried',
+        'not_carried_tied' => 'Motion not carried (tied :yes–:no)'
     ],
     'fptp' => [
         'name' => 'First past the post / Plurality question',
         'abstain' => 'Abstain',
+        'invalid' => 'Invalid',
         'tie' => 'The outcome is a tie. The following options received the same number of votes: ',
         'description' => 'Voters choose one item from a list of options.'
     ],
@@ -31,12 +37,13 @@ return [
         'round' => 'Round',
         'winner_is' => 'The winner is',
         'no_winner' => 'There is no conclussive winner, the possible outcomes are',
-        'tie_elimination' => 'Tie - eliminating'
+        'continuing' => 'Continuing ballots',
+        'exhausted' => 'Exhausted ballots'
     ],
     'approval' => [
         'name' => 'Approval vote question',
         'description' => 'Voters approve of any number of options from a list.',
-        'oftotal' => 'Approval (%)'
+        'rate' => 'Approval rate (%)'
     ],
     'created' => [
         'success' => 'Component created.'

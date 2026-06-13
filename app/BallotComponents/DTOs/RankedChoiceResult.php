@@ -4,11 +4,17 @@ declare(strict_types=1);
 
 namespace App\BallotComponents\DTOs;
 
+/**
+ * Result of an instant-runoff (ranked-choice) tally over a LINEAR rounds list
+ * (D6). The terminal round carries either a single `winner` label (conclusive)
+ * or `winner === null` plus a `tied` list (non-conclusive). The literal 'tie'
+ * sentinel never appears, so it can never leak into `winners` (#14 guard).
+ */
 final readonly class RankedChoiceResult implements ComponentResult
 {
     /**
-     * @param array<int, array<string, mixed>> $rounds Elimination rounds
-     * @param array<string> $winners Unique winners across all branches
+     * @param array<int, array<string, mixed>> $rounds Elimination rounds (flat, oldest first)
+     * @param array<string> $winners Conclusive winner (1) or the tied labels (non-conclusive)
      */
     public function __construct(
         public array $rounds,
@@ -28,7 +34,9 @@ final readonly class RankedChoiceResult implements ComponentResult
     }
 
     /**
-     * Create from rounds data, extracting winner information.
+     * Derive the result from the LINEAR rounds list using our deterministic
+     * final-state logic (D6): the terminal round's `winner` is a single label
+     * (conclusive) or null with an optional `tied` list (non-conclusive).
      *
      * @param array<int, array<string, mixed>> $rounds
      */
@@ -38,31 +46,34 @@ final readonly class RankedChoiceResult implements ComponentResult
             return self::empty();
         }
 
-        $winners = self::extractWinners($rounds);
-        $uniqueWinners = array_unique($winners);
-        $conclusive = count($uniqueWinners) === 1;
+        $final = end($rounds);
+        if (!is_array($final)) {
+            return new self(rounds: $rounds, winners: [], conclusive: false, conclusiveWinner: null);
+        }
+
+        $winner = $final['winner'] ?? null;
+
+        if (is_string($winner)) {
+            return new self(
+                rounds: $rounds,
+                winners: [$winner],
+                conclusive: true,
+                conclusiveWinner: $winner,
+            );
+        }
+
+        // Non-conclusive: surface the tied option labels (if any were recorded).
+        $tied = [];
+        if (isset($final['tied']) && is_array($final['tied'])) {
+            $tied = array_values(array_map('strval', $final['tied']));
+        }
 
         return new self(
             rounds: $rounds,
-            winners: $uniqueWinners,
-            conclusive: $conclusive,
-            conclusiveWinner: $conclusive ? array_values($uniqueWinners)[0] : null,
+            winners: $tied,
+            conclusive: false,
+            conclusiveWinner: null,
         );
-    }
-
-    /**
-     * @param array<mixed> $rounds
-     * @return array<string>
-     */
-    private static function extractWinners(array $rounds): array
-    {
-        $winners = [];
-        array_walk_recursive($rounds, function (mixed $value, mixed $key) use (&$winners): void {
-            if ($key === 'winner' && is_string($value)) {
-                $winners[] = $value;
-            }
-        });
-        return $winners;
     }
 
     #[\Override]

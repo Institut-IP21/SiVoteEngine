@@ -8,9 +8,14 @@ use App\Models\BallotComponent;
 use App\Models\Election;
 use App\Models\Vote;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Tests\TestCase;
 
+/**
+ * Approval vote semantics (D1/D2/D9/D10) on his instance API + DTO ->toArray().
+ * Expected values are our master ApprovalVoteTest, adapted to instance calls.
+ */
 class ApprovalVoteTest extends TestCase
 {
     private ApprovalVote $component;
@@ -21,142 +26,286 @@ class ApprovalVoteTest extends TestCase
         $this->component = new ApprovalVote();
     }
 
-    private function makeComponent(array $options): BallotComponent
+    /**
+     * @param array<int, string|array<int, mixed>>|string|null $answer
+     */
+    private function vote(BallotComponent $component, array|string|null $answer, bool $absent = false): Vote
+    {
+        $values = $absent ? [] : [$component->id => $answer];
+
+        return Vote::factory()->make([
+            'ballot_id' => $component->ballot_id,
+            'values' => $values,
+        ]);
+    }
+
+    private function makeComponent(string $o0 = 'A', string $o1 = 'B', string $o2 = 'C'): BallotComponent
     {
         return BallotComponent::factory()->make([
             'type' => 'ApprovalVote',
-            'version' => 'v1',
-            'options' => $options,
+            'options' => [$o0, $o1, $o2],
+            'ballot_id' => (string) Str::uuid(),
         ]);
     }
 
     /**
-     * @param array<int, array<string>|string|null> $selectionsPerVote
+     * @param array<int, Vote> $votes
+     * @return array<string, mixed>
      */
-    private function votesFor(BallotComponent $component, array $selectionsPerVote): Collection
+    private function calc(array $votes, BallotComponent $component, bool $abstainable = false): array
     {
-        $votes = collect();
-        foreach ($selectionsPerVote as $selection) {
-            $votes->push(Vote::factory()->make([
-                'ballot_id' => 'ballot-x',
-                'values' => $selection === null ? null : [$component->id => $selection],
-            ]));
-        }
-        return $votes;
+        return $this->component->calculateResults(new Collection($votes), $component, $abstainable)->toArray();
     }
 
-    // ----------------------------------------------------------------
-    // Submission validator
-    // ----------------------------------------------------------------
-
-    public function test_submission_validator_non_abstainable_requires_array(): void
+    public function test_basic_multi_approval_unique_winner(): void
     {
-        $election = Election::factory()->make(['abstainable' => false]);
-        $component = $this->makeComponent(['Red', 'Green', 'Blue']);
+        $c = $this->makeComponent();
+        $r = $this->calc([
+            $this->vote($c, ['A', 'B']),
+            $this->vote($c, ['B']),
+            $this->vote($c, ['B', 'C']),
+        ], $c);
 
-        $validator = $this->component->getSubmissionValidator($component, $election);
-
-        $this->assertEquals([
-            $component->id => ['required', 'array'],
-            "{$component->id}.*" => ['distinct', Rule::in(['Red', 'Green', 'Blue'])],
-        ], $validator->toArray());
+        $this->assertEquals(['A' => 1, 'B' => 3, 'C' => 1], $r['state']);
+        $this->assertEquals(3, $r['voters']);
+        $this->assertEquals(5, $r['total_approvals']);
+        $this->assertEquals(0, $r['abstentions']);
+        $this->assertEquals(0, $r['invalid']);
+        $this->assertEquals(3, $r['total_ballots']);
+        $this->assertEquals('B', $r['winner']);
+        $this->assertEquals(['B'], $r['winners']);
     }
 
-    public function test_submission_validator_abstainable_is_nullable(): void
+    public function test_full_roster_seeded_in_options_order(): void
     {
-        $election = Election::factory()->make(['abstainable' => true]);
-        $component = $this->makeComponent(['Red', 'Green', 'Blue']);
+        $c = $this->makeComponent();
+        $r = $this->calc([$this->vote($c, ['B'])], $c);
 
-        $validator = $this->component->getSubmissionValidator($component, $election);
-
-        $this->assertEquals([
-            $component->id => ['nullable', 'array'],
-            "{$component->id}.*" => ['distinct', Rule::in(['Red', 'Green', 'Blue'])],
-        ], $validator->toArray());
+        $this->assertEquals(['A' => 0, 'B' => 1, 'C' => 0], $r['state']);
+        $this->assertEquals(['A', 'B', 'C'], array_keys($r['state']));
     }
 
-    // ----------------------------------------------------------------
-    // Result calculation
-    // ----------------------------------------------------------------
-
-    public function test_counts_each_approval_and_picks_the_winner(): void
+    public function test_two_way_tie(): void
     {
-        $component = $this->makeComponent(['Red', 'Green', 'Blue', 'Yellow']);
-        $votes = $this->votesFor($component, [
-            ['Red', 'Green'],
-            ['Red', 'Blue'],
-            ['Red', 'Green', 'Yellow'],
-            ['Blue', 'Yellow'],
-        ]);
+        $c = $this->makeComponent();
+        $r = $this->calc([
+            $this->vote($c, ['A', 'B']),
+            $this->vote($c, ['A', 'B']),
+            $this->vote($c, ['C']),
+        ], $c);
 
-        $result = $this->component->calculateResults($votes, $component)->toArray();
-
-        $this->assertEquals(3, $result['state']['Red']);
-        $this->assertEquals(2, $result['state']['Green']);
-        $this->assertEquals(2, $result['state']['Blue']);
-        $this->assertEquals(2, $result['state']['Yellow']);
-        // total_votes is the total number of approvals across all ballots.
-        $this->assertEquals(9, $result['state']['Red'] + $result['state']['Green'] + $result['state']['Blue'] + $result['state']['Yellow']);
-        $this->assertEquals(9, $result['total_votes']);
-        $this->assertEquals('Red', $result['winner']);
-        $this->assertEquals(['Red'], $result['winners']);
+        $this->assertEquals(['A' => 2, 'B' => 2, 'C' => 1], $r['state']);
+        $this->assertEquals('tie', $r['winner']);
+        $this->assertEqualsCanonicalizing(['A', 'B'], $r['winners']);
     }
 
-    public function test_detects_a_tie(): void
+    public function test_n_way_tie(): void
     {
-        $component = $this->makeComponent(['X', 'Y']);
-        $votes = $this->votesFor($component, [
-            ['X'],
-            ['Y'],
-        ]);
+        $c = $this->makeComponent();
+        $r = $this->calc([
+            $this->vote($c, ['A']),
+            $this->vote($c, ['B']),
+            $this->vote($c, ['C']),
+        ], $c);
 
-        $result = $this->component->calculateResults($votes, $component)->toArray();
-
-        $this->assertEquals('tie', $result['winner']);
-        $this->assertEqualsCanonicalizing(['X', 'Y'], $result['winners']);
+        $this->assertEquals('tie', $r['winner']);
+        $this->assertEqualsCanonicalizing(['A', 'B', 'C'], $r['winners']);
     }
 
-    public function test_empty_votes_returns_empty_result(): void
+    public function test_scalar_value_wrapped(): void
     {
-        $component = $this->makeComponent(['X', 'Y']);
+        $c = $this->makeComponent();
+        $r = $this->calc([
+            $this->vote($c, 'A'),
+            $this->vote($c, ['A', 'B']),
+        ], $c);
 
-        $result = $this->component->calculateResults(collect([]), $component)->toArray();
-
-        $this->assertEquals([], $result['state']);
-        $this->assertEquals(0, $result['total_votes']);
-        $this->assertNull($result['winner']);
-        $this->assertNull($result['winners']);
+        $this->assertEquals(['A' => 2, 'B' => 1, 'C' => 0], $r['state']);
+        $this->assertEquals(2, $r['voters']);
+        $this->assertEquals(3, $r['total_approvals']);
+        $this->assertEquals('A', $r['winner']);
     }
 
-    public function test_votes_without_this_component_are_ignored(): void
+    public function test_empty_set_is_participant(): void
     {
-        // A voter who abstained on this component (key absent) does not count.
-        $component = $this->makeComponent(['X', 'Y']);
-        $votes = $this->votesFor($component, [
-            ['X', 'Y'],
-            null,                       // no values at all
-        ]);
-        $votes->push(Vote::factory()->make([
-            'ballot_id' => 'ballot-x',
-            'values' => ['some-other-component' => 'foo'],
-        ]));
+        $c = $this->makeComponent();
+        $r = $this->calc([
+            $this->vote($c, ['A']),
+            $this->vote($c, []),
+        ], $c, true);
 
-        $result = $this->component->calculateResults($votes, $component)->toArray();
-
-        $this->assertEquals(1, $result['state']['X']);
-        $this->assertEquals(1, $result['state']['Y']);
-        $this->assertEquals(2, $result['total_votes']);
+        $this->assertEquals(['A' => 1, 'B' => 0, 'C' => 0], $r['state']);
+        $this->assertEquals(2, $r['voters']);
+        $this->assertEquals(1, $r['total_approvals']);
+        $this->assertEquals(0, $r['abstentions']);
+        $this->assertEquals(2, $r['total_ballots']);
+        $this->assertEquals('A', $r['winner']);
     }
 
-    // ----------------------------------------------------------------
-    // CSV
-    // ----------------------------------------------------------------
-
-    public function test_values_to_csv_joins_selections(): void
+    public function test_true_abstention_not_a_voter(): void
     {
-        $component = $this->makeComponent(['X', 'Y', 'Z']);
+        $c = $this->makeComponent();
+        $r = $this->calc([
+            $this->vote($c, ['A', 'B']),
+            $this->vote($c, ['A']),
+            $this->vote($c, null, absent: true),
+        ], $c, true);
 
-        $this->assertEquals('X, Z', $this->component->valuesToCsv([$component->id => ['X', 'Z']], $component->id));
-        $this->assertEquals('', $this->component->valuesToCsv([], $component->id));
+        $this->assertEquals(2, $r['voters']);
+        $this->assertEquals(1, $r['abstentions']);
+        $this->assertEquals(3, $r['total_ballots']);
+        $this->assertEquals('A', $r['winner']);
+        $this->assertEquals(['A'], $r['winners']);
+    }
+
+    public function test_missing_or_null_is_invalid_when_not_abstainable(): void
+    {
+        $c = $this->makeComponent();
+        $r = $this->calc([
+            $this->vote($c, ['A']),
+            $this->vote($c, null, absent: true),
+            $this->vote($c, null),
+        ], $c, false);
+
+        $this->assertEquals(1, $r['voters']);
+        $this->assertEquals(0, $r['abstentions']);
+        $this->assertEquals(2, $r['invalid']);
+        $this->assertEquals('A', $r['winner']);
+    }
+
+    public function test_empty_votes_no_winner(): void
+    {
+        $c = $this->makeComponent();
+        $r = $this->calc([], $c);
+
+        $this->assertEquals(['A' => 0, 'B' => 0, 'C' => 0], $r['state']);
+        $this->assertEquals(0, $r['voters']);
+        $this->assertEquals(0, $r['total_approvals']);
+        $this->assertNull($r['winner']);
+        $this->assertEquals([], $r['winners']);
+    }
+
+    public function test_all_abstain_no_winner(): void
+    {
+        $c = $this->makeComponent();
+        $r = $this->calc([
+            $this->vote($c, null, absent: true),
+            $this->vote($c, null, absent: true),
+        ], $c, true);
+
+        $this->assertEquals(0, $r['voters']);
+        $this->assertEquals(2, $r['abstentions']);
+        $this->assertNull($r['winner']);
+        $this->assertEquals([], $r['winners']);
+    }
+
+    public function test_unknown_label_is_invalid(): void
+    {
+        $c = $this->makeComponent();
+        $r = $this->calc([
+            $this->vote($c, ['A', 'Z']),
+            $this->vote($c, ['A']),
+        ], $c);
+
+        $this->assertEquals(['A' => 2, 'B' => 0, 'C' => 0], $r['state']);
+        $this->assertEquals(2, $r['total_approvals']);
+        $this->assertEquals(1, $r['invalid']);
+        $this->assertEquals('A', $r['winner']);
+        $this->assertNotContains('Z', $r['winners']);
+    }
+
+    public function test_non_scalar_approval_is_invalid(): void
+    {
+        $c = $this->makeComponent();
+        $r = $this->calc([
+            $this->vote($c, ['A', ['nested']]),
+            $this->vote($c, ['A']),
+        ], $c);
+
+        $this->assertEquals(['A' => 2, 'B' => 0, 'C' => 0], $r['state']);
+        $this->assertEquals(2, $r['total_approvals']);
+        $this->assertEquals(1, $r['invalid']);
+        $this->assertEquals('A', $r['winner']);
+    }
+
+    public function test_per_voter_denominator(): void
+    {
+        $c = $this->makeComponent();
+        $r = $this->calc([
+            $this->vote($c, ['A', 'B']),
+            $this->vote($c, ['A', 'B']),
+        ], $c);
+
+        $this->assertEquals(['A' => 2, 'B' => 2, 'C' => 0], $r['state']);
+        $this->assertEquals(2, $r['voters']);
+        $this->assertEquals(4, $r['total_approvals']);
+        $this->assertEquals('tie', $r['winner']);
+        $this->assertEqualsCanonicalizing(['A', 'B'], $r['winners']);
+    }
+
+    public function test_winner_excludes_abstain_and_invalid(): void
+    {
+        $c = $this->makeComponent();
+        $r = $this->calc([
+            $this->vote($c, ['A', 'Z', 'Y']),
+            $this->vote($c, null, absent: true),
+            $this->vote($c, null, absent: true),
+            $this->vote($c, null, absent: true),
+        ], $c, true);
+
+        $this->assertEquals(['A' => 1, 'B' => 0, 'C' => 0], $r['state']);
+        $this->assertEquals(1, $r['voters']);
+        $this->assertEquals(3, $r['abstentions']);
+        $this->assertEquals(2, $r['invalid']);
+        $this->assertEquals('A', $r['winner']);
+        $this->assertEquals(['A'], $r['winners']);
+    }
+
+    public function test_option_named_abstain_is_a_normal_winnable_option(): void
+    {
+        $c = $this->makeComponent('abstain', 'B', 'C');
+        $r = $this->calc([
+            $this->vote($c, ['abstain']),
+            $this->vote($c, ['abstain']),
+            $this->vote($c, ['B']),
+        ], $c, true);
+
+        $this->assertEquals(['abstain' => 2, 'B' => 1, 'C' => 0], $r['state']);
+        $this->assertEquals(0, $r['abstentions']);
+        $this->assertEquals('abstain', $r['winner']);
+        $this->assertEquals(['abstain'], $r['winners']);
+    }
+
+    public function test_values_to_csv(): void
+    {
+        $c = $this->makeComponent();
+        $id = $c->id;
+
+        $this->assertEquals('A, B, C', $this->component->valuesToCsv([$id => ['A', 'B', 'C']], $id));
+        $this->assertEquals('', $this->component->valuesToCsv([], $id));
+        $this->assertEquals('A', $this->component->valuesToCsv([$id => 'A'], $id));
+    }
+
+    public function test_submission_validator_rules(): void
+    {
+        $c = $this->makeComponent();
+        $id = $c->id;
+
+        $abstainable = Election::factory()->make(['abstainable' => true]);
+        $rulesA = $this->component->getSubmissionValidator($c, $abstainable)->toArray();
+        $this->assertEquals(['nullable', 'array'], $rulesA[$id]);
+        $this->assertEquals(['distinct', Rule::in(['A', 'B', 'C'])], $rulesA["$id.*"]);
+
+        $nonAbstainable = Election::factory()->make(['abstainable' => false]);
+        $rulesB = $this->component->getSubmissionValidator($c, $nonAbstainable)->toArray();
+        $this->assertEquals(['required', 'array'], $rulesB[$id]);
+    }
+
+    public function test_validate_options(): void
+    {
+        $this->assertTrue($this->component->validateOptions(['A', 'B']));
+        $this->assertFalse($this->component->validateOptions(['A']));
+        $this->assertFalse($this->component->validateOptions(['A', 'A']));
+        $this->assertFalse($this->component->validateOptions(['A', '']));
     }
 }
