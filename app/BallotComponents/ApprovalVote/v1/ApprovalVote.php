@@ -46,15 +46,16 @@ class ApprovalVote extends BallotComponentType
     public static function calculateResults(array $votes, BallotComponent $component): array
     {
         $state = collect($votes)
-            ->groupBy(function (Vote $vote) use ($component): string {
+            ->flatMap(function (Vote $vote) use ($component): array {
+                // Approval voting is multi-select: each voter approves zero or more
+                // options, so values[$component->id] is an array. Emit one entry per
+                // approved option so countBy() tallies approvals per option.
                 if (is_array($vote->values) && array_key_exists($component->id, $vote->values)) {
-                    return $vote->values[$component->id];
+                    return (array) $vote->values[$component->id];
                 }
-                return 'abstain';
+                return ['abstain'];
             })
-            ->map(function (mixed $votes): int {
-                return $votes->count();
-            })
+            ->countBy()
             ->toArray();
 
         return self::annotateStateForVictory($state);
