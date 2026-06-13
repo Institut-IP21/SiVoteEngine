@@ -129,4 +129,109 @@ class BallotComponentCrudTest extends TestCase
             'data' => $this->component_schema
         ]);
     }
+
+    /** @return array{0: \App\Models\Election, 1: \App\Models\Ballot, 2: \Illuminate\Testing\TestResponse|\Tests\TestCase} */
+    private function ownedBallot(): array
+    {
+        $owner = Uuid::uuid();
+        $req = $this->withHeaders(['Authorization' => '123123123', 'Owner' => $owner]);
+
+        $e = Election::factory()
+            ->state(['owner' => $owner])
+            ->has(
+                Ballot::factory()->state(['active' => true])
+            )
+            ->create();
+
+        return [$e, $e->ballots[0], $req];
+    }
+
+    public function test_create_component_with_preset_pass_threshold()
+    {
+        [$e, $b, $req] = $this->ownedBallot();
+
+        $req->postJson("/api/election/$e->id/ballot/$b->id/component/create", [
+            'title' => 'Threshold component',
+            'type' => 'YesNo',
+            'version' => 'v1',
+            'settings' => ['pass_threshold' => 'two_thirds'],
+        ])->assertJsonStructure(['data' => $this->component_schema]);
+
+        $component = BallotComponent::where('ballot_id', $b->id)->firstOrFail();
+        $this->assertSame('two_thirds', $component->settings['pass_threshold']);
+    }
+
+    public function test_create_component_with_numeric_pass_threshold_persists_as_number()
+    {
+        [$e, $b, $req] = $this->ownedBallot();
+
+        $req->postJson("/api/election/$e->id/ballot/$b->id/component/create", [
+            'title' => 'Threshold component',
+            'type' => 'YesNo',
+            'version' => 'v1',
+            'settings' => ['pass_threshold' => 70],
+        ])->assertJsonStructure(['data' => $this->component_schema]);
+
+        $component = BallotComponent::where('ballot_id', $b->id)->firstOrFail();
+        $this->assertSame(70, $component->settings['pass_threshold']);
+    }
+
+    public function test_create_component_with_invalid_pass_threshold_fails()
+    {
+        [$e, $b, $req] = $this->ownedBallot();
+
+        // Numeric below the [50,100] range.
+        $req->postJson("/api/election/$e->id/ballot/$b->id/component/create", [
+            'title' => 'Threshold component',
+            'type' => 'YesNo',
+            'version' => 'v1',
+            'settings' => ['pass_threshold' => 40],
+        ])->assertJsonStructure(['field_errors' => ['settings.pass_threshold']]);
+
+        // Unknown preset string.
+        $req->postJson("/api/election/$e->id/ballot/$b->id/component/create", [
+            'title' => 'Threshold component',
+            'type' => 'YesNo',
+            'version' => 'v1',
+            'settings' => ['pass_threshold' => 'three_fifths'],
+        ])->assertJsonStructure(['field_errors' => ['settings.pass_threshold']]);
+
+        $this->assertSame(0, BallotComponent::where('ballot_id', $b->id)->count());
+    }
+
+    public function test_create_component_without_settings_leaves_settings_null()
+    {
+        [$e, $b, $req] = $this->ownedBallot();
+
+        $req->postJson("/api/election/$e->id/ballot/$b->id/component/create", [
+            'title' => 'No settings component',
+            'type' => 'YesNo',
+            'version' => 'v1',
+        ])->assertJsonStructure(['data' => $this->component_schema]);
+
+        $component = BallotComponent::where('ballot_id', $b->id)->firstOrFail();
+        $this->assertNull($component->settings);
+    }
+
+    public function test_update_component_toggles_pass_threshold()
+    {
+        [$e, $b, $req] = $this->ownedBallot();
+
+        $c = BallotComponent::factory()->create([
+            'ballot_id' => $b->id,
+            'type' => 'YesNo',
+            'version' => 'v1',
+            'options' => ['yes', 'no'],
+        ]);
+
+        $req->postJson("/api/election/$e->id/ballot/$b->id/component/$c->id", [
+            'title' => 'Updated component',
+            'type' => 'YesNo',
+            'version' => 'v1',
+            'settings' => ['pass_threshold' => 'three_quarters'],
+        ])->assertJsonStructure(['data' => $this->component_schema]);
+
+        $c->refresh();
+        $this->assertSame('three_quarters', $c->settings['pass_threshold']);
+    }
 }
