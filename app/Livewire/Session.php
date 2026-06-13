@@ -29,14 +29,28 @@ class Session extends Component
 
         $this->election = $election;
         $this->ballot = $ballot;
+        $this->applyElectionLocale();
         $this->componentTree = $service->getComponentTree();
 
         $vote = Vote::find(['id' => $request->query('code')])->first();
         $this->code = $vote->id ?? 'preview-mode';
     }
 
+    /**
+     * Render the session ballot in the locale the election was organized in
+     * (set on every Livewire request, not just initial mount).
+     */
+    private function applyElectionLocale(): void
+    {
+        if (!empty($this->election->locale)) {
+            app()->setLocale($this->election->locale);
+        }
+    }
+
     public function render()
     {
+        $this->applyElectionLocale();
+
         $this->activeComponents = $this->ballot->components()->get()->filter(function ($component) {
             return $component->active;
         });

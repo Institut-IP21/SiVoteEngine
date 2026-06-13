@@ -15,7 +15,7 @@
 
         <div class="text-center justify-between items-baseline">
             <h1 class="text-2xl font-bold">{{ __('ballot.vote.registered') }}</h1>
-            <p class="mt-2">To stran lahko zaprete.</p>
+            <p class="mt-2">{{ __('ballot.vote.closeable') }}</p>
         </div>
     </div>
 

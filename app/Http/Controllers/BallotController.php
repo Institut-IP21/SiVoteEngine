@@ -20,8 +20,44 @@ class BallotController extends Controller
         $this->ballotService = $ballotService;
     }
 
+    /**
+     * Render voter-facing pages in the locale the election was organized in.
+     * These are public web routes (no SetLocale middleware), so without this
+     * the ballot and results would always use the engine's default language.
+     */
+    private function applyElectionLocale(Election $election): void
+    {
+        if (!empty($election->locale)) {
+            app()->setLocale($election->locale);
+        }
+    }
+
+    /**
+     * Map component ids to their human-readable titles so validation messages
+     * reference the question (e.g. "Favorite colour?") instead of an opaque
+     * component UUID. Keyed by component id; "code" is mapped to the vote-id
+     * label.
+     *
+     * @return array<string, string>
+     */
+    private function validationAttributes(Ballot $ballot): array
+    {
+        // Use the relation query (not the $ballot->components accessor, which
+        // returns a plain array) so we can pluck title keyed by id.
+        $attributes = $ballot->components()
+            ->pluck('title', 'id')
+            ->filter()
+            ->toArray();
+
+        $attributes['code'] = __('ballot.voteId');
+
+        return $attributes;
+    }
+
     public function view(Election $election, Ballot $ballot, Request $request, BallotService $service)
     {
+        $this->applyElectionLocale($election);
+
         $code = $request->query('code');
         $vote = Vote::find($code);
 
@@ -42,6 +78,8 @@ class BallotController extends Controller
 
     public function preview(Election $election, Ballot $ballot, Request $request, BallotService $service)
     {
+        $this->applyElectionLocale($election);
+
         $pers = Personalization::where('owner', $election->owner)->first();
         $componentTree = $service->getComponentTree();
 
@@ -50,6 +88,8 @@ class BallotController extends Controller
 
     public function vote(Election $election, Ballot $ballot, Request $request)
     {
+        $this->applyElectionLocale($election);
+
         if ($ballot->mode === Ballot::MODE_SESSION) {
             throw new \Exception("Can not vote SESSION ballots this way ");
         }
@@ -69,7 +109,7 @@ class BallotController extends Controller
             'code' => 'required|uuid|exists:App\Models\Vote,id',
         ], $this->ballotService->getSubmissionValidators($ballot));
 
-        $validator = Validator::make($request->all(), $settings);
+        $validator = Validator::make($request->all(), $settings, [], $this->validationAttributes($ballot));
         $errors = $validator->errors();
 
         if (!$errors->isEmpty()) {
@@ -88,6 +128,8 @@ class BallotController extends Controller
 
     public function voteComponent(Election $election, Ballot $ballot, BallotComponent $component, Request $request)
     {
+        $this->applyElectionLocale($election);
+
         if ($ballot->mode !== Ballot::MODE_SESSION) {
             throw new \Exception("Only SESSION ballots can vote this way");
         }
@@ -107,7 +149,7 @@ class BallotController extends Controller
             'code' => 'required|uuid|exists:App\Models\Vote,id',
         ], $this->ballotService->getPartialSubmissionValidators($ballot, $request->all()));
 
-        $validator = Validator::make($request->all(), $settings);
+        $validator = Validator::make($request->all(), $settings, [], $this->validationAttributes($ballot));
         $errors = $validator->errors();
 
         if (!$errors->isEmpty()) {
@@ -134,6 +176,8 @@ class BallotController extends Controller
 
     public function result(Election $election, Ballot $ballot, Request $request)
     {
+        $this->applyElectionLocale($election);
+
         if (!$ballot->finished) {
             return response(__('ballot.result.not_yet'), 403);
         }

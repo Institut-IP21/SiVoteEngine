@@ -19,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->api(prepend: [
             \App\Http\Middleware\ApiAuth::class,
+            \App\Http\Middleware\SetLocale::class,
         ]);
 
         $middleware->redirectGuestsTo('/login');

@@ -90,6 +90,18 @@ class YesNoTest extends TestCase
         $this->assertEquals(['yes'], $result['winners']);
     }
 
+    public function test_unvoted_option_still_appears_at_zero(): void
+    {
+        $component = $this->makeComponent();
+        $votes = $this->votesFor($component, ['yes', 'yes']);
+
+        $result = $this->component->calculateResults($votes, $component)->toArray();
+
+        // "no" got no votes but must still be reported for transparency.
+        $this->assertEquals(['yes' => 2, 'no' => 0], $result['state']);
+        $this->assertEquals('yes', $result['winner']);
+    }
+
     public function test_counts_abstain_as_its_own_tally(): void
     {
         $component = $this->makeComponent();

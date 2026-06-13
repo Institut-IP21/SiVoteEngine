@@ -62,7 +62,11 @@ class ElectionApiController extends Controller
             'level' => $params['level'],
             'owner' => $this->getOwner(),
             'abstainable' => $params['abstainable'] ?? true,
-            'description' => $params['description'] ?? ''
+            'description' => $params['description'] ?? '',
+            // Captured from the organizer's request locale (set by SetLocale
+            // middleware from the Accept-Language header) so voter-facing pages
+            // can later render in the same language.
+            'locale' => app()->getLocale(),
         ];
 
         $election = Election::create($election_params);

@@ -89,12 +89,20 @@ abstract class AbstractBallotComponent implements BallotComponentInterface
      * a scalar is treated as a single-element selection. Votes that did not
      * answer this component (null/missing value) are skipped.
      *
+     * Every defined option is included in the result (seeded at 0) so that
+     * options which received no votes still appear in the published results —
+     * omitting them would hide candidates/choices from the tally and harm
+     * transparency. When not a single vote was cast for this component an empty
+     * map is returned so callers can distinguish "no result yet" from a
+     * genuine all-zero tally. Selections outside the defined options (e.g. the
+     * dynamically-added "abstain") are preserved.
+     *
      * @param Collection<int, \App\Models\Vote> $votes
      * @return array<string, int> Map of option => vote count
      */
     protected function tallyValues(Collection $votes, BallotComponent $component): array
     {
-        $tallies = [];
+        $counts = [];
 
         foreach ($votes as $vote) {
             $value = $vote->values[$component->id] ?? null;
@@ -103,8 +111,19 @@ abstract class AbstractBallotComponent implements BallotComponentInterface
             }
 
             foreach ((array) $value as $selection) {
-                $tallies[$selection] = ($tallies[$selection] ?? 0) + 1;
+                $counts[$selection] = ($counts[$selection] ?? 0) + 1;
             }
+        }
+
+        if ($counts === []) {
+            return [];
+        }
+
+        // Seed every defined option at 0 (preserving definition order), then
+        // overlay the actual counts; extra selections such as "abstain" remain.
+        $tallies = array_fill_keys($component->options ?? [], 0);
+        foreach ($counts as $selection => $count) {
+            $tallies[$selection] = $count;
         }
 
         return $tallies;

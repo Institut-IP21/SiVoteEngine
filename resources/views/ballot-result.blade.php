@@ -1,6 +1,6 @@
 @extends('layouts.main')
 
-@section('title', 'Ballot Results')
+@section('title', __('ballot.result.title'))
 
 @section('body')
 <x-ballot-wrapper>

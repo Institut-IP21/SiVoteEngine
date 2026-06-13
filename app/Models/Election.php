@@ -31,7 +31,8 @@ class Election extends Model
         'title',
         'description',
         'level',
-        'abstainable'
+        'abstainable',
+        'locale'
     ];
 
     protected $casts = [

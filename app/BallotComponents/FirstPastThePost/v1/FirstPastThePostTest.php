@@ -103,16 +103,18 @@ class FirstPastThePostTest extends TestCase
         $this->assertEqualsCanonicalizing(['Ana', 'Betty'], $result['winners']);
     }
 
-    public function test_only_options_with_votes_appear_in_state(): void
+    public function test_all_options_appear_in_state_including_unvoted(): void
     {
         $component = $this->makeComponent(['Ana', 'Betty', 'Charles']);
         $votes = $this->votesFor($component, ['Ana', 'Ana']);
 
         $result = $this->component->calculateResults($votes, $component)->toArray();
 
-        // Charles/Betty received no votes and are absent from the tally.
-        $this->assertEquals(['Ana' => 2], $result['state']);
+        // Every defined option must appear for result transparency, including
+        // those that received zero votes.
+        $this->assertEquals(['Ana' => 2, 'Betty' => 0, 'Charles' => 0], $result['state']);
         $this->assertEquals('Ana', $result['winner']);
+        $this->assertEquals(['Ana'], $result['winners']);
     }
 
     public function test_empty_votes_returns_empty_result(): void
