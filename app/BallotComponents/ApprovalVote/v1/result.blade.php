@@ -3,7 +3,7 @@ $result = $results[$component->id]['results'];
 $voters = $result['voters'];
 @endphp
 
-<x-ballot-results-table>
+<x-ballot-results-table :shareLabel="__('components.approval.rate')">
 
     @foreach ($result['state'] as $option => $votes)
     <div

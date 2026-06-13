@@ -104,13 +104,21 @@ class BallotComponentCreate extends Command
 
         $ballotComponentClass = $this->ballotService->getBallotComponentClass($type, $version);
 
-        $options = $ballotComponentClass::$needsOptions ? BallotComponent::parseOptionsString((string) $options) : $ballotComponentClass::$presetOptions;
+        // Types whose contract carries preset options (e.g. YesNo, $needsOptions
+        // = false) must NOT prompt: their $optionsValidator is a scalar `in:` rule
+        // that an array of options can never satisfy, so prompting/validating here
+        // would loop forever. Use the preset list instead.
+        if ($ballotComponentClass::$needsOptions) {
+            $options = BallotComponent::parseOptionsString((string) $options);
 
-        while (!count($options) || !$ballotComponentClass::validateOptions($options)) {
-            $options = BallotComponent::parseOptionsString((string) $this->ask('Please enter options for the ballot'));
-            if (!$options || !$ballotComponentClass::validateOptions($options)) {
-                $this->info("Not valid options for {$type} ballot type");
+            while (!count($options) || !$ballotComponentClass::validateOptions($options)) {
+                $options = BallotComponent::parseOptionsString((string) $this->ask('Please enter options for the ballot'));
+                if (!$options || !$ballotComponentClass::validateOptions($options)) {
+                    $this->info("Not valid options for {$type} ballot type");
+                }
             }
+        } else {
+            $options = $ballotComponentClass::$presetOptions;
         }
 
         // Optional pass threshold persists into settings['pass_threshold'].

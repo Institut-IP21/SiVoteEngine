@@ -7,6 +7,7 @@ return [
     'eliminated' => 'Eliminated',
     'tie' => 'Tie',
     'oftotal' => 'Share (%)',
+    'share_valid' => 'Share of valid votes (%)',
     'yesno' => [
         'yes' => 'Yes',
         'no' => 'No',
@@ -36,12 +37,13 @@ return [
         'round' => 'Round',
         'winner_is' => 'The winner is',
         'no_winner' => 'There is no conclussive winner, the possible outcomes are',
-        'tie_elimination' => 'Tie - eliminating'
+        'continuing' => 'Continuing ballots',
+        'exhausted' => 'Exhausted ballots'
     ],
     'approval' => [
         'name' => 'Approval vote question',
         'description' => 'Voters approve of any number of options from a list.',
-        'oftotal' => 'Approval (%)'
+        'rate' => 'Approval rate (%)'
     ],
     'created' => [
         'success' => 'Component created.'

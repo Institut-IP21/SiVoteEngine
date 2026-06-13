@@ -34,14 +34,13 @@
         </div>
         @endif
 
-        {{-- Continuing/exhausted figures (D7/D8). Literal labels for now: dedicated
-             lang keys (components.rankedchoice.continuing/.exhausted) are a Phase 2 item. --}}
+        {{-- Continuing/exhausted figures (D7/D8). --}}
         <div class="border-t row px-2 py-1 text-sm text-gray-600">
-            <span class="flex-1">Continuing ballots</span>
+            <span class="flex-1">{{ __('components.rankedchoice.continuing') }}</span>
             <span class="flex-1 text-right">{{ $round['continuing'] ?? 0 }}</span>
         </div>
         <div class="row px-2 py-1 text-sm text-gray-600">
-            <span class="flex-1">Exhausted ballots</span>
+            <span class="flex-1">{{ __('components.rankedchoice.exhausted') }}</span>
             <span class="flex-1 text-right">{{ $round['exhausted'] ?? 0 }}</span>
         </div>
     </div>

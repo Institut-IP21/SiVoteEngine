@@ -7,6 +7,7 @@ return [
     'eliminated' => 'Eliminiran',
     'tie' => 'Izenačen',
     'oftotal' => 'Delež (%)',
+    'share_valid' => 'Delež veljavnih glasov (%)',
     'yesno' => [
         'yes' => 'Da',
         'no' => 'Ne',
@@ -36,12 +37,13 @@ return [
         'round' => 'Krog',
         'winner_is' => 'Zmagovalec je',
         'no_winner' => 'Zmagovalca ni mogoče določiti, možni zmagovalci so',
-        'tie_elimination' => 'Izenačeno - eliminiran'
+        'continuing' => 'Glasovnice v igri',
+        'exhausted' => 'Izčrpane glasovnice'
     ],
     'approval' => [
         'name' => 'Odobritveni glas',
         'description' => 'Glasovalci označijo, katere izmed možnosti na seznamu podpirajo.',
-        'oftotal' => 'Podpora (%)'
+        'rate' => 'Stopnja podpore (%)'
     ],
     'created' => [
         'success' => 'Komponenta ustvarjena.'

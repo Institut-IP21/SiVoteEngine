@@ -3,7 +3,7 @@ $result = $results[$component->id]['results'];
 $validVotes = $result['valid_votes'];
 @endphp
 
-<x-ballot-results-table>
+<x-ballot-results-table :shareLabel="__('components.share_valid')">
     @foreach ($result['state'] as $option => $votes)
     <div
         class="flex flex-row {{ count($result['winners']) > 1 && in_array($option, $result['winners']) ? 'bg-yellow-100' : '' }}{{ count($result['winners']) === 1 && in_array($option, $result['winners']) ? 'winner bg-green-200' : '' }}">

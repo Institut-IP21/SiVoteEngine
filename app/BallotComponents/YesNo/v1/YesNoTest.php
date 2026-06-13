@@ -486,7 +486,7 @@ class YesNoTest extends TestCase
         assertNotSame('components.yesno.not_carried_tied', trans('components.yesno.not_carried_tied'));
     }
 
-    // ---- valuesToCsv: not overridden -> base returns the raw stored value verbatim ----
+    // ---- valuesToCsv: present key -> raw stored value verbatim; absent key -> '' ----
 
     public function test_values_to_csv_returns_raw_value_verbatim(): void
     {
@@ -496,5 +496,13 @@ class YesNoTest extends TestCase
         assertSame('yes', YesNo::valuesToCsv([$id => 'yes'], $id));
         assertSame('no', YesNo::valuesToCsv([$id => 'no'], $id));
         assertSame('abstain', YesNo::valuesToCsv([$id => 'abstain'], $id));
+    }
+
+    public function test_values_to_csv_returns_empty_string_when_key_absent(): void
+    {
+        $component = $this->makeComponent();
+        $id = $component->id;
+
+        assertSame('', YesNo::valuesToCsv([], $id));
     }
 }

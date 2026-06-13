@@ -223,6 +223,21 @@ class YesNo extends BallotComponentType
         return 50;
     }
 
+    /**
+     * Mirror the FPTP/Approval guard: return '' when the component key is absent,
+     * otherwise the stored value RAW (machine-stable, never localized — the CSV
+     * must stay parseable: yes / no / abstain).
+     *
+     * @param array<string, mixed> $values
+     */
+    public static function valuesToCsv(array $values, string $component_id): mixed
+    {
+        if (array_key_exists($component_id, $values)) {
+            return $values[$component_id];
+        }
+        return '';
+    }
+
     /** @return array<string, mixed> */
     public static function getSubmissionValidator(BallotComponent $component, Election $election): array
     {
