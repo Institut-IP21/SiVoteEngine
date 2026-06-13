@@ -1,12 +1,13 @@
 @php
 $result = $results[$component->id]['results'];
 $validVotes = $result['valid_votes'];
+$quorumMet = $quorumMet ?? true;
 @endphp
 
 <x-ballot-results-table :shareLabel="__('components.share_valid')">
     @foreach ($result['state'] as $option => $votes)
     <div
-        class="flex flex-row {{ $result['passed'] && in_array($option, $result['winners']) ? 'winner bg-green-200' : '' }}">
+        class="flex flex-row {{ $quorumMet && $result['passed'] && in_array($option, $result['winners']) ? 'winner bg-green-200' : '' }}">
         <x-ballot-results-table-row>
             {{ __("components.yesno.$option") }}
         </x-ballot-results-table-row>
@@ -44,6 +45,7 @@ $validVotes = $result['valid_votes'];
     @endif
 </x-ballot-results-table>
 
+@if ($quorumMet)
 @if ($result['passed'])
 <div class="p-4 text-center block mt-6 bg-green-200">
     {{ __('components.yesno.carried') }}
@@ -56,4 +58,5 @@ $validVotes = $result['valid_votes'];
 <div class="p-4 text-center block mt-6 bg-yellow-200">
     {{ __('components.yesno.not_carried') }}
 </div>
+@endif
 @endif

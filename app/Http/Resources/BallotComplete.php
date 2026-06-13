@@ -23,6 +23,8 @@ class BallotComplete extends JsonResource
             'title' => $this->title,
             'active' => $this->active,
             'votes_count' => $this->votes_count,
+            'electorate_size' => $this->electorate_size,
+            'quorum_met' => $this->quorum_met,
             'cast_votes' => $this->cast_votes,
             'finished' => $this->finished,
             'description' => $this->description,

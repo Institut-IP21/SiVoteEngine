@@ -8,6 +8,9 @@ return [
     'result' => [
         'not_yet' => 'Ballot results not available yet'
     ],
+    'quorum' => [
+        'not_met' => 'Quorum not met — turnout :turnout of required :quorum; result not binding.',
+    ],
     'vote' => [
         'registered' => 'Your vote has been registered'
     ],

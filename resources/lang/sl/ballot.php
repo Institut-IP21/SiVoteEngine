@@ -8,6 +8,9 @@ return [
     'result' => [
         'not_yet' => 'Izid glasovanja še ni na voljo.'
     ],
+    'quorum' => [
+        'not_met' => 'Sklepčnost ni dosežena — udeležba :turnout od zahtevanih :quorum; izid ni zavezujoč.',
+    ],
     'vote' => [
         'registered' => 'Vaš glas je bil zabeležen.'
     ],

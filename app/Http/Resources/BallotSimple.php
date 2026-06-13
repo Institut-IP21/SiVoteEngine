@@ -22,6 +22,8 @@ class BallotSimple extends JsonResource
             'is_secret' => $this->is_secret,
             'title' => $this->title,
             'active' => $this->active,
+            'electorate_size' => $this->electorate_size,
+            'quorum_met' => $this->quorum_met,
             'description' => $this->description,
             'email_subject' => $this->email_subject,
             'email_template' => $this->email_template,

@@ -15,6 +15,12 @@
         </div>
     </div>
 
+    @unless ($ballot->quorum_met)
+    <div class="w-full rounded bg-red-100 border border-red-400 text-red-800 font-bold text-center p-4 mb-8">
+        {{ __('ballot.quorum.not_met', ['turnout' => $ballot->votes_count, 'quorum' => $ballot->quorum]) }}
+    </div>
+    @endunless
+
     @if ($ballot->components)
     <div class="h-full flex flex-col mt-3 sm:mt-8">
         @foreach ($ballot->components as $component)
@@ -23,7 +29,7 @@
 
             <x-ballot-component.desc :component="$component" />
             <div class="px-7">
-                @include($component->result_template, ['component' => $component, 'election' => $election])
+                @include($component->result_template, ['component' => $component, 'election' => $election, 'quorumMet' => $ballot->quorum_met])
             </div>
         </div>
         @endforeach

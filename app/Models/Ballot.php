@@ -29,6 +29,8 @@ use Dyrynda\Database\Support\CascadeSoftDeletes;
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Vote> $votes
  * @property-read \App\Models\Vote[] $cast_votes
  * @property-read int $votes_count
+ * @property-read int $electorate_size
+ * @property-read bool $quorum_met
  * @property-read bool $locked
  */
 class Ballot extends Model
@@ -120,6 +122,23 @@ class Ballot extends Model
     public function getVotesCountAttribute(): int
     {
         return $this->castVotes()->count();
+    }
+
+    /**
+     * Eligible electorate = number of issued voting codes (one Vote row per code).
+     * Used as the validation ceiling for quorum, not as the met-test (D11).
+     */
+    public function getElectorateSizeAttribute(): int
+    {
+        return $this->votes()->count();
+    }
+
+    /**
+     * Quorum is met iff no quorum is set, or turnout (cast votes) reaches it (D11).
+     */
+    public function getQuorumMetAttribute(): bool
+    {
+        return $this->quorum === null || $this->votes_count >= $this->quorum;
     }
 
     /** @return BelongsTo<Election, $this> */
