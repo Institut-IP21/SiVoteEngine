@@ -60,7 +60,23 @@ class FirstPastThePost extends BallotComponentType
                 'winners' => null
             ];
         }
-        $winners = array_keys($state, max($state));
+        // Abstentions are tallied and displayed (and remain in total_votes and
+        // therefore the percentage denominator), but must never win or tie the
+        // outcome, so they are excluded from the winner computation.
+        $candidates = $state;
+        unset($candidates['abstain']);
+
+        if (count($candidates) === 0) {
+            // Only abstentions were cast — no option can win.
+            return [
+                'state' => $state,
+                'total_votes' => array_sum($state),
+                'winner' => null,
+                'winners' => []
+            ];
+        }
+
+        $winners = array_keys($candidates, max($candidates));
         if (count($winners) > 1) {
             $winner = 'tie';
         } else {
