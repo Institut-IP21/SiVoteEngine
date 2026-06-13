@@ -11,9 +11,9 @@ class CreateElectionsTable extends Migration
      *
      * @return void
      */
-    public function up()
+    public function up(): void
     {
-        Schema::create('elections', function (Blueprint $table) {
+        Schema::create('elections', function (Blueprint $table): void {
             $table->uuid('id')->primary();
             $table->string('title');
             $table->text('description')->nullable();
@@ -30,7 +30,7 @@ class CreateElectionsTable extends Migration
      *
      * @return void
      */
-    public function down()
+    public function down(): void
     {
         Schema::dropIfExists('elections');
     }

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\JsonResponse;
+use App\Models\ApiUser;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Bus\DispatchesJobs;
 use Illuminate\Foundation\Validation\ValidatesRequests;
@@ -17,7 +19,7 @@ class Controller extends BaseController
      * @param array<string, mixed> $params
      * @param array<string, mixed> $settings
      */
-    public function findErrors(array $params, array $settings): \Illuminate\Http\JsonResponse|null
+    public function findErrors(array $params, array $settings): JsonResponse|null
     {
         $validator = Validator::make($params, $settings);
         $messages = $validator->errors();
@@ -38,7 +40,7 @@ class Controller extends BaseController
     /**
      * @param array<string, mixed> $extra
      */
-    public function basicResponse(int $code = 200, array $extra = []): \Illuminate\Http\JsonResponse
+    public function basicResponse(int $code = 200, array $extra = []): JsonResponse
     {
         $data = [
             'success' => $code == 200,
@@ -55,7 +57,7 @@ class Controller extends BaseController
     {
         // Routes calling getOwner() run behind the auth.api middleware, which
         // logs in an ApiUser, so Auth::user() is never null here.
-        /** @var \App\Models\ApiUser $user */
+        /** @var ApiUser $user */
         $user = Auth::user();
         return $user->owner;
     }

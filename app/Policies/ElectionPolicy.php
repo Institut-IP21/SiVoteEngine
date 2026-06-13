@@ -17,7 +17,7 @@ class ElectionPolicy
      *
      * @return mixed
      */
-    public function viewAny(User $user)
+    public function viewAny(User $user): bool
     {
         return true;
     }
@@ -39,7 +39,7 @@ class ElectionPolicy
      *
      * @return mixed
      */
-    public function create(User $user)
+    public function create(User $user): bool
     {
         return true;
     }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Livewire;
 
+use Illuminate\Contracts\View\View;
 use App\Models\Ballot;
 use App\Models\BallotComponent;
 use Illuminate\Support\Collection;
@@ -25,12 +26,10 @@ class RankedChoiceLivewire extends Component
         $this->ballot = $ballot;
         $this->component = $component;
         /** @var Collection<int, array{name: string, rank: int|null}> $rankees */
-        $rankees = collect($this->component->options)->map(function (mixed $option): array {
-            return [
-                'name' => (string) $option,
-                'rank' => null,
-            ];
-        });
+        $rankees = collect($this->component->options)->map(fn(mixed $option): array => [
+            'name' => (string) $option,
+            'rank' => null,
+        ]);
         $this->rankees = $rankees;
     }
 
@@ -95,12 +94,10 @@ class RankedChoiceLivewire extends Component
         });
     }
 
-    public function render(): \Illuminate\Contracts\View\View
+    public function render(): View
     {
         /** @var Collection<int<0,1>, Collection<int, array{name: string, rank: int|null}>> $partitioned */
-        $partitioned = $this->rankees->partition(function (array $rankee): bool {
-            return $rankee['rank'] !== null;
-        });
+        $partitioned = $this->rankees->partition(fn(array $rankee): bool => $rankee['rank'] !== null);
         /** @var Collection<int, array{name: string, rank: int|null}> $selected */
         /** @var Collection<int, array{name: string, rank: int|null}> $unselected */
         [$selected, $unselected] = $partitioned;

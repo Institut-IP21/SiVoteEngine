@@ -11,9 +11,9 @@ class CreateVotesTable extends Migration
      *
      * @return void
      */
-    public function up()
+    public function up(): void
     {
-        Schema::create('votes', function (Blueprint $table) {
+        Schema::create('votes', function (Blueprint $table): void {
             $table->uuid('id')->primary();
             $table->uuid('ballot_id');
             $table->foreign('ballot_id')->references('id')->on('ballots');;
@@ -28,7 +28,7 @@ class CreateVotesTable extends Migration
      *
      * @return void
      */
-    public function down()
+    public function down(): void
     {
         Schema::dropIfExists('votes');
     }

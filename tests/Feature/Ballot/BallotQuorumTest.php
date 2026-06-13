@@ -41,14 +41,14 @@ class BallotQuorumTest extends TestCase
         return $ballot->fresh();
     }
 
-    public function test_quorum_met_is_true_when_quorum_is_null()
+    public function test_quorum_met_is_true_when_quorum_is_null(): void
     {
         $ballot = $this->makeBallot(null, 5, 1);
 
         $this->assertTrue($ballot->quorum_met);
     }
 
-    public function test_quorum_met_is_true_when_turnout_reaches_quorum()
+    public function test_quorum_met_is_true_when_turnout_reaches_quorum(): void
     {
         // turnout == quorum (boundary)
         $ballot = $this->makeBallot(3, 5, 3);
@@ -60,7 +60,7 @@ class BallotQuorumTest extends TestCase
         $this->assertTrue($ballot->quorum_met);
     }
 
-    public function test_quorum_met_is_false_when_turnout_below_quorum()
+    public function test_quorum_met_is_false_when_turnout_below_quorum(): void
     {
         $ballot = $this->makeBallot(4, 5, 2);
 
@@ -68,7 +68,7 @@ class BallotQuorumTest extends TestCase
         $this->assertFalse($ballot->quorum_met);
     }
 
-    public function test_electorate_size_is_issued_code_count()
+    public function test_electorate_size_is_issued_code_count(): void
     {
         $ballot = $this->makeBallot(null, 7, 3);
 

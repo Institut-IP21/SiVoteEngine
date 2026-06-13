@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\JsonResponse;
 use App\Http\Resources\BallotComponent as ComponentResource;
 use App\Models\Ballot;
 use App\Models\BallotComponent;
@@ -17,14 +18,14 @@ class BallotComponentApiController extends Controller
         protected readonly BallotService $ballotService,
     ) {}
 
-    public function list(Election $election)
+    public function list(Election $election): array
     {
         return [
             'data' => $this->ballotService->getComponentTree()
         ];
     }
 
-    public function create(Election $election, Ballot $ballot, Request $request)
+    public function create(Election $election, Ballot $ballot, Request $request): JsonResponse|ComponentResource
     {
         $params = $request->all();
         $settings = [
@@ -35,7 +36,7 @@ class BallotComponentApiController extends Controller
                 'required',
                 'string',
                 'bail',
-                function ($attribute, $value, $fail) {
+                function (string $attribute, $value, $fail): void {
                     if (!in_array($value, $this->ballotService->getBallotTypes())) {
                         $fail($attribute . ' must be a valid ballot type.');
                     }
@@ -45,7 +46,7 @@ class BallotComponentApiController extends Controller
                 'required',
                 'string',
                 'bail',
-                function ($attribute, $value, $fail) use ($params) {
+                function (string $attribute, $value, $fail) use ($params): void {
                     if (!in_array($value, $this->ballotService->getBallotVersions($params['type']))) {
                         $fail($attribute . ' must be a valid version.');
                     }
@@ -92,12 +93,12 @@ class BallotComponentApiController extends Controller
         return new ComponentResource($component);
     }
 
-    public function read(Election $election, Ballot $ballot, BallotComponent $component, Request $request)
+    public function read(Election $election, Ballot $ballot, BallotComponent $component, Request $request): ComponentResource
     {
         return new ComponentResource($component);
     }
 
-    public function update(Election $election, Ballot $ballot, BallotComponent $component, Request $request)
+    public function update(Election $election, Ballot $ballot, BallotComponent $component, Request $request): JsonResponse|ComponentResource
     {
         $params = $request->all();
         $settings = [
@@ -108,7 +109,7 @@ class BallotComponentApiController extends Controller
                 'bail',
                 'required',
                 'string',
-                function ($attribute, $value, $fail) {
+                function (string $attribute, $value, $fail): void {
                     if (!in_array($value, $this->ballotService->getBallotTypes())) {
                         $fail($attribute . ' must be a valid ballot type.');
                     }
@@ -118,7 +119,7 @@ class BallotComponentApiController extends Controller
                 'bail',
                 'required',
                 'string',
-                function ($attribute, $value, $fail) use ($params) {
+                function (string $attribute, $value, $fail) use ($params): void {
                     if (!in_array($value, $this->ballotService->getBallotVersions($params['type']))) {
                         $fail($attribute . ' must be a valid version.');
                     }
@@ -188,7 +189,7 @@ class BallotComponentApiController extends Controller
     {
         return [
             'nullable',
-            function ($attribute, $value, $fail) {
+            function (string $attribute, $value, $fail): void {
                 $presets = ['two_thirds', 'three_quarters'];
                 if (is_string($value) && in_array($value, $presets, true)) {
                     return;

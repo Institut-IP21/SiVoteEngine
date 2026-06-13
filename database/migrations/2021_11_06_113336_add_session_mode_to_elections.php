@@ -11,9 +11,9 @@ class AddSessionModeToElections extends Migration
      *
      * @return void
      */
-    public function up()
+    public function up(): void
     {
-        Schema::table('elections', function (Blueprint $table) {
+        Schema::table('elections', function (Blueprint $table): void {
             $table->string('mode')->default('basic')->after('level');
         });
     }
@@ -23,9 +23,9 @@ class AddSessionModeToElections extends Migration
      *
      * @return void
      */
-    public function down()
+    public function down(): void
     {
-        Schema::table('elections', function (Blueprint $table) {
+        Schema::table('elections', function (Blueprint $table): void {
             $table->dropColumn('mode');
         });
     }

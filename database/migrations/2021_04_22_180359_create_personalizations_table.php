@@ -11,9 +11,9 @@ class CreatePersonalizationsTable extends Migration
      *
      * @return void
      */
-    public function up()
+    public function up(): void
     {
-        Schema::create('personalizations', function (Blueprint $table) {
+        Schema::create('personalizations', function (Blueprint $table): void {
             $table->id();
             $table->uuid('owner');
             $table->string('photo_url')->nullable();
@@ -26,7 +26,7 @@ class CreatePersonalizationsTable extends Migration
      *
      * @return void
      */
-    public function down()
+    public function down(): void
     {
         Schema::dropIfExists('personalizations');
     }

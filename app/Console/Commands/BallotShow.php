@@ -55,7 +55,7 @@ class BallotShow extends Command
         $this->info('Components:');
         $this->table(
             ['ID', 'Title', 'Type', 'Version', 'Active', 'Order'],
-            $components->map(fn ($c) => [
+            $components->map(fn ($c): array => [
                 $c->id,
                 $c->title,
                 $c->type,

@@ -24,7 +24,7 @@ class ElectionCrudTest extends TestCase
         'ballots',
     ];
 
-    public function test_auth_battery()
+    public function test_auth_battery(): void
     {
         $el = Election::factory()->create();
         $auth_error = ['error' => 'No authorization or invalid.'];
@@ -46,7 +46,7 @@ class ElectionCrudTest extends TestCase
         $req->deleteJson("/api/election/$el->id")->assertForbidden()->assertJson($owner_error);
     }
 
-    public function test_get_election_fails_if_wrong_owner()
+    public function test_get_election_fails_if_wrong_owner(): void
     {
         $el = Election::factory()->create(['owner' => UUID::uuid()]);
         $this->withHeaders(['Authorization' => '123123123', 'Owner' => UUID::uuid()])
@@ -57,7 +57,7 @@ class ElectionCrudTest extends TestCase
             ]);
     }
 
-    public function test_get_election_success()
+    public function test_get_election_success(): void
     {
         $owner = UUID::uuid();
         $el = Election::factory()->create([ 'owner' => $owner ]);
@@ -69,7 +69,7 @@ class ElectionCrudTest extends TestCase
             ]);
     }
 
-    public function test_create_election_fails_without_required_fields()
+    public function test_create_election_fails_without_required_fields(): void
     {
         $this->withHeaders(['Authorization' => '123123123', 'Owner' => UUID::uuid()])
             ->postJson("/api/election/create")
@@ -85,7 +85,7 @@ class ElectionCrudTest extends TestCase
             ]);
     }
 
-    public function test_create_election_success()
+    public function test_create_election_success(): void
     {
         $owner = UUID::uuid();
         $this->withHeaders(['Authorization' => '123123123', 'Owner' => $owner])
@@ -107,7 +107,7 @@ class ElectionCrudTest extends TestCase
             ]);
     }
 
-    public function test_update_election_fails_if_wrong_owner()
+    public function test_update_election_fails_if_wrong_owner(): void
     {
         $el = Election::factory()->create();
         $this->withHeaders(['Authorization' => '123123123', 'Owner' => UUID::uuid()])
@@ -121,7 +121,7 @@ class ElectionCrudTest extends TestCase
             ]);
     }
 
-    public function test_update_election_success()
+    public function test_update_election_success(): void
     {
         $el = Election::factory()->create();
         $this->withHeaders(['Authorization' => '123123123', 'Owner' => $el->owner])
@@ -142,7 +142,7 @@ class ElectionCrudTest extends TestCase
             ]);
     }
 
-    public function test_delete_election()
+    public function test_delete_election(): void
     {
         $el = Election::factory()->create();
         $this->withHeaders(['Authorization' => '123123123', 'Owner' => $el->owner])

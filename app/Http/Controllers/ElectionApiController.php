@@ -71,12 +71,12 @@ class ElectionApiController extends Controller
 
         $election = Election::create($election_params);
 
-        return (new ElectionResource($election))
+        return new ElectionResource($election)
             ->response()
             ->setStatusCode(201);
     }
 
-    public function read(Election $election)
+    public function read(Election $election): ElectionResource
     {
         return new ElectionResource($election);
     }

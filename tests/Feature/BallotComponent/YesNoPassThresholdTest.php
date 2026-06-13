@@ -78,7 +78,7 @@ class YesNoPassThresholdTest extends TestCase
 
         // 6 yes / 5 no: a simple majority (would pass at 50) but 54.5% < 2/3.
         $votes = $this->persistVotes($ballot, $component, 6, 5);
-        $r = (new YesNo())->calculateResults($votes, $component)->toArray();
+        $r = new YesNo()->calculateResults($votes, $component)->toArray();
 
         $this->assertSame(11, $r['valid_votes']);
         $this->assertSame('yes', $r['winner']);
@@ -95,7 +95,7 @@ class YesNoPassThresholdTest extends TestCase
 
         // 13 yes / 7 no = 65% < 70.
         $votes = $this->persistVotes($ballot, $component, 13, 7);
-        $r = (new YesNo())->calculateResults($votes, $component)->toArray();
+        $r = new YesNo()->calculateResults($votes, $component)->toArray();
 
         $this->assertSame(20, $r['valid_votes']);
         $this->assertSame('yes', $r['winner']);
@@ -113,7 +113,7 @@ class YesNoPassThresholdTest extends TestCase
 
         // 6 yes / 5 no carries under the default simple majority.
         $votes = $this->persistVotes($ballot, $component, 6, 5);
-        $r = (new YesNo())->calculateResults($votes, $component)->toArray();
+        $r = new YesNo()->calculateResults($votes, $component)->toArray();
 
         $this->assertSame(11, $r['valid_votes']);
         $this->assertTrue($r['passed']);
@@ -162,7 +162,7 @@ class YesNoPassThresholdTest extends TestCase
 
         // And it is operative: 6 yes / 5 no clears 50 but not a supermajority.
         $votes = $this->persistVotes($ballot, $component, 6, 5);
-        $r = (new YesNo())->calculateResults($votes, $component)->toArray();
+        $r = new YesNo()->calculateResults($votes, $component)->toArray();
         $this->assertSame($expected, $r['pass_threshold']);
         $this->assertFalse($r['passed']);
     }

@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('active_session_voters', function (Blueprint $table) {
+        Schema::create('active_session_voters', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('ballot_id')->index();
             $table->string('code');

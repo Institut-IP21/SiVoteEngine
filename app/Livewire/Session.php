@@ -2,6 +2,8 @@
 
 namespace App\Livewire;
 
+use Illuminate\Contracts\View\Factory;
+use Illuminate\Contracts\View\View;
 use App\Models\Ballot;
 use App\Models\Election;
 use App\Models\Vote;
@@ -21,7 +23,7 @@ class Session extends Component
     public string $code;
     public Collection $activeComponents;
 
-    public function mount(Election $election, Ballot $ballot, Request $request, BallotService $service)
+    public function mount(Election $election, Ballot $ballot, Request $request, BallotService $service): void
     {
         if (!$request->hasValidSignature()) {
             abort(401);
@@ -47,13 +49,11 @@ class Session extends Component
         }
     }
 
-    public function render()
+    public function render(): Factory|View
     {
         $this->applyElectionLocale();
 
-        $this->activeComponents = $this->ballot->components()->get()->filter(function ($component) {
-            return $component->active;
-        });
+        $this->activeComponents = $this->ballot->components()->get()->filter(fn($component) => $component->active);
 
         if ($this->code !== 'preview-mode') {
             ActiveSessionVoter::updateOrCreate(

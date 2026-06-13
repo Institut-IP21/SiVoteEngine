@@ -60,7 +60,7 @@ class BallotQuorumRenderTest extends TestCase
         ]);
     }
 
-    public function test_quorum_failed_shows_banner_and_suppresses_winner()
+    public function test_quorum_failed_shows_banner_and_suppresses_winner(): void
     {
         // 5 issued, 2 cast, quorum 4 → not met.
         [$election, $ballot] = $this->makeFinishedBallot(4, 5, 2);
@@ -76,7 +76,7 @@ class BallotQuorumRenderTest extends TestCase
         $response->assertDontSee('winner bg-green-200', false);
     }
 
-    public function test_quorum_met_shows_winner_and_no_banner()
+    public function test_quorum_met_shows_winner_and_no_banner(): void
     {
         // 5 issued, 4 cast, quorum 3 → met.
         [$election, $ballot] = $this->makeFinishedBallot(3, 5, 4);
@@ -89,7 +89,7 @@ class BallotQuorumRenderTest extends TestCase
         $response->assertSee('winner bg-green-200', false);
     }
 
-    public function test_null_quorum_shows_winner_and_no_banner()
+    public function test_null_quorum_shows_winner_and_no_banner(): void
     {
         [$election, $ballot] = $this->makeFinishedBallot(null, 5, 1);
 

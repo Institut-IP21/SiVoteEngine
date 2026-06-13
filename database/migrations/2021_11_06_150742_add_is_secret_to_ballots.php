@@ -11,9 +11,9 @@ class AddIsSecretToBallots extends Migration
      *
      * @return void
      */
-    public function up()
+    public function up(): void
     {
-        Schema::table('ballots', function (Blueprint $table) {
+        Schema::table('ballots', function (Blueprint $table): void {
             $table->boolean('is_secret')->default(true);
         });
     }
@@ -23,9 +23,9 @@ class AddIsSecretToBallots extends Migration
      *
      * @return void
      */
-    public function down()
+    public function down(): void
     {
-        Schema::table('ballots', function (Blueprint $table) {
+        Schema::table('ballots', function (Blueprint $table): void {
             $table->dropColumn('is_secret');
         });
     }

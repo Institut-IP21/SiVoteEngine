@@ -53,7 +53,7 @@ class ElectionShow extends Command
         $this->info('Ballots:');
         $this->table(
             ['ID', 'Title', 'Active', 'Finished'],
-            $ballots->map(fn ($b) => [
+            $ballots->map(fn ($b): array => [
                 $b->id,
                 $b->title,
                 $b->active ? 'Yes' : 'No',

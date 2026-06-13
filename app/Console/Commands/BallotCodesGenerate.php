@@ -40,7 +40,7 @@ class BallotCodesGenerate extends Command
      *
      * @return int
      */
-    public function handle()
+    public function handle(): int
     {
         $ballotId = $this->option('ballot');
 

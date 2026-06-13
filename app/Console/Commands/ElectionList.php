@@ -36,7 +36,7 @@ class ElectionList extends Command
      *
      * @return int
      */
-    public function handle()
+    public function handle(): int
     {
         $elections = Election::all();
         $this->table(['ID', 'Title', 'Description', 'Level', 'Owner', 'Abstainable', 'Deleted At', 'Created At', 'Updated At'], $elections);

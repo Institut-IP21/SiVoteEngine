@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use Illuminate\Http\Request;
 use App\Models\Ballot;
 use App\Models\BallotComponent;
 use App\Models\Election;
@@ -17,7 +18,7 @@ class ScopeRouteBindings
      * `can:` checks only authorize the {election}. 404 on mismatch — identical
      * to requesting an id that does not exist.
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param Request $request
      * @param  \Closure  $next
      * @return mixed
      */

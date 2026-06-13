@@ -6,7 +6,7 @@ use App\Models\Ballot;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Ballot>
+ * @extends Factory<Ballot>
  */
 class BallotFactory extends Factory
 {

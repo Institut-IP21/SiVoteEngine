@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Resources\Json\JsonResource;
 use App\Http\Resources\PersonalizationFull;
 use App\Models\Personalization;
 
@@ -9,7 +11,7 @@ use Illuminate\Http\Request;
 
 class OwnerController extends Controller
 {
-    public function updatePersonalization(Request $request): \Illuminate\Http\JsonResponse|\Illuminate\Http\Resources\Json\JsonResource
+    public function updatePersonalization(Request $request): JsonResponse|JsonResource
     {
         $params = $request->all();
         $settings = [

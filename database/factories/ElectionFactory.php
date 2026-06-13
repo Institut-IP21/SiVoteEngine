@@ -7,7 +7,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Election>
+ * @extends Factory<Election>
  */
 class ElectionFactory extends Factory
 {
@@ -38,10 +38,8 @@ class ElectionFactory extends Factory
 
     public function abstainable()
     {
-        return $this->state(function (array $attributes) {
-            return [
-            'abstainable' => 'true',
-        ];
-        });
+        return $this->state(fn(array $attributes) => [
+        'abstainable' => 'true',
+    ]);
     }
 }

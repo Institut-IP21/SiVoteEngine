@@ -23,7 +23,8 @@ class EventServiceProvider extends ServiceProvider
      *
      * @return void
      */
-    public function boot()
+    #[\Override]
+    public function boot(): void
     {
         //
     }

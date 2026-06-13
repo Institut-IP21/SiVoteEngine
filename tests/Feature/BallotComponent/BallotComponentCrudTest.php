@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\BallotComponent;
 
+use Illuminate\Testing\TestResponse;
 use App\Models\Ballot;
 use App\Models\BallotComponent;
 use App\Models\Election;
@@ -26,7 +27,7 @@ class BallotComponentCrudTest extends TestCase
         "slug"
     ];
 
-    public function test_auth_battery()
+    public function test_auth_battery(): void
     {
         $e = Election::factory()
             ->has(
@@ -54,7 +55,7 @@ class BallotComponentCrudTest extends TestCase
         $req->deleteJson("/api/election/$e->id/ballot/$b->id/component/$c->id")->assertForbidden()->assertJson($owner_error);
     }
 
-    public function test_get_component_success()
+    public function test_get_component_success(): void
     {
         $owner = Uuid::uuid();
         $req = $this->withHeaders(['Authorization' => '123123123', 'Owner' => $owner]);
@@ -76,7 +77,7 @@ class BallotComponentCrudTest extends TestCase
         ]);
     }
 
-    public function test_create_component_fails_without_valid_type_and_version()
+    public function test_create_component_fails_without_valid_type_and_version(): void
     {
         $owner = Uuid::uuid();
         $req = $this->withHeaders(['Authorization' => '123123123', 'Owner' => $owner]);
@@ -133,7 +134,7 @@ class BallotComponentCrudTest extends TestCase
     /**
      * An owned, authenticated ballot context: returns [election, ballot, request].
      *
-     * @return array{0: Election, 1: Ballot, 2: \Illuminate\Testing\TestResponse|\Illuminate\Foundation\Testing\TestCase|\Tests\TestCase}
+     * @return array{0: Election, 1: Ballot, 2: TestResponse|\Illuminate\Foundation\Testing\TestCase|TestCase}
      */
     private function ownedBallot(): array
     {
@@ -148,7 +149,7 @@ class BallotComponentCrudTest extends TestCase
         return [$e, $b, $req];
     }
 
-    public function test_create_component_with_preset_pass_threshold()
+    public function test_create_component_with_preset_pass_threshold(): void
     {
         [$e, $b, $req] = $this->ownedBallot();
 
@@ -163,7 +164,7 @@ class BallotComponentCrudTest extends TestCase
         $this->assertSame('two_thirds', $component->settings['pass_threshold']);
     }
 
-    public function test_create_component_with_numeric_pass_threshold_persists_as_number()
+    public function test_create_component_with_numeric_pass_threshold_persists_as_number(): void
     {
         [$e, $b, $req] = $this->ownedBallot();
 
@@ -178,7 +179,7 @@ class BallotComponentCrudTest extends TestCase
         $this->assertSame(70, $component->settings['pass_threshold']);
     }
 
-    public function test_create_component_with_invalid_pass_threshold_fails()
+    public function test_create_component_with_invalid_pass_threshold_fails(): void
     {
         [$e, $b, $req] = $this->ownedBallot();
 
@@ -201,7 +202,7 @@ class BallotComponentCrudTest extends TestCase
         $this->assertSame(0, BallotComponent::where('ballot_id', $b->id)->count());
     }
 
-    public function test_create_component_without_settings_leaves_settings_null()
+    public function test_create_component_without_settings_leaves_settings_null(): void
     {
         [$e, $b, $req] = $this->ownedBallot();
 
@@ -215,7 +216,7 @@ class BallotComponentCrudTest extends TestCase
         $this->assertNull($component->settings);
     }
 
-    public function test_update_component_toggles_pass_threshold()
+    public function test_update_component_toggles_pass_threshold(): void
     {
         [$e, $b, $req] = $this->ownedBallot();
 

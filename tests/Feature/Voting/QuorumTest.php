@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Voting;
 
+use Illuminate\Testing\TestResponse;
 use App\Models\Ballot;
 use App\Models\BallotComponent;
 use App\Models\Election;
@@ -53,7 +54,7 @@ class QuorumTest extends TestCase
         return [$election, $ballot, $components];
     }
 
-    protected function submitVote(Election $election, Ballot $ballot, Vote $vote, array $selections): \Illuminate\Testing\TestResponse
+    protected function submitVote(Election $election, Ballot $ballot, Vote $vote, array $selections): TestResponse
     {
         return $this->post("/election/{$election->id}/ballot/{$ballot->id}", array_merge([
             'code' => $vote->id,

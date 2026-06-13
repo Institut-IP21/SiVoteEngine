@@ -10,17 +10,14 @@ use Illuminate\Support\ServiceProvider;
 
 class BallotServiceProvider extends ServiceProvider
 {
+    #[\Override]
     public function register(): void
     {
-        $this->app->singleton(ComponentRegistry::class, function ($app) {
-            return new ComponentRegistry($app);
-        });
+        $this->app->singleton(ComponentRegistry::class, fn($app) => new ComponentRegistry($app));
 
-        $this->app->singleton(BallotService::class, function ($app) {
-            return new BallotService(
-                $app->make(ComponentRegistry::class)
-            );
-        });
+        $this->app->singleton(BallotService::class, fn($app) => new BallotService(
+            $app->make(ComponentRegistry::class)
+        ));
 
         // Backward compatibility alias
         $this->app->alias(BallotService::class, 'ballot');

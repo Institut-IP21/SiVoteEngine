@@ -74,9 +74,7 @@ class BallotResult extends Command
                 }
             } else {
                 // Handle generic array-of-rows results
-                $rows = collect($resultData)->map(function ($row) {
-                    return array_values(is_array($row) ? $row : (array) $row);
-                });
+                $rows = collect($resultData)->map(fn($row) => array_values(is_array($row) ? $row : (array) $row));
 
                 if ($rows->isNotEmpty()) {
                     $firstRow = is_array($resultData[0] ?? null)

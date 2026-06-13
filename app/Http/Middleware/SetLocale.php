@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\App;
  */
 class SetLocale
 {
-    private const SUPPORTED = ['en', 'sl'];
+    private const array SUPPORTED = ['en', 'sl'];
 
     public function handle(Request $request, Closure $next)
     {

@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\JsonResponse;
+use Illuminate\Contracts\Routing\ResponseFactory;
+use Illuminate\Http\Response;
 use App\Http\Resources\Ballot as BallotResource;
 use App\Http\Resources\BallotComplete;
 use App\Models\Ballot;
@@ -12,14 +15,11 @@ use Illuminate\Http\Request;
 
 class BallotApiController extends Controller
 {
-    private BallotService $ballotService;
-
-    public function __construct(BallotService $ballotService)
+    public function __construct(private readonly BallotService $ballotService)
     {
-        $this->ballotService = $ballotService;
     }
 
-    public function create(Election $election, Request $request)
+    public function create(Election $election, Request $request): JsonResponse|BallotResource
     {
         $params = $request->all();
         $settings = [
@@ -55,12 +55,12 @@ class BallotApiController extends Controller
         return new BallotResource($election);
     }
 
-    public function read(Election $election, Ballot $ballot, Request $request)
+    public function read(Election $election, Ballot $ballot, Request $request): BallotResource
     {
         return new BallotResource($ballot);
     }
 
-    public function result(Election $election, Ballot $ballot, Request $request)
+    public function result(Election $election, Ballot $ballot, Request $request): ResponseFactory|Response|array
     {
         if (!$ballot->finished) {
             return response(__('ballot.result.not_yet'), 403);
@@ -69,7 +69,7 @@ class BallotApiController extends Controller
         return $results;
     }
 
-    public function votes(Election $election, Ballot $ballot, Request $request)
+    public function votes(Election $election, Ballot $ballot, Request $request): ResponseFactory|Response|BallotComplete
     {
         if (!$ballot->finished) {
             return response(__('ballot.result.not_yet'), 400);
@@ -77,7 +77,7 @@ class BallotApiController extends Controller
         return new BallotComplete($ballot);
     }
 
-    public function votesCsv(Election $election, Ballot $ballot, Request $request)
+    public function votesCsv(Election $election, Ballot $ballot, Request $request): ResponseFactory|Response
     {
         if (!$ballot->finished) {
             return response(__('ballot.result.not_yet'), 400);
@@ -86,7 +86,7 @@ class BallotApiController extends Controller
         return response(['data' => $csv], 200);
     }
 
-    public function update(Election $election, Ballot $ballot, Request $request)
+    public function update(Election $election, Ballot $ballot, Request $request): JsonResponse|BallotResource
     {
         if ($ballot->locked) {
             return $this->basicResponse(400, ['error' => __('This Ballot is locked and cannot be edited.')]);
@@ -131,7 +131,7 @@ class BallotApiController extends Controller
     }
 
 
-    public function activate(Election $election, Ballot $ballot, Request $request)
+    public function activate(Election $election, Ballot $ballot, Request $request): JsonResponse|BallotResource
     {
         if ($ballot->finished) {
             return $this->basicResponse(400, ['error' => __("This ballot is already finished. It cannot be reactivated.")]);
@@ -144,7 +144,7 @@ class BallotApiController extends Controller
         return new BallotResource($ballot);
     }
 
-    public function deactivate(Election $election, Ballot $ballot, Request $request)
+    public function deactivate(Election $election, Ballot $ballot, Request $request): BallotResource
     {
         if ($ballot->active) {
             $ballot->deactivate();
@@ -162,7 +162,7 @@ class BallotApiController extends Controller
         return $ballot->delete();
     }
 
-    public function switchOrder(Election $election, Ballot $ballot, Request $request)
+    public function switchOrder(Election $election, Ballot $ballot, Request $request): ResponseFactory|Response|JsonResponse|BallotResource
     {
         if ($ballot->finished) {
             return response('Finished ballots can not be reordered', 403);

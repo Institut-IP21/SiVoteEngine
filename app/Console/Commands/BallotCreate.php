@@ -41,7 +41,7 @@ class BallotCreate extends Command
      *
      * @return int
      */
-    public function handle()
+    public function handle(): int
     {
         $electionId = $this->option('election');
         $title = $this->option('title');

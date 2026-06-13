@@ -2,6 +2,10 @@
 
 namespace App\Models;
 
+use Illuminate\Support\Carbon;
+use Illuminate\Database\Eloquent\Collection;
+use Database\Factories\BallotFactory;
+use Illuminate\Database\Eloquent\Builder;
 use App\Models\Concerns\HasUuidV4;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -9,11 +13,52 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Dyrynda\Database\Support\CascadeSoftDeletes;
 
 // Preview ballot can open engine URL <- /preview route
-
 /**
  * @property-read bool $quorum_met D11: quorum===null OR votes_count >= quorum.
  * @property-read int $electorate_size Issued-code count (all Vote rows for this ballot).
  * @property-read int $votes_count Cast-vote turnout.
+ * @property string $id
+ * @property string $election_id
+ * @property string $title
+ * @property string|null $email_subject
+ * @property string|null $email_template
+ * @property string|null $description
+ * @property bool $active
+ * @property int $finished
+ * @property Carbon|null $deleted_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property bool $is_secret
+ * @property string $mode
+ * @property int|null $quorum
+ * @property-read Collection<int, BallotComponent> $components
+ * @property-read int|null $components_count
+ * @property-read Election|null $election
+ * @property-read mixed $cast_votes
+ * @property-read mixed $locked
+ * @property-read Collection<int, Vote> $votes
+ * @method static BallotFactory factory($count = null, $state = [])
+ * @method static Builder<static>|Ballot newModelQuery()
+ * @method static Builder<static>|Ballot newQuery()
+ * @method static Builder<static>|Ballot onlyTrashed()
+ * @method static Builder<static>|Ballot query()
+ * @method static Builder<static>|Ballot whereActive($value)
+ * @method static Builder<static>|Ballot whereCreatedAt($value)
+ * @method static Builder<static>|Ballot whereDeletedAt($value)
+ * @method static Builder<static>|Ballot whereDescription($value)
+ * @method static Builder<static>|Ballot whereElectionId($value)
+ * @method static Builder<static>|Ballot whereEmailSubject($value)
+ * @method static Builder<static>|Ballot whereEmailTemplate($value)
+ * @method static Builder<static>|Ballot whereFinished($value)
+ * @method static Builder<static>|Ballot whereId($value)
+ * @method static Builder<static>|Ballot whereIsSecret($value)
+ * @method static Builder<static>|Ballot whereMode($value)
+ * @method static Builder<static>|Ballot whereQuorum($value)
+ * @method static Builder<static>|Ballot whereTitle($value)
+ * @method static Builder<static>|Ballot whereUpdatedAt($value)
+ * @method static Builder<static>|Ballot withTrashed(bool $withTrashed = true)
+ * @method static Builder<static>|Ballot withoutTrashed()
+ * @mixin \Eloquent
  */
 class Ballot extends Model
 {
@@ -70,12 +115,12 @@ class Ballot extends Model
         return $this->components()->get()->all();
     }
 
-    public function disableComponents()
+    public function disableComponents(): void
     {
         $this->components()->where('active', true)->update(['active' => false]);
     }
 
-    public function getLockedAttribute()
+    public function getLockedAttribute(): bool
     {
         return $this->active || $this->finished;
     }

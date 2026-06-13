@@ -39,7 +39,7 @@ class BallotComponentList extends Command
      *
      * @return int
      */
-    public function handle()
+    public function handle(): int
     {
         $ballotId = $this->option('ballot');
 
@@ -52,18 +52,16 @@ class BallotComponentList extends Command
         }
         $this->newLine();
 
-        $rows = $ballotComponents->map(function (BallotComponent $c) {
-            return [
-                $c->id,
-                $c->ballot_id,
-                $c->title,
-                $c->type,
-                $c->deleted_at,
-                $c->version,
-                $c->created_at,
-                $c->updated_at,
-            ];
-        });
+        $rows = $ballotComponents->map(fn(BallotComponent $c) => [
+            $c->id,
+            $c->ballot_id,
+            $c->title,
+            $c->type,
+            $c->deleted_at,
+            $c->version,
+            $c->created_at,
+            $c->updated_at,
+        ]);
 
         $this->table(['ID', 'Ballot', 'Title', 'Type', 'Deleted At', 'version', 'Created At', 'Updated At'], $rows);
         return 0;

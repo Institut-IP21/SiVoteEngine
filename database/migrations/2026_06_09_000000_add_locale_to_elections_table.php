@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('elections', function (Blueprint $table) {
+        Schema::table('elections', function (Blueprint $table): void {
             // Organizer's locale, captured at creation, so voter-facing ballot
             // and result pages render in the same language the election was
             // organized in. Null for legacy elections (falls back to default).
@@ -18,7 +18,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('elections', function (Blueprint $table) {
+        Schema::table('elections', function (Blueprint $table): void {
             $table->dropColumn('locale');
         });
     }

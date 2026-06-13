@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('ballot_components', function (Blueprint $table) {
+        Schema::table('ballot_components', function (Blueprint $table): void {
             // Per-component settings payload (e.g. YesNo's `pass_threshold`).
             // Nullable: absent settings -> component-type defaults.
             $table->json('settings')->nullable()->after('options');
@@ -23,7 +23,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('ballot_components', function (Blueprint $table) {
+        Schema::table('ballot_components', function (Blueprint $table): void {
             $table->dropColumn('settings');
         });
     }

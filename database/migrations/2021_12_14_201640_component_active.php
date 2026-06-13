@@ -11,9 +11,9 @@ class ComponentActive extends Migration
      *
      * @return void
      */
-    public function up()
+    public function up(): void
     {
-        Schema::table('ballot_components', function (Blueprint $table) {
+        Schema::table('ballot_components', function (Blueprint $table): void {
             $table->boolean('active')->default(false);
         });
     }
@@ -23,9 +23,9 @@ class ComponentActive extends Migration
      *
      * @return void
      */
-    public function down()
+    public function down(): void
     {
-        Schema::table('ballot_components', function (Blueprint $table) {
+        Schema::table('ballot_components', function (Blueprint $table): void {
             $table->dropColumn('active');
         });
     }

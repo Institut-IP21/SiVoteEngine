@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class PersonalizationFull extends JsonResource
@@ -9,9 +10,10 @@ class PersonalizationFull extends JsonResource
     /**
      * Transform the resource into an array.
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param Request $request
      * @return array
      */
+    #[\Override]
     public function toArray($request)
     {
         return [

@@ -25,7 +25,7 @@ class BallotCrudTest extends TestCase
         'components',
     ];
 
-    public function test_auth_battery()
+    public function test_auth_battery(): void
     {
         $el = Election::factory()
             ->hasBallots(3, [ 'active' => true ])
@@ -60,7 +60,7 @@ class BallotCrudTest extends TestCase
         $req->postJson("/api/election/$el->id/ballot/$ballot->id/deactivate")->assertForbidden()->assertJson($owner_error);
     }
 
-    public function test_create_ballot_fails_without_required_params()
+    public function test_create_ballot_fails_without_required_params(): void
     {
         $el = Election::factory()->create();
 
@@ -75,7 +75,7 @@ class BallotCrudTest extends TestCase
             ]);
     }
 
-    public function test_get_ballot_success()
+    public function test_get_ballot_success(): void
     {
         $el = Election::factory()
             ->hasBallots(3, [ 'active' => true ])
@@ -91,7 +91,7 @@ class BallotCrudTest extends TestCase
         }
     }
 
-    public function test_create_ballot()
+    public function test_create_ballot(): void
     {
         $el = Election::factory()->create();
 
@@ -108,7 +108,7 @@ class BallotCrudTest extends TestCase
             ]);
     }
 
-    public function test_update_ballot_fails_if_locked()
+    public function test_update_ballot_fails_if_locked(): void
     {
         $el = Election::factory()
             ->hasBallots(1, [ 'active' => true ])
@@ -126,7 +126,7 @@ class BallotCrudTest extends TestCase
             ->assertStatus(400);
     }
 
-    public function test_update_ballot_success()
+    public function test_update_ballot_success(): void
     {
         $el = Election::factory()
             ->hasBallots(1, [ 'active' => false ])

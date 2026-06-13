@@ -37,7 +37,7 @@ class VoteFactory extends Factory
      */
     public function forBallot(Ballot $ballot): static
     {
-        return $this->state(fn () => ['ballot_id' => $ballot->id]);
+        return $this->state(fn (): array => ['ballot_id' => $ballot->id]);
     }
 
     /**
@@ -45,7 +45,7 @@ class VoteFactory extends Factory
      */
     public function withValues(array $values): static
     {
-        return $this->state(fn () => ['values' => $values]);
+        return $this->state(fn (): array => ['values' => $values]);
     }
 
     /**
@@ -53,6 +53,6 @@ class VoteFactory extends Factory
      */
     public function castBy(string $voter): static
     {
-        return $this->state(fn () => ['cast_by' => $voter]);
+        return $this->state(fn (): array => ['cast_by' => $voter]);
     }
 }

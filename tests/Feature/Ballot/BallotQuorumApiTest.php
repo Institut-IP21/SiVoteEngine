@@ -14,7 +14,7 @@ class BallotQuorumApiTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_update_persists_quorum()
+    public function test_update_persists_quorum(): void
     {
         $el = Election::factory()->hasBallots(1, ['active' => false])->create();
         $ballot = $el->ballots[0];
@@ -29,7 +29,7 @@ class BallotQuorumApiTest extends TestCase
         $this->assertSame(12, $ballot->fresh()->quorum);
     }
 
-    public function test_update_rejects_zero_and_negative_quorum()
+    public function test_update_rejects_zero_and_negative_quorum(): void
     {
         $el = Election::factory()->hasBallots(1, ['active' => false])->create();
         $ballot = $el->ballots[0];
@@ -45,7 +45,7 @@ class BallotQuorumApiTest extends TestCase
             ->assertJsonStructure(['field_errors' => ['quorum']]);
     }
 
-    public function test_create_rejects_zero_quorum()
+    public function test_create_rejects_zero_quorum(): void
     {
         $el = Election::factory()->create();
 
@@ -58,7 +58,7 @@ class BallotQuorumApiTest extends TestCase
             ->assertJsonStructure(['field_errors' => ['quorum']]);
     }
 
-    public function test_resource_exposes_quorum_met_and_electorate_size()
+    public function test_resource_exposes_quorum_met_and_electorate_size(): void
     {
         $el = Election::factory()->hasBallots(1, ['active' => true])->create();
         $ballot = $el->ballots[0];

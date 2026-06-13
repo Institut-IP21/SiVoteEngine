@@ -11,13 +11,13 @@ class SessionSupportV2 extends Migration
      *
      * @return void
      */
-    public function up()
+    public function up(): void
     {
-        Schema::table('elections', function (Blueprint $table) {
+        Schema::table('elections', function (Blueprint $table): void {
             $table->dropColumn('mode');
         });
 
-        Schema::table('ballots', function (Blueprint $table) {
+        Schema::table('ballots', function (Blueprint $table): void {
             $table->string('mode')->default('basic');
         });
     }
@@ -27,7 +27,7 @@ class SessionSupportV2 extends Migration
      *
      * @return void
      */
-    public function down()
+    public function down(): void
     {
         //
     }

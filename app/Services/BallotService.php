@@ -14,10 +14,10 @@ use League\Csv\Writer;
 /**
  * Service for ballot operations including result calculation and CSV export.
  */
-final class BallotService
+final readonly class BallotService
 {
     public function __construct(
-        private readonly ComponentRegistry $registry,
+        private ComponentRegistry $registry,
     ) {}
 
     /**

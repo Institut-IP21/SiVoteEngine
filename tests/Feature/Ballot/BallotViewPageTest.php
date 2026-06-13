@@ -25,7 +25,7 @@ class BallotViewPageTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_ballot_page_loads_livewire_assets_with_correct_path()
+    public function test_ballot_page_loads_livewire_assets_with_correct_path(): void
     {
         $election = Election::factory()->create();
         $ballot = Ballot::factory()->create([

@@ -2,6 +2,8 @@
 
 namespace App\Livewire;
 
+use Illuminate\Contracts\View\Factory;
+use Illuminate\Contracts\View\View;
 use App\Models\Ballot;
 use App\Models\BallotComponent;
 use Illuminate\Support\Collection;
@@ -17,21 +19,19 @@ class RankedChoiceLivewire extends Component
     public Collection $selected;
     public Collection $unselected;
 
-    public function mount(Ballot $ballot, BallotComponent $component)
+    public function mount(Ballot $ballot, BallotComponent $component): void
     {
         $this->ballot = $ballot;
         $this->component = $component;
-        $this->rankees = collect($this->component->options)->map(function ($option) {
-            return [
-                'name' => $option,
-                'rank' => null
-            ];
-        });
+        $this->rankees = collect($this->component->options)->map(fn($option) => [
+            'name' => $option,
+            'rank' => null
+        ]);
     }
 
-    public function select($option)
+    public function select($option): void
     {
-        $this->rankees = $this->rankees->map(function ($rankee) use ($option) {
+        $this->rankees = $this->rankees->map(function (array $rankee) use ($option): array {
             if ($rankee['name'] === $option) {
                 $rankee['rank'] = $this->rankees->max('rank') + 1;
             }
@@ -39,11 +39,11 @@ class RankedChoiceLivewire extends Component
         });
     }
 
-    public function up($option)
+    public function up($option): void
     {
         $targetRankee = $this->rankees->where('name', $option)->first();
 
-        $this->rankees = $this->rankees->map(function ($rankee) use ($targetRankee) {
+        $this->rankees = $this->rankees->map(function (array $rankee) use ($targetRankee): array {
             if ($rankee['rank'] === $targetRankee['rank'] - 1) {
                 $rankee['rank'] += 1;
             }
@@ -55,11 +55,11 @@ class RankedChoiceLivewire extends Component
         });
     }
 
-    public function down($option)
+    public function down($option): void
     {
         $targetRankee = $this->rankees->where('name', $option)->first();
 
-        $this->rankees = $this->rankees->map(function ($rankee) use ($targetRankee) {
+        $this->rankees = $this->rankees->map(function (array $rankee) use ($targetRankee): array {
             if ($rankee['rank'] === $targetRankee['rank'] + 1) {
                 $rankee['rank'] -= 1;
             }
@@ -72,11 +72,11 @@ class RankedChoiceLivewire extends Component
         });
     }
 
-    public function remove($option)
+    public function remove($option): void
     {
         $targetRankee = $this->rankees->where('name', $option)->first();
 
-        $this->rankees = $this->rankees->map(function ($rankee) use ($targetRankee) {
+        $this->rankees = $this->rankees->map(function (array $rankee) use ($targetRankee): array {
             if ($rankee['name'] === $targetRankee['name']) {
                 $rankee['rank'] = null;
             }
@@ -87,11 +87,9 @@ class RankedChoiceLivewire extends Component
         });
     }
 
-    public function render()
+    public function render(): Factory|View
     {
-        [$selected, $unselected] = $this->rankees->partition(function ($rankee) {
-            return $rankee['rank'] !== null;
-        });
+        [$selected, $unselected] = $this->rankees->partition(fn($rankee) => $rankee['rank'] !== null);
         $this->selected = $selected->sortBy('rank')->values();
         $this->unselected = $unselected;
         return view($this->component->form_template_livewire);

@@ -2,6 +2,7 @@
 
 namespace App\Http\Livewire;
 
+use Illuminate\Contracts\View\View;
 use App\Models\Ballot;
 use App\Models\BallotComponent;
 use App\Models\Election;
@@ -37,11 +38,9 @@ class Session extends Component
         $this->code = $vote->id ?? 'preview-mode';
     }
 
-    public function render(): \Illuminate\Contracts\View\View
+    public function render(): View
     {
-        $this->activeComponents = $this->ballot->components()->get()->filter(function (BallotComponent $component) {
-            return $component->active;
-        });
+        $this->activeComponents = $this->ballot->components()->get()->filter(fn(BallotComponent $component) => $component->active);
 
         if ($this->code !== 'preview-mode') {
             Redis::setex("session:active-voters:{$this->ballot->id}:{$this->code}", 60, 1);

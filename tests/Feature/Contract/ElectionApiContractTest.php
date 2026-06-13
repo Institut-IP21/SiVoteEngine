@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Contract;
 
+use Ramsey\Uuid\Uuid;
 use App\Models\Ballot;
 use App\Models\BallotComponent;
 use App\Models\Election;
@@ -105,7 +106,7 @@ class ElectionApiContractTest extends TestCase
         // For secret ballots, codes should be flat UUIDs (strings)
         foreach ($codes as $code) {
             $this->assertIsString($code);
-            $this->assertTrue(\Ramsey\Uuid\Uuid::isValid($code), "Code '$code' is not a valid UUID");
+            $this->assertTrue(Uuid::isValid($code), "Code '$code' is not a valid UUID");
         }
     }
 

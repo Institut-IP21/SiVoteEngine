@@ -11,9 +11,9 @@ class CreateBallotComponentsTable extends Migration
      *
      * @return void
      */
-    public function up()
+    public function up(): void
     {
-        Schema::create('ballot_components', function (Blueprint $table) {
+        Schema::create('ballot_components', function (Blueprint $table): void {
             $table->uuid('id')->primary();
             $table->uuid('ballot_id');
             $table->foreign('ballot_id')->references('id')->on('ballots');
@@ -32,7 +32,7 @@ class CreateBallotComponentsTable extends Migration
      *
      * @return void
      */
-    public function down()
+    public function down(): void
     {
         Schema::dropIfExists('ballot_components');
     }

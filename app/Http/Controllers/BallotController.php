@@ -2,6 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Contracts\View\Factory;
+use Illuminate\Contracts\View\View;
+use Illuminate\Contracts\Routing\ResponseFactory;
+use Illuminate\Http\Response;
 use App\Models\Ballot;
 use App\Models\BallotComponent;
 use App\Models\Election;
@@ -13,11 +17,8 @@ use Illuminate\Support\Facades\Validator;
 
 class BallotController extends Controller
 {
-    private BallotService $ballotService;
-
-    public function __construct(BallotService $ballotService)
+    public function __construct(private readonly BallotService $ballotService)
     {
-        $this->ballotService = $ballotService;
     }
 
     /**
@@ -54,7 +55,7 @@ class BallotController extends Controller
         return $attributes;
     }
 
-    public function view(Election $election, Ballot $ballot, Request $request, BallotService $service)
+    public function view(Election $election, Ballot $ballot, Request $request, BallotService $service): Factory|View
     {
         $this->applyElectionLocale($election);
 
@@ -76,7 +77,7 @@ class BallotController extends Controller
         return view('ballot', ['election' => $election, 'ballot' => $ballot, 'code' => $code, 'pers' => $pers, 'componentTree' => $componentTree]);
     }
 
-    public function preview(Election $election, Ballot $ballot, Request $request, BallotService $service)
+    public function preview(Election $election, Ballot $ballot, Request $request, BallotService $service): Factory|View
     {
         $this->applyElectionLocale($election);
 
@@ -86,7 +87,7 @@ class BallotController extends Controller
         return view('ballot-preview', ['election' => $election, 'ballot' => $ballot, 'pers' => $pers, 'componentTree' => $componentTree]);
     }
 
-    public function vote(Election $election, Ballot $ballot, Request $request)
+    public function vote(Election $election, Ballot $ballot, Request $request): Factory|View
     {
         $this->applyElectionLocale($election);
 
@@ -174,7 +175,7 @@ class BallotController extends Controller
         return redirect()->back()->with('success', __('ballot.vote.registered'));
     }
 
-    public function result(Election $election, Ballot $ballot, Request $request)
+    public function result(Election $election, Ballot $ballot, Request $request): ResponseFactory|Response|Factory|View
     {
         $this->applyElectionLocale($election);
 

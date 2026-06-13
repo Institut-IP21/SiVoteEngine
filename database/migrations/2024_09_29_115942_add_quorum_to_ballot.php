@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('ballots', function (Blueprint $table) {
+        Schema::table('ballots', function (Blueprint $table): void {
             $table->integer('quorum')->nullable();
         });
     }
@@ -21,7 +21,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('ballots', function (Blueprint $table) {
+        Schema::table('ballots', function (Blueprint $table): void {
             $table->dropColumn('quorum');
         });
     }

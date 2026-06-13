@@ -12,19 +12,14 @@ use Illuminate\Http\Request;
 
 class VoteApiController extends Controller
 {
-    protected BallotService $ballotService;
-
-    public function __construct(BallotService $ballotService)
+    public function __construct(protected BallotService $ballotService)
     {
-        $this->ballotService = $ballotService;
     }
 
     /** @return array<int, string> */
     public function show(Election $election, Ballot $ballot, Request $request): array
     {
-        return array_map(function ($vote) {
-            return $vote['id'];
-        }, $ballot->votes()->get()->toArray());
+        return array_map(fn(array $vote) => $vote['id'], $ballot->votes()->get()->toArray());
     }
 
     /** @return array<mixed>|JsonResponse */
