@@ -172,4 +172,68 @@ class YesNoTest extends TestCase
             $c->id => ['required', Rule::in(['yes', 'no', 'abstain'])],
         ], $this->component->getSubmissionValidator($c, $election)->toArray());
     }
+
+    public function test_pass_threshold_three_quarters_carries_on_exact_boundary(): void
+    {
+        // three_quarters preset (yes*4 >= 3*valid) had no tally-level coverage.
+        // 6 yes / 2 no = exactly 75%: 24 >= 24 -> carries on the boundary.
+        $c = $this->makeComponent(['pass_threshold' => 'three_quarters']);
+        $r = $this->calc($c, $this->votes($c, array_merge(array_fill(0, 6, 'yes'), array_fill(0, 2, 'no'))));
+
+        $this->assertEquals('yes', $r['winner']);
+        $this->assertTrue($r['passed']);
+        $this->assertEquals('three_quarters', $r['pass_threshold']);
+    }
+
+    public function test_pass_threshold_three_quarters_blocks_just_below(): void
+    {
+        // 5 yes / 2 no ~= 71.4%: 20 < 21 -> blocked despite a clear majority.
+        $c = $this->makeComponent(['pass_threshold' => 'three_quarters']);
+        $r = $this->calc($c, $this->votes($c, array_merge(array_fill(0, 5, 'yes'), array_fill(0, 2, 'no'))));
+
+        $this->assertEquals('yes', $r['winner']);
+        $this->assertFalse($r['passed']);
+    }
+
+    public function test_pass_threshold_two_thirds_carries_on_exact_boundary(): void
+    {
+        // 4 yes / 2 no = 66.6..%: 12 >= 12 -> the integer-rational test carries exactly.
+        $c = $this->makeComponent(['pass_threshold' => 'two_thirds']);
+        $r = $this->calc($c, $this->votes($c, array_merge(array_fill(0, 4, 'yes'), array_fill(0, 2, 'no'))));
+
+        $this->assertTrue($r['passed']);
+    }
+
+    public function test_pass_threshold_numeric_carries_on_exact_boundary(): void
+    {
+        // 6 yes / 4 no = exactly 60% -> meets the `>=` comparison literally.
+        $c = $this->makeComponent(['pass_threshold' => 60]);
+        $r = $this->calc($c, $this->votes($c, array_merge(array_fill(0, 6, 'yes'), array_fill(0, 4, 'no'))));
+
+        $this->assertTrue($r['passed']);
+        $this->assertEquals(60, $r['pass_threshold']);
+    }
+
+    public function test_pass_threshold_zero_valid_votes_never_passes(): void
+    {
+        // All-abstain under a supermajority threshold: no division by zero, no passage.
+        $c = $this->makeComponent(['pass_threshold' => 'two_thirds']);
+        $r = $this->calc($c, $this->votes($c, ['abstain', 'abstain']), true);
+
+        $this->assertEquals(['yes' => 0, 'no' => 0], $r['state']);
+        $this->assertEquals(0, $r['valid_votes']);
+        $this->assertEquals(2, $r['abstentions']);
+        $this->assertNull($r['winner']);
+        $this->assertFalse($r['passed']);
+    }
+
+    public function test_tie_under_supermajority_threshold_never_passes(): void
+    {
+        // The strict-majority floor (yes > no) short-circuits before the threshold maths.
+        $c = $this->makeComponent(['pass_threshold' => 'two_thirds']);
+        $r = $this->calc($c, $this->votes($c, ['yes', 'no']));
+
+        $this->assertEquals('tie', $r['winner']);
+        $this->assertFalse($r['passed']);
+    }
 }

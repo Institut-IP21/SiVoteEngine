@@ -276,6 +276,24 @@ class ApprovalVoteTest extends TestCase
         $this->assertEquals(['abstain'], $r['winners']);
     }
 
+    public function test_all_voters_approve_every_option_is_a_full_tie(): void
+    {
+        // Degenerate maximum-approval case: every option saturates at the voter count.
+        $c = $this->makeComponent();
+        $r = $this->calc([
+            $this->vote($c, ['A', 'B', 'C']),
+            $this->vote($c, ['A', 'B', 'C']),
+            $this->vote($c, ['A', 'B', 'C']),
+        ], $c);
+
+        $this->assertEquals(['A' => 3, 'B' => 3, 'C' => 3], $r['state']);
+        $this->assertEquals(3, $r['voters']);
+        $this->assertEquals(9, $r['total_approvals']);
+        $this->assertEquals(0, $r['invalid']);
+        $this->assertEquals('tie', $r['winner']);
+        $this->assertEqualsCanonicalizing(['A', 'B', 'C'], $r['winners']);
+    }
+
     public function test_values_to_csv(): void
     {
         $c = $this->makeComponent();
