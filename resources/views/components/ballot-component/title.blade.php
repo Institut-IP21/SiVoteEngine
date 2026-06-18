@@ -1,17 +1,11 @@
-@props(['component', 'showType' => false])
+@props(['component', 'typeName' => null])
 
-@php
-    // Map the stored component type to its localized name (see lang/*/components.php).
-    $typeNameKeys = [
-        'YesNo' => 'components.yesno.name',
-        'FirstPastThePost' => 'components.firstpastthepost.name',
-        'RankedChoice' => 'components.rankedchoice.name',
-        'ApprovalVote' => 'components.approval.name',
-    ];
-@endphp
-<div class="pb-3 font-bold text-xl sm:text-2xl flex justify-between items-baseline">
-    <h2>{{ $component->title }}</h2>
-    @if ($showType && isset($typeNameKeys[$component->type]))
-        <span class="text-sm font-normal text-gray-500 ml-3 flex-shrink-0">{{ __($typeNameKeys[$component->type]) }}</span>
+{{-- $typeName is the component's localized type label, resolved by the caller from the
+     component tree (each component's getStrings()['name']) — the single source of truth.
+     Shown top-right of every ballot element. --}}
+<div class="flex items-baseline justify-between gap-3">
+    <h2 class="font-bold text-base sm:text-lg text-ink leading-snug">{{ $component->title }}</h2>
+    @if ($typeName)
+        <span class="flex-shrink-0 text-[11px] font-semibold uppercase tracking-[0.05em] text-muted">{{ $typeName }}</span>
     @endif
 </div>

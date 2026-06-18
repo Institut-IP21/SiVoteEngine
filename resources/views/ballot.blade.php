@@ -3,49 +3,41 @@
 @section('title', __('ballot.single'))
 
 @section('body')
-<x-ballot-wrapper>
+<x-ballot-wrapper :pers="$pers">
     <x-ballot-logo :pers="$pers" />
 
     <x-ballot-title :ballot="$ballot" />
 
-    <form class="max-w-screen-md mx-auto h-full flex flex-col"
+    <form class="flex flex-col"
         action="/election/{{ $ballot->election->id }}/ballot/{{ $ballot->id }}" method="post">
         @csrf
 
         <x-ballot-code :code="$code" />
 
         @if ($ballot->components)
-        <div class="h-full flex flex-col mt-3 sm:mt-8">
-            @foreach ($ballot->components as $component)
-            <div class="w-full rounded overflow-hidden shadow bg-white mb-10 p-5 sm:px-8 sm:pt-7 sm:pb-8">
-                <x-ballot-component.title :component="$component" />
-
-                <x-ballot-component.desc :component="$component" />
-
-                <x-ballot-component.form :component="$component" :componentTree="$componentTree" :election="$election"
-                    :ballot="$ballot" />
+            <div class="flex flex-col gap-4">
+                @foreach ($ballot->components as $component)
+                    @php $typeName = $componentTree[$component->type][$component->version]['strings']['name'] ?? null; @endphp
+                    <div class="bg-white border border-line rounded-2xl shadow-[0_1px_2px_rgba(16,30,40,.05)] p-5 sm:p-6">
+                        <x-ballot-component.title :component="$component" :type-name="$typeName" />
+                        <x-ballot-component.desc :component="$component" />
+                        <div class="mt-4">
+                            <x-ballot-component.form :component="$component" :componentTree="$componentTree"
+                                :election="$election" :ballot="$ballot" />
+                        </div>
+                    </div>
+                @endforeach
             </div>
-            @endforeach
-        </div>
-        <div class="mt-6 mb-12 w-full">
-            <button type="submit"
-                class="block w-1/2 mx-auto border border-black bg-blue-700 text-white uppercase px-6 py-4 text-xl font-bold">
-                Oddaj glas
-            </button>
-        </div>
 
-        <div class="mt-6 mb-20 text-center w-full text-sm font-thin">
-            Glasovanje se izvaja z odprtokodnim sistemom za anonimno glasovanje <a class="underline"
-                href="https://github.com/Institut-IP21">SiVote</a> in platforme <a class="underline"
-                href="https://eglasovanje.si">eGlasovanje.si</a>.
-            <br />
-            Vaš glas bo zabeležen anonimno.
-        </div>
+            <button type="submit" class="ballot-submit mt-6">{{ __('ballot.submit') }}</button>
 
+            <p class="mt-5 mb-10 text-center text-[11px] leading-relaxed text-muted">
+                {{ __('ballot.anonymous') }}<br>
+                {{ __('ballot.powered_by') }}
+            </p>
         @else
-        <span>No components!</span>
+            <p class="text-center text-muted py-10">{{ __('ballot.no_questions') }}</p>
         @endif
-
     </form>
 </x-ballot-wrapper>
 @endsection

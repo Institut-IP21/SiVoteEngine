@@ -12,6 +12,7 @@ return [
         'yes' => 'Da',
         'no' => 'Ne',
         'abstain' => 'Vzdržan',
+        'hint' => 'Izberite eno možnost.',
         'name' => 'Da/Ne vprašanje',
         'tie' => 'Izid je neodločen.',
         'description' => 'Glasovalci izbirajo med Da, Ne, in glede na nastavitve, Vzdržano.',
@@ -23,6 +24,7 @@ return [
     'fptp' => [
         'name' => 'Izbira ene vrednosti izmed večih',
         'abstain' => 'Vzdržan',
+        'hint' => 'Izberite enega kandidata.',
         'invalid' => 'Neveljavno',
         'tie' => 'Izid je neodločen. Isto število glasov so prejeli: ',
         'description' => 'Glasovalci izberejo natančno eno izmed izbir.'
@@ -32,6 +34,22 @@ return [
         'description' => 'Glasovalci seznam možnosti uredijo po vrsti glede na preferenco.',
         'intro' => 'Pred vami je :options opcij. Razvrstite jih po vrsti od najboljše do najslabše. Razvrstite lahko kolikor opcij želite.',
         'state' => 'Do sedaj ste razvrstili :selected opcij, lahko jih še :remaining.',
+        'hint' => 'Pritisnite po vrsti — 1 = najljubši. Razvrstite poljubno število; ni treba razvrstiti vseh.',
+        'counter' => 'Razvrščeni: :selected od :total',
+        'your_ranking' => 'Vaša razvrstitev',
+        'remaining' => 'Preostale možnosti',
+        'add' => 'Dodaj :name na seznam',
+        'add_short' => 'Dodaj',
+        'move_up' => 'Premakni :name navzgor',
+        'move_down' => 'Premakni :name navzdol',
+        'move_top' => 'Premakni :name na vrh',
+        'remove' => 'Odstrani :name s seznama',
+        'position' => ':name, izbira :rank od :total',
+        'announce_added' => ':name dodan kot izbira :rank',
+        'announce_removed' => ':name odstranjen iz razvrstitve',
+        'announce_moved' => ':name, zdaj izbira :rank',
+        'drag' => 'Povleci za razvrstitev',
+        'requires_js' => 'Za razvrščanje tega vprašanja je potreben JavaScript. Prosimo, omogočite ga in osvežite stran.',
         'UP' => 'GOR',
         'DOWN' => 'DOL',
         'round' => 'Krog',
@@ -43,6 +61,7 @@ return [
     'approval' => [
         'name' => 'Odobritveni glas',
         'description' => 'Glasovalci označijo, katere izmed možnosti na seznamu podpirajo.',
+        'hint' => 'Izberite eno ali več možnosti.',
         'rate' => 'Stopnja podpore (%)'
     ],
     'created' => [

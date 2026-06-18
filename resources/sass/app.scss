@@ -5,7 +5,242 @@
 @theme {
     --flex-2: 2 2 0%;
     --flex-3: 3 3 0%;
+
+    /* Brand palette — mirrors web_app. Defaults are eGlasovanje; a customer accent
+       overrides --color-brand (+ derived) inline on the ballot root (see ballot shell). */
+    --color-brand: #34b6df;
+    --color-brand-dark: #1b8fb8;
+    --color-brand-soft: #e8f7fc;
+    --color-brand-fg: #053040;
+    --color-ink: #11161a;
+    --color-muted: #6b7c85;
+    --color-line: #e2e8ed;
+    --color-canvas: #f4f8fa;
+    --color-warn: #b7791f;
+    --color-warn-soft: #fff4e5;
 }
+
+[x-cloak] { display: none !important; }
+
+/* ---- Base typography (self-hosted fonts imported in app.js) ---- */
+body {
+    font-family: 'Karla', system-ui, sans-serif;
+    color: var(--color-ink);
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Poppins', system-ui, sans-serif;
+}
+
+/* ---- Ballot option rows (radio / checkbox) ----
+   Selection styling is pure CSS via :has() — no JS. The native input stays in the
+   DOM (focusable, keyboard- and screen-reader-operable) but visually hidden; a custom
+   control shows state. */
+.opt-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 52px;
+    padding: 0.5rem 0.875rem;
+    border: 1px solid var(--color-line);
+    border-radius: 0.75rem;
+    background: #fff;
+    cursor: pointer;
+    transition: border-color 0.12s ease, background-color 0.12s ease;
+
+    & + .opt-row { margin-top: 0.5rem; }
+
+    input {
+        position: absolute;
+        opacity: 0;
+        width: 1px;
+        height: 1px;
+    }
+}
+
+.opt-row:hover {
+    border-color: color-mix(in srgb, var(--color-brand) 45%, var(--color-line));
+}
+
+.opt-row:has(input:focus-visible) {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+}
+
+.opt-row:has(input:checked) {
+    border: 1.5px solid var(--color-brand);
+    background: var(--color-brand-soft);
+}
+
+.opt-row__label {
+    flex: 1;
+    font-size: 0.9375rem;
+    line-height: 1.4;
+    color: var(--color-ink);
+}
+
+.opt-row:has(input:checked) .opt-row__label {
+    font-weight: 600;
+    color: var(--color-brand-fg);
+}
+
+.opt-ctrl {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    border: 2px solid #c4ced4;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.opt-ctrl--radio { border-radius: 50%; }
+.opt-ctrl--check { border-radius: 6px; }
+
+.opt-row:has(input:checked) .opt-ctrl--radio {
+    border: 6px solid var(--color-brand-dark);
+}
+
+.opt-row:has(input:checked) .opt-ctrl--check {
+    border-color: var(--color-brand-dark);
+    background: var(--color-brand-dark);
+}
+
+/* checkmark for checked checkbox */
+.opt-ctrl--check::after {
+    content: "";
+    width: 6px;
+    height: 10px;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg) translateY(-1px);
+    opacity: 0;
+}
+
+.opt-row:has(input:checked) .opt-ctrl--check::after { opacity: 1; }
+
+/* ---- RankedChoice ---- */
+.rc-ranked {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: 0.625rem;
+    row-gap: 0.5rem;
+    padding: 0.75rem 0.8125rem;
+    border: 1px solid color-mix(in srgb, var(--color-brand) 35%, #fff);
+    border-radius: 0.75rem;
+    background: #fff;
+
+    & + & { margin-top: 0.5rem; }
+}
+
+.rc-unranked {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 52px;
+    padding: 0.625rem 0.875rem;
+    border: 1px solid var(--color-line);
+    border-radius: 0.75rem;
+    background: #fff;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.12s ease;
+
+    &:hover { border-color: color-mix(in srgb, var(--color-brand) 45%, var(--color-line)); }
+    & + & { margin-top: 0.5rem; }
+}
+
+.rc-badge {
+    width: 27px;
+    height: 27px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--color-brand-dark);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.84375rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+}
+
+.rc-badge-empty {
+    width: 27px;
+    height: 27px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    border: 2px dashed #cbd5da;
+}
+
+/* zero-width flex break: forces the controls onto their own line on phones only */
+.rc-break {
+    flex-basis: 100%;
+    height: 0;
+}
+@media (min-width: 640px) { .rc-break { display: none; } }
+
+.rc-ico {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    height: 38px;
+    border: none;
+    background: transparent;
+    border-radius: 0.5rem;
+    color: #5e93a8;
+    cursor: pointer;
+    transition: background-color 0.12s ease, color 0.12s ease;
+
+    &:hover:not(:disabled) { background: var(--color-brand-soft); color: var(--color-brand-dark); }
+    &:disabled { color: #d2dbe0; cursor: default; }
+}
+
+.rc-ico--rm {
+    color: #b9a7a4;
+    &:hover { background: #fdece9; color: #c0392b; }
+}
+
+.rc-grip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    align-self: stretch;
+    color: #aebcc4;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    letter-spacing: -2px;
+    font-size: 1.0625rem;
+
+    &:active { cursor: grabbing; }
+}
+
+.sortable-ghost { opacity: 0.4; }
+.sortable-chosen { box-shadow: 0 8px 22px -10px rgba(16, 30, 40, 0.35); }
+
+/* ---- Primary ballot button ---- */
+.ballot-submit {
+    display: block;
+    width: 100%;
+    border: none;
+    border-radius: 0.625rem;
+    padding: 0.9375rem;
+    font-size: 1rem;
+    font-weight: 800;
+    background: var(--color-brand);
+    color: var(--color-brand-fg);
+    cursor: pointer;
+    transition: background-color 0.12s ease;
+}
+
+.ballot-submit:hover { background: var(--color-brand-dark); color: #fff; }
 
 // BUTTONS
 .btn {
@@ -20,96 +255,7 @@
     @apply bg-blue-700;
 }
 
-//
-// Question Labels
-//
-
-@mixin question {
-    font-size: 1.3rem;
-    color: var(--color);
-    line-height: 1;
-
-    @media (max-width: 640px) {
-        font-size: 1.2rem;
-        padding-bottom: 0.7rem;
-        line-height: 1;
-    }
-}
-
-.question {
-    @include question;
-}
-
-//
-// Question Inputs
-//
-
-@mixin generic_input {
-    display: flex;
-
-    input {
-        opacity: 0;
-        width: 0;
-        height: 0;
-    }
-}
-
-//
-// Specifics by type
-//
-
-// --- Radio ---
-
-label.radio {
-    @include question;
-}
-
-.radio__label {
-    @include question;
-}
-
-.radio__input {
-    @include generic_input;
-
-    input:checked+.radio__control {
-        background: currentColor;
-    }
-}
-
-.radio__control {
-    display: block;
-    width: 1em;
-    height: 1em;
-    border-radius: 50%;
-    border: 0.1em solid currentColor;
-}
-
-// --- Checkbox ---
-
-.checkbox {
-    @include question;
-}
-
-.checkbox__label {
-    @include question;
-}
-
-.checkbox__input {
-    @include generic_input;
-
-    input:checked+.checkbox__control {
-        background: currentColor;
-    }
-}
-
-.checkbox__control {
-    display: block;
-    width: 1em;
-    height: 1em;
-    border: 0.1em solid currentColor;
-}
-
-// --- Ranked choice ---
+// --- Results: ranked-choice round tables ---
 
 .tie-header {
     writing-mode: vertical-lr;

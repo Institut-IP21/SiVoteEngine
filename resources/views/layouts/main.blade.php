@@ -8,30 +8,10 @@
 
     <title>@yield('title')</title>
 
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Karla:wght@200;400;600;700&family=Poppins:wght@100;200;400;500;600,700,900&display=swap"
-        rel="stylesheet">
-
-    <!-- Styles -->
+    {{-- Fonts are self-hosted (imported in app.js, bundled by Vite). No external CDN:
+         a secret-ballot page must not leak voter IPs to third parties. --}}
     @vite(['resources/sass/app.scss', 'resources/js/app.js'])
 
-    <style>
-        body {
-            font-family: 'Karla', sans-serif;
-        }
-
-        h1,
-        h2,
-        h3,
-        h4,
-        h5,
-        h6 {
-            font-family: 'Poppins', sans-serif;
-        }
-    </style>
     @stack('scripts')
     @livewireStyles
 </head>

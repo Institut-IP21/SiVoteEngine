@@ -1,59 +1,67 @@
-<div class="pb-4">
-    <p class="text-sm sm:text-base">
-        {{ __('components.rankedchoice.intro', ['options' => count($component->options)]) }}
+@php $total = count($component->options); @endphp
+<div data-ranked-choice>
+    <p class="text-[13px] text-muted leading-relaxed">{{ __('components.rankedchoice.hint') }}</p>
+    <p class="mt-2 mb-3.5 text-[11px] font-semibold text-muted">
+        {{ __('components.rankedchoice.counter', ['selected' => $selected->count(), 'total' => $total]) }}
     </p>
-    <p class="py-6 text-center w-full text-sm sm:text-base">
-        {{ __('components.rankedchoice.state', ['remaining' => $rankees->count() - $selected->count(), 'selected' => $selected->count()]) }}
-    </p>
-    @if ($selected)
-    @foreach ($selected as $option)
-    <div class="row border border-blue-300 flex flex-col sm:flex-row items-stretch sm:items-center mb-4"
-        wire:key="{{ count($selected) . $loop->index . $loop->first . $loop->last . $option['name'] . $option['rank'] }}">
-        <div class="flex items-center flex-1">
-            <div class="rank border-blue-300 rank text-2xl flex-1 py-2 pl-4 pr-6 w-10 sm:w-16 flex-grow-0">
-                {{ $option['rank'] }}
-            </div>
-            <div class="question sm:border-r border-blue-300 flex-3 py-3 px-4 flex-shrink-0 min-w-1/2">
-                {{ $option['name'] }}
-            </div>
-        </div>
-        <div class="border-t sm:border-t-0 border-blue-300 text-2xl buttons flex">
-            <button type="button"
-                class="btn disabled:opacity-30 hover:bg-blue-100 hover:bg-opacity-25 disabled:bg-transparent w-2/5"
-                wire:loading.attr="disabled" @if (count($selected) < 2 || $loop->first) disabled @endif wire:target="up,
-                down, remove, select"
-                wire:click="up('{{ $option['name'] }}')">
-                <i>{{ __('components.rankedchoice.UP') }}</i>
-            </button>
-            <button type="button"
-                class="btn disabled:opacity-30 hover:bg-blue-100 hover:bg-opacity-25 disabled:bg-transparent w-2/5"
-                wire:loading.attr="disabled" wire:click="down('{{ $option['name'] }}')"
-                wire:target="up, down, remove, select" @if (count($selected) < 2 || $loop->last) disabled @endif>
-                <i>{{ __('components.rankedchoice.DOWN') }}</i>
-            </button>
-            <button
-                class="btn border-l bg-red-200 text-red-600 hover:text-white hover:bg-red-600 rounded-none w-1/5 flex justify-center items-center"
-                wire:click.prevent="remove('{{ $option['name'] }}')">
-                <i>X</i>
-            </button>
-        </div>
+
+    {{-- Screen-reader announcement for every add / move / remove --}}
+    <div class="sr-only" role="status" aria-live="polite">{{ $announce }}</div>
+
+    {{-- Interactive widget (hidden when JS is unavailable; see <noscript> below) --}}
+    <div class="rc-interactive">
+        @if ($selected->isNotEmpty())
+            <ul data-rc-sortable wire:key="ranked-list">
+                @foreach ($selected as $option)
+                    <li class="rc-ranked" data-name="{{ $option['name'] }}" wire:key="r-{{ md5($option['name']) }}">
+                        <span class="rc-grip" aria-hidden="true" title="{{ __('components.rankedchoice.drag') }}">⠿</span>
+                        <button type="button" class="rc-badge"
+                            wire:click="moveToTop(@js($option['name']))"
+                            aria-label="{{ __('components.rankedchoice.move_top', ['name' => $option['name']]) }}">{{ $option['rank'] }}</button>
+                        <span class="flex-1 min-w-0 text-[15px] font-semibold text-brand-fg leading-snug"
+                            aria-label="{{ __('components.rankedchoice.position', ['name' => $option['name'], 'rank' => $option['rank'], 'total' => $selected->count()]) }}">{{ $option['name'] }}</span>
+                        <span class="rc-break" aria-hidden="true"></span>
+                        <span class="flex items-center gap-0.5 sm:ml-auto">
+                            <button type="button" class="rc-ico" wire:click="up(@js($option['name']))" @disabled($loop->first)
+                                aria-label="{{ __('components.rankedchoice.move_up', ['name' => $option['name']]) }}">↑</button>
+                            <button type="button" class="rc-ico" wire:click="down(@js($option['name']))" @disabled($loop->last)
+                                aria-label="{{ __('components.rankedchoice.move_down', ['name' => $option['name']]) }}">↓</button>
+                            <span class="w-px h-5 bg-line mx-1" aria-hidden="true"></span>
+                            <button type="button" class="rc-ico rc-ico--rm" wire:click="remove(@js($option['name']))"
+                                aria-label="{{ __('components.rankedchoice.remove', ['name' => $option['name']]) }}">✕</button>
+                        </span>
+                    </li>
+                @endforeach
+            </ul>
+        @endif
+
+        @if ($unselected->isNotEmpty())
+            @if ($selected->isNotEmpty())
+                <div class="my-3 border-t border-dashed border-line"></div>
+                <p class="mb-2 text-[11px] uppercase tracking-[0.07em] font-bold text-muted">{{ __('components.rankedchoice.remaining') }}</p>
+            @endif
+            @foreach ($unselected as $option)
+                <button type="button" class="rc-unranked" wire:click="select(@js($option['name']))" wire:key="u-{{ md5($option['name']) }}"
+                    aria-label="{{ __('components.rankedchoice.add', ['name' => $option['name']]) }}">
+                    <span class="rc-badge-empty" aria-hidden="true"></span>
+                    <span class="flex-1 min-w-0 text-[15px] text-ink leading-snug">{{ $option['name'] }}</span>
+                    <span class="text-[13px] font-bold text-brand-dark flex-shrink-0">{{ __('components.rankedchoice.add_short') }}</span>
+                </button>
+            @endforeach
+        @endif
+
+        {{-- Submission: ordered list of option names, name="{id}[]" — unchanged contract --}}
+        @foreach ($selected as $option)
+            <input type="hidden" name="{{ $component->id }}[]" value="{{ $option['name'] }}" wire:key="h-{{ md5($option['name']) }}">
+        @endforeach
     </div>
-    @endforeach
-    @endif
-    @if ($unselected)
-    @foreach ($unselected as $option)
-    <div class="row border border-gray-400 mb-4 flex cursor-pointer"
-        wire:click="select('{{ $option['name'] }}', {{ $loop->index }})">
-        <div class="question hover:bg-blue-100 hover:bg-opacity-25 flex-2 py-2 px-4">
-            {{ $option['name'] }}
-        </div>
-    </div>
-    @endforeach
-    @endif
-    @if ($selected)
-    @foreach ($selected as $option)
-    <input type="hidden" v-for="rankee in selected" wire:key="{{ $option['name'] }}" name="{{ $component->id }}[]"
-        value="{{ $option['name'] }}" />
-    @endforeach
-    @endif
+
+    {{-- RankedChoice is the one inherently-interactive question type. Without JS the
+         Livewire widget can't run, so we show a notice rather than a broken control. --}}
+    <noscript>
+        <style>.rc-interactive{display:none !important;}</style>
+        <p class="rounded-xl border border-[#f0d9a8] bg-warn-soft px-4 py-3 text-sm text-[#8a5a12]">
+            {{ __('components.rankedchoice.requires_js') }}
+        </p>
+    </noscript>
 </div>

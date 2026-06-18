@@ -21,6 +21,8 @@ class RankedChoiceLivewire extends Component
     public Collection $selected;
     /** @var Collection<array-key, mixed> */
     public Collection $unselected;
+    /** Latest change, announced to screen readers via an aria-live region. */
+    public string $announce = '';
 
     public function mount(Ballot $ballot, BallotComponent $component): void
     {
@@ -40,6 +42,7 @@ class RankedChoiceLivewire extends Component
             }
             return $rankee;
         });
+        $this->announce(messageKey: 'announce_added', name: $option);
     }
 
     public function up(string $option): void
@@ -57,6 +60,7 @@ class RankedChoiceLivewire extends Component
             }
             return $rankee;
         });
+        $this->announce(messageKey: 'announce_moved', name: $option);
     }
 
     public function down(string $option): void
@@ -75,6 +79,28 @@ class RankedChoiceLivewire extends Component
 
             return $rankee;
         });
+        $this->announce(messageKey: 'announce_moved', name: $option);
+    }
+
+    /** Promote a ranked option straight to first preference (no repeated "up" taps). */
+    public function moveToTop(string $option): void
+    {
+        /** @var array<string, mixed>|null $targetRankee */
+        $targetRankee = $this->rankees->where('name', $option)->first();
+        if ($targetRankee === null || $targetRankee['rank'] === null) {
+            return;
+        }
+        $from = $targetRankee['rank'];
+
+        $this->rankees = $this->rankees->map(function (array $rankee) use ($option, $from): array {
+            if ($rankee['name'] === $option) {
+                $rankee['rank'] = 1;
+            } elseif ($rankee['rank'] !== null && $rankee['rank'] < $from) {
+                $rankee['rank'] += 1;
+            }
+            return $rankee;
+        });
+        $this->announce(messageKey: 'announce_moved', name: $option);
     }
 
     public function remove(string $option): void
@@ -91,6 +117,40 @@ class RankedChoiceLivewire extends Component
             }
             return $rankee;
         });
+        $this->announce(messageKey: 'announce_removed', name: $option);
+    }
+
+    /**
+     * Re-rank from a complete ordered list of names (used by drag-to-reorder).
+     * Names not in $names become unranked; unknown names are ignored; ranks stay 1..n.
+     *
+     * @param  array<int, mixed>  $names
+     */
+    public function setOrder(array $names): void
+    {
+        /** @var Collection<int, string> $order */
+        $order = collect($names)
+            ->filter(fn($n): bool => is_string($n) && in_array($n, $this->component->options, true))
+            ->unique()
+            ->values();
+
+        $this->rankees = $this->rankees->map(function (array $rankee) use ($order): array {
+            $index = $order->search($rankee['name'], strict: true);
+            $rankee['rank'] = $index === false ? null : ((int) $index) + 1;
+            return $rankee;
+        });
+    }
+
+    /** Set the aria-live message for the last action. */
+    private function announce(string $messageKey, string $name): void
+    {
+        $params = ['name' => $name];
+        if ($messageKey !== 'announce_removed') {
+            /** @var array<string, mixed>|null $rankee */
+            $rankee = $this->rankees->where('name', $name)->first();
+            $params['rank'] = $rankee['rank'] ?? '';
+        }
+        $this->announce = (string) __('components.rankedchoice.' . $messageKey, $params);
     }
 
     public function render(): Factory|View

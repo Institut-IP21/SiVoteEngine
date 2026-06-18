@@ -1,22 +1,16 @@
+<p class="mb-3.5 text-[13px] text-muted">{{ __('components.yesno.hint') }}</p>
 @foreach ($component->options as $option)
-    <label class="radio flex -ml-2 p-2 mb-2 cursor-pointer hover:bg-blue-100 hover:bg-opacity-25"
-        for="{{ $component->id }}--{{ $loop->iteration }}">
-        <span class="radio__input">
-            <input type="radio" id="{{ $component->id }}--{{ $loop->iteration }}" name="{{ $component->id }}"
-                value="{{ $option }}" required="{{ $election->abstainable }}" />
-            <span class="radio__control mr-3"></span>
-        </span>
-        <span class="radio__label">{{ __($option) }}</span>
+    <label class="opt-row" for="{{ $component->id }}--{{ $loop->iteration }}">
+        <span class="opt-ctrl opt-ctrl--radio" aria-hidden="true"></span>
+        <input type="radio" id="{{ $component->id }}--{{ $loop->iteration }}" name="{{ $component->id }}"
+            value="{{ $option }}" @required(! $election->abstainable) />
+        <span class="opt-row__label">{{ __($option) }}</span>
     </label>
 @endforeach
 @if ($election->abstainable)
-    <label class="radio flex -ml-2 p-2 mb-2 cursor-pointer hover:bg-blue-100 hover:bg-opacity-25"
-        for="{{ $component->id }}--abstain">
-        <span class="radio__input">
-            <input type="radio" id="{{ $component->id }}--abstain" name="{{ $component->id }}" value="abstain"
-                checked />
-            <span class="radio__control mr-3"></span>
-        </span>
-        <span class="radio__label">{{ __('Abstain') }}</span>
+    <label class="opt-row" for="{{ $component->id }}--abstain">
+        <span class="opt-ctrl opt-ctrl--radio" aria-hidden="true"></span>
+        <input type="radio" id="{{ $component->id }}--abstain" name="{{ $component->id }}" value="abstain" checked />
+        <span class="opt-row__label">{{ __('Abstain') }}</span>
     </label>
 @endif

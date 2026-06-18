@@ -2,6 +2,10 @@
 
 return [
     'single' => 'Ballot',
+    'submit' => 'Cast vote',
+    'anonymous' => 'Your vote will be recorded anonymously.',
+    'powered_by' => 'Voting runs on the open-source SiVote system and the eGlasovanje.si platform.',
+    'no_questions' => 'This ballot has no questions yet.',
     'preview' => [
         'warning' => 'This view will be available for 15 minutes. After that, you need a new link.'
     ],
@@ -20,6 +24,7 @@ return [
     ],
     'expired' => 'This ballot has already expired.',
     'voteId' => 'Vote ID',
+    'code_info' => 'The code you received (also part of the link that brought you here) is how the system knows you are eligible to vote without knowing who you are. Keep it to yourself and do not share it. After voting, you can use it to check that your votes were recorded correctly.',
     'quorum' => [
         'label' => 'Quorum',
         'met' => 'Quorum met',

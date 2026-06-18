@@ -22,6 +22,7 @@ class PersonalizationFull extends JsonResource
             'created_at'   => $this->created_at,
             'updated_at'   => $this->updated_at,
             'photo_url'    => $this->photo_url,
+            'brand_color'  => $this->brand_color,
         ];
     }
 }

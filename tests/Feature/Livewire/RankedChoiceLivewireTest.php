@@ -130,4 +130,89 @@ class RankedChoiceLivewireTest extends TestCase
         $this->assertSame(['C', 'A'], $selected->pluck('name')->all());
         $this->assertSame(['B'], $unselected->pluck('name')->values()->all());
     }
+
+    public function test_move_to_top_promotes_to_first_and_shifts_others_down(): void
+    {
+        $t = $this->makeWidget();
+        $t->call('select', 'A')->call('select', 'B')->call('select', 'C'); // A=1,B=2,C=3
+
+        $t->call('moveToTop', 'C'); // C jumps to 1, A/B shift down
+
+        $this->assertSame(1, $this->rankOf($t, 'C'));
+        $this->assertSame(2, $this->rankOf($t, 'A'));
+        $this->assertSame(3, $this->rankOf($t, 'B'));
+    }
+
+    public function test_move_to_top_on_first_is_a_no_op(): void
+    {
+        $t = $this->makeWidget();
+        $t->call('select', 'A')->call('select', 'B'); // A=1,B=2
+
+        $t->call('moveToTop', 'A');
+
+        $this->assertSame(1, $this->rankOf($t, 'A'));
+        $this->assertSame(2, $this->rankOf($t, 'B'));
+    }
+
+    public function test_move_to_top_ignores_an_unranked_option(): void
+    {
+        $t = $this->makeWidget();
+        $t->call('select', 'A'); // A=1, B/C unranked
+
+        $t->call('moveToTop', 'B'); // B isn't ranked → nothing happens
+
+        $this->assertSame(1, $this->rankOf($t, 'A'));
+        $this->assertNull($this->rankOf($t, 'B'));
+    }
+
+    public function test_set_order_rewrites_ranks_to_match_given_order(): void
+    {
+        $t = $this->makeWidget();
+        $t->call('select', 'A')->call('select', 'B')->call('select', 'C'); // A=1,B=2,C=3
+
+        $t->call('setOrder', ['C', 'A', 'B']); // drag-drop result
+
+        $this->assertSame(1, $this->rankOf($t, 'C'));
+        $this->assertSame(2, $this->rankOf($t, 'A'));
+        $this->assertSame(3, $this->rankOf($t, 'B'));
+    }
+
+    public function test_set_order_with_a_subset_leaves_the_rest_unranked(): void
+    {
+        $t = $this->makeWidget();
+        $t->call('select', 'A')->call('select', 'B')->call('select', 'C');
+
+        $t->call('setOrder', ['B', 'A']); // only two ranked now
+
+        $this->assertSame(1, $this->rankOf($t, 'B'));
+        $this->assertSame(2, $this->rankOf($t, 'A'));
+        $this->assertNull($this->rankOf($t, 'C'));
+    }
+
+    public function test_set_order_ignores_names_not_in_the_options(): void
+    {
+        $t = $this->makeWidget();
+
+        $t->call('setOrder', ['B', 'ZZZ', 'A']); // ZZZ is not a real option
+
+        $this->assertSame(1, $this->rankOf($t, 'B'));
+        $this->assertSame(2, $this->rankOf($t, 'A'));
+        $this->assertNull($this->rankOf($t, 'C'));
+        // The phantom name never enters the rankee set.
+        $this->assertNull(collect($t->get('rankees'))->firstWhere('name', 'ZZZ'));
+    }
+
+    public function test_each_action_sets_an_aria_live_announcement(): void
+    {
+        $t = $this->makeWidget();
+
+        $t->call('select', 'A');
+        $this->assertNotSame('', $t->get('announce'));
+
+        $t->call('select', 'B')->call('up', 'B');
+        $this->assertStringContainsString('B', $t->get('announce'));
+
+        $t->call('remove', 'A');
+        $this->assertStringContainsString('A', $t->get('announce'));
+    }
 }

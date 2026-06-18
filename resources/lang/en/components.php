@@ -12,6 +12,7 @@ return [
         'yes' => 'Yes',
         'no' => 'No',
         'abstain' => 'Abstain',
+        'hint' => 'Choose one option.',
         'name' => 'Yes/No question',
         'tie' => 'The outcome is a tie.',
         'description' => 'Voters choose whether they support or oppose a single item.',
@@ -23,6 +24,7 @@ return [
     'fptp' => [
         'name' => 'First past the post / Plurality question',
         'abstain' => 'Abstain',
+        'hint' => 'Choose one candidate.',
         'invalid' => 'Invalid',
         'tie' => 'The outcome is a tie. The following options received the same number of votes: ',
         'description' => 'Voters choose one item from a list of options.'
@@ -32,6 +34,22 @@ return [
         'description' => 'Voters rank multiple options in order of their preference.',
         'intro' => 'There are :options options. Rank the options in order of your choice. You may rank as few or as many as you wish.',
         'state' => 'You have ranked :selected, you may rank :remaining more.',
+        'hint' => 'Tap in order — 1 = favourite. Rank as many or as few as you like; you need not rank all.',
+        'counter' => 'Ranked: :selected of :total',
+        'your_ranking' => 'Your ranking',
+        'remaining' => 'Remaining options',
+        'add' => 'Add :name to your ranking',
+        'add_short' => 'Add',
+        'move_up' => 'Move :name up',
+        'move_down' => 'Move :name down',
+        'move_top' => 'Move :name to the top',
+        'remove' => 'Remove :name from your ranking',
+        'position' => ':name, choice :rank of :total',
+        'announce_added' => ':name added as choice :rank',
+        'announce_removed' => ':name removed from your ranking',
+        'announce_moved' => ':name, now choice :rank',
+        'drag' => 'Drag to reorder',
+        'requires_js' => 'Ranking this question requires JavaScript. Please enable it and refresh the page.',
         'UP' => 'UP',
         'DOWN' => 'DOWN',
         'round' => 'Round',
@@ -43,6 +61,7 @@ return [
     'approval' => [
         'name' => 'Approval vote question',
         'description' => 'Voters approve of any number of options from a list.',
+        'hint' => 'Choose one or more options.',
         'rate' => 'Approval rate (%)'
     ],
     'created' => [

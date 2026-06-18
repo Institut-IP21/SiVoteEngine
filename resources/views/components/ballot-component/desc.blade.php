@@ -1,5 +1,3 @@
-<p class="pb-8 text-justify text-sm sm:text-base">
-    @if ($component->description)
-    {{ $component->description }}
-    @endif
-</p>
+@if ($component->description)
+    <p class="mt-1.5 text-sm text-muted leading-relaxed">{{ $component->description }}</p>
+@endif
