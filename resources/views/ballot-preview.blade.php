@@ -15,6 +15,10 @@
 
     <x-ballot-title :ballot="$ballot" />
 
+    {{-- The vote-code card always sits at the top of the ballot (as on the live ballot);
+         shown here with a placeholder so the preview matches what voters see. --}}
+    <x-ballot-code :code="'XXXX–XXXX–XXXX'" />
+
     @if ($ballot->components)
         <div class="flex flex-col gap-4">
             @foreach ($ballot->components as $component)
