@@ -88,6 +88,24 @@ class PersonalizationBrandColorTest extends TestCase
         ];
     }
 
+    public function test_logo_only_update_preserves_an_existing_brand_color(): void
+    {
+        // The current web_app flow sends only photo_url; it must NOT wipe a set color.
+        Personalization::create([
+            'owner' => $this->owner,
+            'photo_url' => 'https://example.test/old.png',
+            'brand_color' => '#abcabc',
+        ]);
+
+        $this->submit(['photo_url' => 'https://example.test/new.png'])->assertSuccessful();
+
+        $this->assertDatabaseHas('personalizations', [
+            'owner' => $this->owner,
+            'photo_url' => 'https://example.test/new.png',
+            'brand_color' => '#abcabc',
+        ]);
+    }
+
     public function test_updating_color_does_not_wipe_an_existing_logo(): void
     {
         Personalization::create([

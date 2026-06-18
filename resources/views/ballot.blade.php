@@ -17,9 +17,8 @@
         @if ($ballot->components)
             <div class="flex flex-col gap-4">
                 @foreach ($ballot->components as $component)
-                    @php $typeName = $componentTree[$component->type][$component->version]['strings']['name'] ?? null; @endphp
                     <div class="bg-white border border-line rounded-2xl shadow-[0_1px_2px_rgba(16,30,40,.05)] p-5 sm:p-6">
-                        <x-ballot-component.title :component="$component" :type-name="$typeName" />
+                        <x-ballot-component.title :component="$component" />
                         <x-ballot-component.desc :component="$component" />
                         <div class="mt-4">
                             <x-ballot-component.form :component="$component" :componentTree="$componentTree"

@@ -85,6 +85,30 @@ class BallotRedesignRenderTest extends TestCase
         $res->assertSee(__('components.rankedchoice.name'));
     }
 
+    public function test_type_name_accessor_resolves_the_localized_name_via_the_registry(): void
+    {
+        $map = [
+            'YesNo' => 'components.yesno.name',
+            'FirstPastThePost' => 'components.fptp.name',
+            'RankedChoice' => 'components.rankedchoice.name',
+            'ApprovalVote' => 'components.approval.name',
+        ];
+        foreach ($map as $type => $key) {
+            $ballot = $this->ballotWith($type, ['A', 'B']);
+            $component = $ballot->components()->first();
+            $this->assertSame(__($key), $component->type_name);
+        }
+    }
+
+    public function test_type_name_accessor_is_null_for_an_unregistered_type(): void
+    {
+        $ballot = $this->ballotWith('FirstPastThePost', ['A', 'B']);
+        $component = $ballot->components()->first();
+        $component->type = 'NotARealType';
+
+        $this->assertNull($component->type_name);
+    }
+
     public function test_customer_brand_color_is_emitted_as_an_inline_override_when_set(): void
     {
         $ballot = $this->ballotWith('YesNo', ['yes', 'no'], owner: (string) fake()->uuid());

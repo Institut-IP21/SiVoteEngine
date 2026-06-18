@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Support\Carbon;
+use App\BallotComponents\Support\ComponentRegistry;
 use Database\Factories\BallotComponentFactory;
 use Illuminate\Database\Eloquent\Builder;
 use App\Models\Concerns\HasUuidV4;
@@ -28,6 +29,7 @@ use Illuminate\Support\Str;
  * @property bool $finished
  * @property-read Ballot|null $ballot
  * @property-read string $component_path
+ * @property-read string|null $type_name
  * @property-read string $form_template
  * @property-read string $form_template_livewire
  * @property-read string $result_template
@@ -99,6 +101,21 @@ class BallotComponent extends Model
     public function getComponentPathAttribute(): string
     {
         return $this->type . '/' . $this->version;
+    }
+
+    /**
+     * The localized human name of this component's type, sourced from the component's
+     * own getStrings()['name'] via the registry — the single source of truth (no
+     * parallel hardcoded map in views). Null if the type/version isn't registered.
+     */
+    public function getTypeNameAttribute(): ?string
+    {
+        $registry = app(ComponentRegistry::class);
+        if (! $registry->has($this->type, $this->version)) {
+            return null;
+        }
+
+        return $registry->resolve($this->type, $this->version)->getMetadata()->strings['name'] ?? null;
     }
 
     public function getFormTemplateAttribute(): string

@@ -202,6 +202,41 @@ class RankedChoiceLivewireTest extends TestCase
         $this->assertNull(collect($t->get('rankees'))->firstWhere('name', 'ZZZ'));
     }
 
+    public function test_up_on_the_first_item_is_a_no_op(): void
+    {
+        $t = $this->makeWidget();
+        $t->call('select', 'A')->call('select', 'B'); // A=1, B=2
+
+        $t->call('up', 'A'); // already first — must not drive rank to 0
+
+        $this->assertSame(1, $this->rankOf($t, 'A'));
+        $this->assertSame(2, $this->rankOf($t, 'B'));
+    }
+
+    public function test_down_on_the_last_item_is_a_no_op(): void
+    {
+        $t = $this->makeWidget();
+        $t->call('select', 'A')->call('select', 'B'); // A=1, B=2
+
+        $t->call('down', 'B'); // already last — must not drive rank past the end
+
+        $this->assertSame(1, $this->rankOf($t, 'A'));
+        $this->assertSame(2, $this->rankOf($t, 'B'));
+    }
+
+    public function test_up_down_remove_on_an_unranked_option_are_no_ops(): void
+    {
+        $t = $this->makeWidget();
+        $t->call('select', 'A'); // A=1, B & C unranked
+
+        $t->call('up', 'B')->call('down', 'C')->call('remove', 'B');
+
+        // No unranked option ever acquires a (negative) rank, A is untouched.
+        $this->assertSame(1, $this->rankOf($t, 'A'));
+        $this->assertNull($this->rankOf($t, 'B'));
+        $this->assertNull($this->rankOf($t, 'C'));
+    }
+
     public function test_each_action_sets_an_aria_live_announcement(): void
     {
         $t = $this->makeWidget();

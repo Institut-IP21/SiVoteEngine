@@ -7,6 +7,7 @@ use Illuminate\Contracts\View\View;
 use App\Models\Ballot;
 use App\Models\BallotComponent;
 use Illuminate\Support\Collection;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 
 
@@ -21,7 +22,9 @@ class RankedChoiceLivewire extends Component
     public Collection $selected;
     /** @var Collection<array-key, mixed> */
     public Collection $unselected;
-    /** Latest change, announced to screen readers via an aria-live region. */
+    /** Latest change, announced to screen readers via an aria-live region. Server-set
+     *  only (#[Locked] — the client may not overwrite it). */
+    #[Locked]
     public string $announce = '';
 
     public function mount(Ballot $ballot, BallotComponent $component): void
@@ -47,8 +50,12 @@ class RankedChoiceLivewire extends Component
 
     public function up(string $option): void
     {
-        /** @var array<string, mixed> $targetRankee */
+        /** @var array<string, mixed>|null $targetRankee */
         $targetRankee = $this->rankees->where('name', $option)->first();
+        // Guard: unknown/unranked option, or already first — nothing above to swap with.
+        if ($targetRankee === null || $targetRankee['rank'] === null || $targetRankee['rank'] <= 1) {
+            return;
+        }
 
         $this->rankees = $this->rankees->map(function (array $rankee) use ($targetRankee): array {
             if ($rankee['rank'] === $targetRankee['rank'] - 1) {
@@ -65,8 +72,12 @@ class RankedChoiceLivewire extends Component
 
     public function down(string $option): void
     {
-        /** @var array<string, mixed> $targetRankee */
+        /** @var array<string, mixed>|null $targetRankee */
         $targetRankee = $this->rankees->where('name', $option)->first();
+        // Guard: unknown/unranked option, or already last — nothing below to swap with.
+        if ($targetRankee === null || $targetRankee['rank'] === null || $targetRankee['rank'] >= $this->rankees->max('rank')) {
+            return;
+        }
 
         $this->rankees = $this->rankees->map(function (array $rankee) use ($targetRankee): array {
             if ($rankee['rank'] === $targetRankee['rank'] + 1) {
@@ -105,8 +116,12 @@ class RankedChoiceLivewire extends Component
 
     public function remove(string $option): void
     {
-        /** @var array<string, mixed> $targetRankee */
+        /** @var array<string, mixed>|null $targetRankee */
         $targetRankee = $this->rankees->where('name', $option)->first();
+        // Guard: unknown or already-unranked option.
+        if ($targetRankee === null || $targetRankee['rank'] === null) {
+            return;
+        }
 
         $this->rankees = $this->rankees->map(function (array $rankee) use ($targetRankee): array {
             if ($rankee['name'] === $targetRankee['name']) {
