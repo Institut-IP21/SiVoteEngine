@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use Illuminate\Contracts\Routing\ResponseFactory;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
+use App\Http\Resources\Ballot as BallotResource;
 use App\Http\Resources\BallotComponent as ComponentResource;
 use App\Models\Ballot;
 use App\Models\BallotComponent;
@@ -92,6 +95,36 @@ class BallotComponentApiController extends Controller
         $component = BallotComponent::create($attributes);
 
         return new ComponentResource($component);
+    }
+
+    /**
+     * Reorder this ballot's components to match a given id sequence: each
+     * component's `order` becomes its index in `order[]`. Ids not on this
+     * ballot are ignored (see BallotService::reorderComponents). Returns the
+     * refreshed Ballot resource so the GUI can rebuild from authoritative data.
+     */
+    public function order(Election $election, Ballot $ballot, Request $request): ResponseFactory|Response|JsonResponse|BallotResource
+    {
+        if ($ballot->finished) {
+            return response('Finished ballots can not be reordered', 403);
+        }
+
+        $params = $request->all();
+        $settings = [
+            'order'   => 'required|array',
+            'order.*' => 'uuid',
+        ];
+
+        if ($errors = $this->findErrors($params, $settings)) {
+            return $errors;
+        }
+
+        /** @var array<int, string> $orderedIds */
+        $orderedIds = array_values($params['order']);
+
+        $this->ballotService->reorderComponents($ballot, $orderedIds);
+
+        return new BallotResource($ballot->refresh());
     }
 
     public function read(Election $election, Ballot $ballot, BallotComponent $component, Request $request): ComponentResource

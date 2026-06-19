@@ -10,6 +10,7 @@ use App\Models\Ballot;
 use App\Models\BallotComponent;
 use App\Models\Election;
 use App\Models\Vote;
+use Illuminate\Support\Facades\DB;
 use League\Csv\Writer;
 
 /**
@@ -129,6 +130,36 @@ final readonly class BallotService
     public function resolveComponent(string $type, string $version): BallotComponentInterface
     {
         return $this->registry->resolve($type, $version);
+    }
+
+    /**
+     * Set each component's `order` to its position in the given id sequence.
+     *
+     * Only ids that actually belong to $ballot are applied — any id not on the
+     * ballot (foreign, deleted, or bogus) is ignored, so a caller can never
+     * touch another ballot's components through this path. Components on the
+     * ballot whose id is absent from the sequence keep their current order.
+     * Persistence is wrapped in a transaction so a partial reorder can't land.
+     *
+     * @param  array<int, string>  $orderedIds
+     */
+    public function reorderComponents(Ballot $ballot, array $orderedIds): void
+    {
+        /** @var array<string, BallotComponent> $owned */
+        $owned = $ballot->components()->get()->keyBy('id')->all();
+
+        DB::transaction(function () use ($orderedIds, $owned): void {
+            $position = 0;
+            foreach ($orderedIds as $id) {
+                $component = $owned[$id] ?? null;
+                if ($component === null) {
+                    continue; // not on this ballot — ignore safely
+                }
+                $component->order = $position;
+                $component->save();
+                $position++;
+            }
+        });
     }
 
     /**

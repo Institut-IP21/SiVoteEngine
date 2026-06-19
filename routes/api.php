@@ -47,6 +47,7 @@ Route::middleware(['api', 'scope.bindings'])->prefix('election/{election}/ballot
 Route::middleware(['api', 'scope.bindings'])->prefix('election/{election}/ballot/{ballot}/component')->group(function () {
     Route::get('/', [BallotComponentApiController::class, 'list'])->name('componen.apit.list')->middleware('can:view,election');
     Route::post('/create', [BallotComponentApiController::class, 'create'])->name('component.api.create')->middleware('can:update,election');
+    Route::post('/order', [BallotComponentApiController::class, 'order'])->name('component.order')->middleware('can:update,election');
     Route::get('/{component}', [BallotComponentApiController::class, 'read'])->name('component.api.read')->middleware('can:view,election');
     Route::post('/{component}', [BallotComponentApiController::class, 'update'])->name('component.api.update')->middleware('can:update,election');
     Route::delete('/{component}', [BallotComponentApiController::class, 'delete'])->name('component.api.delete')->middleware('can:update,election');
