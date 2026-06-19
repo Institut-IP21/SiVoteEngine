@@ -4,12 +4,16 @@
 
 @section('body')
 <x-ballot-wrapper :pers="$pers">
-    <div class="mb-6 flex items-start gap-3 rounded-xl border border-[#f0d9a8] bg-warn-soft px-4 py-3 text-sm text-[#8a5a12]">
-        <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.7 3.86a2 2 0 0 0-3.42 0Z" />
-        </svg>
-        <span>{{ __('ballot.preview.warning') }}</span>
-    </div>
+    {{-- Standalone preview warning. Hidden when embedded (?embed=1) in the web_app
+         builder's live-preview iframe; shown on the full-page preview link. --}}
+    @unless (request()->boolean('embed'))
+        <div class="mb-6 flex items-start gap-3 rounded-xl border border-[#f0d9a8] bg-warn-soft px-4 py-3 text-sm text-[#8a5a12]">
+            <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.7 3.86a2 2 0 0 0-3.42 0Z" />
+            </svg>
+            <span>{{ __('ballot.preview.warning') }}</span>
+        </div>
+    @endunless
 
     <x-ballot-logo :pers="$pers" />
 
