@@ -37,6 +37,8 @@ class Ballot extends JsonResource
             'is_secret' => $this->is_secret,
             'title' => $this->title,
             'active' => $this->active,
+            'opened_at' => $this->opened_at?->toIso8601String(),
+            'closed_at' => $this->closed_at?->toIso8601String(),
             'mode' => $this->mode,
             'votes_count' => $this->votes_count,
             'electorate_size' => $this->electorate_size,

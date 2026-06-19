@@ -27,6 +27,8 @@ use Dyrynda\Database\Support\CascadeSoftDeletes;
  * @property string|null $description
  * @property bool $active
  * @property bool $finished
+ * @property Carbon|null $opened_at
+ * @property Carbon|null $closed_at
  * @property Carbon|null $deleted_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -55,6 +57,8 @@ use Dyrynda\Database\Support\CascadeSoftDeletes;
  * @method static Builder<static>|Ballot whereId($value)
  * @method static Builder<static>|Ballot whereIsSecret($value)
  * @method static Builder<static>|Ballot whereMode($value)
+ * @method static Builder<static>|Ballot whereOpenedAt($value)
+ * @method static Builder<static>|Ballot whereClosedAt($value)
  * @method static Builder<static>|Ballot whereQuorum($value)
  * @method static Builder<static>|Ballot whereTitle($value)
  * @method static Builder<static>|Ballot whereUpdatedAt($value)
@@ -107,6 +111,8 @@ class Ballot extends Model
         'active' => 'boolean',
         'is_secret' => 'boolean',
         'quorum' => 'integer',
+        'opened_at' => 'datetime',
+        'closed_at' => 'datetime',
     ];
 
     /** @return HasMany<BallotComponent, $this> */
@@ -181,6 +187,11 @@ class Ballot extends Model
     public function activate(): bool
     {
         $this->active = true;
+        // Stamp the first time it opens; a ballot can't reactivate per the
+        // domain, but guard against clobbering an existing timestamp anyway.
+        if ($this->opened_at === null) {
+            $this->opened_at = now();
+        }
         return $this->save();
     }
 
@@ -188,6 +199,7 @@ class Ballot extends Model
     {
         $this->active = false;
         $this->finished = true;
+        $this->closed_at = now();
         return $this->save();
     }
 }
