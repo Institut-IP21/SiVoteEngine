@@ -24,6 +24,8 @@ return Application::configure(basePath: dirname(__DIR__))
             // ballot > component) so an owner authorized on one election cannot
             // reach another election's ballot/component (cross-tenant IDOR).
             'scope.bindings' => \App\Http\Middleware\ScopeRouteBindings::class,
+            // Lets the configured web_app origin iframe a response (preview only).
+            'frame.webapp' => \App\Http\Middleware\AllowWebAppFraming::class,
         ]);
 
         $middleware->api(prepend: [

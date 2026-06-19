@@ -79,4 +79,39 @@ class BallotPreviewTest extends TestCase
         $this->get("/election/{$election->id}/ballot/{$ballot->id}/preview")
             ->assertStatus(200);
     }
+
+    public function test_preview_allows_framing_by_the_web_app_origin(): void
+    {
+        config(['app.web_app_url' => 'https://app.example.test']);
+        [$election, $ballot] = $this->makeBallot();
+
+        $response = $this->get("/election/{$election->id}/ballot/{$ballot->id}/preview")
+            ->assertStatus(200);
+
+        // CSP pins framing to self + the configured web_app origin (never "*").
+        $csp = $response->headers->get('Content-Security-Policy');
+        $this->assertNotNull($csp);
+        $this->assertStringContainsString("frame-ancestors 'self' https://app.example.test", $csp);
+        $this->assertStringNotContainsString('*', (string) $csp);
+
+        // And it must NOT carry a blocking X-Frame-Options.
+        $this->assertNotSame('SAMEORIGIN', $response->headers->get('X-Frame-Options'));
+        $this->assertNull($response->headers->get('X-Frame-Options'));
+    }
+
+    public function test_non_preview_routes_are_not_made_framable(): void
+    {
+        // The voter-facing ballot view (and other routes) must not gain the
+        // permissive frame-ancestors header — only the preview route does.
+        [$election, $ballot] = $this->makeBallot(active: true);
+
+        $response = $this->get('/');
+
+        $csp = $response->headers->get('Content-Security-Policy');
+        if ($csp !== null) {
+            $this->assertStringNotContainsString('frame-ancestors', $csp);
+        } else {
+            $this->assertNull($csp);
+        }
+    }
 }

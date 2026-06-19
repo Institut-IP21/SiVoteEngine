@@ -24,6 +24,13 @@ return [
     ],
 
     /*
+    | Origin of the web_app GUI. The ballot-preview page allows this single
+    | origin to embed it in an <iframe> (CSP frame-ancestors); all other routes
+    | stay same-origin only. Never set this to "*".
+    */
+    'web_app_url' => env('WEB_APP_URL', 'http://evote.local'),
+
+    /*
     |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------

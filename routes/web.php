@@ -23,7 +23,7 @@ Route::get('/session/{election}/ballot/{ballot}', Session::class)->middleware('w
 
 Route::middleware('web')->prefix('election')->group(function () {
     Route::get('/{election}/ballot/{ballot}', [BallotController::class, 'view'])->name('ballot.view');
-    Route::get('/{election}/ballot/{ballot}/preview', [BallotController::class, 'preview'])->name('ballot.preview');
+    Route::get('/{election}/ballot/{ballot}/preview', [BallotController::class, 'preview'])->name('ballot.preview')->middleware('frame.webapp');
     Route::post('/{election}/ballot/{ballot}', [BallotController::class, 'vote'])->name('ballot.vote')->middleware('throttle:votes');
     Route::post('/{election}/ballot/{ballot}/component', [BallotController::class, 'voteComponent'])->name('ballot.vote.component')->middleware('throttle:votes');
     Route::get('/{election}/ballot/{ballot}/result', [BallotController::class, 'result'])->name('ballot.result');
