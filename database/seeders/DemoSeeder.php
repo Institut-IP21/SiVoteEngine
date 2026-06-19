@@ -61,6 +61,17 @@ class DemoSeeder extends Seeder
     {
         $state = (string) $spec['state'];
 
+        // Realistic custody timestamps so the dashboard shows dates.
+        //   open   : opened a few days ago, still running   (closed_at null)
+        //   closed : opened further back, closed more recently
+        //   empty / ready : never opened                    (both null)
+        $openedAt = match ($state) {
+            'open' => now()->subDays(3),
+            'closed' => now()->subDays(10),
+            default => null,
+        };
+        $closedAt = $state === 'closed' ? now()->subDays(2) : null;
+
         $ballot = Ballot::factory()->create([
             'id' => $spec['id'],
             'election_id' => $electionId,
@@ -70,6 +81,12 @@ class DemoSeeder extends Seeder
             'is_secret' => true,
             'quorum' => $spec['quorum'],
         ]);
+
+        // opened_at/closed_at are intentionally NOT fillable (set only on transition),
+        // so assign them directly here to give the demo realistic custody dates.
+        $ballot->opened_at = $openedAt;
+        $ballot->closed_at = $closedAt;
+        $ballot->save();
 
         /** @var array<int,array<string,mixed>> $components */
         $components = $spec['components'] ?? [];
