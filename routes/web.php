@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\BallotController;
+use App\Http\Controllers\BrandingPreviewController;
 use App\Livewire\Session;
 use Illuminate\Support\Facades\Route;
 
@@ -20,6 +21,11 @@ Route::get('/', function () {
 });
 
 Route::get('/session/{election}/ballot/{ballot}', Session::class)->middleware('web')->name('ballot.session');
+
+// Data-free branding preview for the web_app branding page (framed by web_app).
+Route::get('/branding-preview/{owner}', [BrandingPreviewController::class, 'show'])
+    ->middleware(['web', 'frame.webapp'])
+    ->name('branding.preview');
 
 Route::middleware('web')->prefix('election')->group(function () {
     Route::get('/{election}/ballot/{ballot}', [BallotController::class, 'view'])->name('ballot.view');

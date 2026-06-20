@@ -7,7 +7,8 @@ return [
     'powered_by' => 'Voting runs on the open-source SiVote system and the eGlasovanje.si platform.',
     'no_questions' => 'This ballot has no questions yet.',
     'preview' => [
-        'warning' => 'This view will be available for 15 minutes. After that, you need a new link.'
+        'warning' => 'This view will be available for 15 minutes. After that, you need a new link.',
+        'sample_question' => 'Sample question',
     ],
     'result' => [
         'not_yet' => 'Ballot results not available yet',

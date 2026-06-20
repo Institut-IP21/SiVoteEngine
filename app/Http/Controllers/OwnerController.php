@@ -20,6 +20,14 @@ class OwnerController extends Controller
         'image/webp' => 'webp',
     ];
 
+    /** Read the organizer's current personalization (for the web_app branding page). */
+    public function getPersonalization(): JsonResource
+    {
+        $personalization = Personalization::firstOrNew(['owner' => $this->getOwner()]);
+
+        return new PersonalizationFull($personalization);
+    }
+
     /**
      * Update the organizer's brand accent colour.
      *

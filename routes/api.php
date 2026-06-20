@@ -61,6 +61,7 @@ Route::middleware(['api', 'scope.bindings'])->prefix('election/{election}/ballot
 });
 
 Route::middleware('api')->prefix('owner')->group(function () {
+    Route::get('/personalization', [OwnerController::class, 'getPersonalization'])->name('owner.personalization.get');
     Route::post('/personalization', [OwnerController::class, 'updatePersonalization'])->name('owner.personalization');
     Route::post('/logo', [OwnerController::class, 'uploadLogo'])->name('owner.logo');
 });

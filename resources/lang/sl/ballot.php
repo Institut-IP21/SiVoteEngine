@@ -7,7 +7,8 @@ return [
     'powered_by' => 'Glasovanje poteka prek odprtokodnega sistema SiVote in platforme eGlasovanje.si.',
     'no_questions' => 'Ta glasovnica še nima vprašanj.',
     'preview' => [
-        'warning' => 'Ta predogled bo dostopen 15 minut, potem pa boste morali ponovno klikniti na gumb za predogled v nadzorni plošči.'
+        'warning' => 'Ta predogled bo dostopen 15 minut, potem pa boste morali ponovno klikniti na gumb za predogled v nadzorni plošči.',
+        'sample_question' => 'Vzorčno vprašanje',
     ],
     'result' => [
         'not_yet' => 'Izid glasovanja še ni na voljo.',
