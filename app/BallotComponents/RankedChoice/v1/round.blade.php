@@ -15,22 +15,22 @@
                     {{ $winner !== null && (string) $name === (string) $winner ? 'bg-green-200' : '' }}
                     {{ $eliminated !== null && in_array((string) $name, array_map('trim', explode(',', (string) $eliminated)), true) ? 'bg-red-200' : '' }}
                     {{ ($winner === null && $eliminated === null && $minTally === $votes) ? 'bg-yellow-200' : '' }}">
-            <span class="flex-1">{{ $name }}</span>
-            <span class="flex-1 text-right">{{ $votes }}</span>
+            <span class="flex-1" style="min-width:0;overflow-wrap:anywhere">{{ $name }}</span>
+            <span class="flex-shrink-0 text-right pl-2">{{ $votes }}</span>
         </div>
         @endforeach
 
         @if ($eliminated !== null)
         <div class="border-t row px-2 py-1 bg-red-200">
-            <span class="flex-1"><strong>{{ __('components.eliminated') }}:</strong></span>
-            <span class="flex-1 text-right">{{ $eliminated }}</span>
+            <span class="flex-shrink-0"><strong>{{ __('components.eliminated') }}:</strong></span>
+            <span class="flex-1 text-right pl-2" style="min-width:0;overflow-wrap:anywhere">{{ $eliminated }}</span>
         </div>
         @endif
 
         @if (is_string($winner))
         <div class="border-t row px-2 py-1 bg-green-200">
-            <span class="flex-1"><strong>{{ __('components.winner') }}:</strong></span>
-            <span class="flex-1 text-right">{{ $winner }}</span>
+            <span class="flex-shrink-0"><strong>{{ __('components.winner') }}:</strong></span>
+            <span class="flex-1 text-right pl-2" style="min-width:0;overflow-wrap:anywhere">{{ $winner }}</span>
         </div>
         @endif
 

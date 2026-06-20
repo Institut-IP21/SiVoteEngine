@@ -10,7 +10,7 @@
         <h1 class="text-2xl sm:text-3xl font-bold">
             Rezultati glasovanja:
         </h1>
-        <div class="text-1xl sm:text-2xl font-bold">
+        <div class="text-1xl sm:text-2xl font-bold" style="overflow-wrap:anywhere">
             {{ $ballot->title }}
         </div>
     </div>

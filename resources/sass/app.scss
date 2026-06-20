@@ -74,6 +74,11 @@ h1, h2, h3, h4, h5, h6 {
 
 .opt-row__label {
     flex: 1;
+    // min-width:0 lets the flex child shrink; overflow-wrap breaks long unbreakable
+    // tokens — together they keep a long option label fully visible inside the row
+    // instead of overflowing the ballot card. Voter-facing: never truncate.
+    min-width: 0;
+    overflow-wrap: anywhere;
     font-size: 0.9375rem;
     line-height: 1.4;
     color: var(--color-ink);
