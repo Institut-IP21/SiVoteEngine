@@ -68,8 +68,11 @@ class BallotQuorumRenderTest extends TestCase
         $response = $this->get("/election/{$election->id}/ballot/{$ballot->id}/result");
 
         $response->assertOk();
-        // Prominent "result not binding" banner.
+        // Prominent "result not binding" message.
         $response->assertSeeText($this->bannerText($ballot));
+        // #6: a SINGLE quorum warning — the old separate red banner (border-red-400) is
+        // gone; everything is now in the one panel (border-red-300).
+        $response->assertDontSee('border-red-400', false);
         // Tallies still render (Ana row visible).
         $response->assertSeeText('Ana');
         // No winner highlight when quorum fails.
