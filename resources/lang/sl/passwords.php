@@ -13,10 +13,10 @@ return [
     |
     */
 
-    'reset' => 'Your password has been reset!',
+    'reset' => 'Vaše geslo je bilo ponastavljeno!',
     'sent' => 'Povezava je bila poslana, preverite svoj nabiralnik!',
-    'throttled' => 'Please wait before retrying.',
-    'token' => 'This password reset token is invalid.',
-    'user' => "Ne najdemo uporabnika s tem email naslovom.",
+    'throttled' => 'Prosimo počakajte preden poskusite ponovno.',
+    'token' => 'Ta žeton za ponastavitev gesla ni veljaven.',
+    'user' => 'Ne najdemo uporabnika s tem email naslovom.',
 
 ];
