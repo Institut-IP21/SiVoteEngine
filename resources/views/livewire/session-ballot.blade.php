@@ -1,74 +1,45 @@
-<div id="app" class="bg-gray-100 min-h-screen" wire:poll.5000ms>
-    <div class="py-2"></div>
-    <div class="max-w-screen-md text-center mx-auto">
-        <div class="w-full py-3 rounded overflow-hidden shadow-md mx-auto bg-white">
-            <h1 class="text-2xl">{{ $ballot->title }}</h1>
-            @if ($ballot->description)
-                <p class="mt-2 border-t pt-3">{{ $ballot->description }}</p>
-            @endif
-        </div>
-    </div>
-    <div class="py-2"></div>
+{{-- Live "session" voting page: same redesigned shell as the standalone ballot, but the
+     admin opens/closes questions during a meeting, so it polls and renders only the
+     currently-active components. wire:poll lives on the shell root (single Livewire root). --}}
+<x-ballot-wrapper :pers="$pers" wire:poll.5000ms>
+    <x-ballot-logo :pers="$pers" />
+
+    <x-ballot-title :ballot="$ballot" />
+
     @if (session('success'))
-        <div class="max-w-screen-md text-center mx-auto bg-green-600 text-white">
-            <div class="w-full py-3 rounded overflow-hidden shadow-md mx-auto">
-                <h1 class="text-2xl">{{ session('success') }}</h1>
-            </div>
+        <div class="mb-4 flex items-center justify-center gap-2 rounded-2xl border border-brand bg-brand-soft px-5 py-4 text-center font-bold text-brand-fg"
+            data-session-success>
+            <svg class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+            <span>{{ session('success') }}</span>
         </div>
-        <div class="py-2"></div>
     @endif
-    <form class="max-w-screen-md mx-auto h-full flex flex-col"
+
+    <form class="flex flex-col"
         action="/election/{{ $ballot->election->id }}/ballot/{{ $ballot->id }}/component/" method="post">
         @csrf
-        <div class="w-full rounded overflow-hidden shadow-md mx-auto bg-white mb-3">
-            <div class="px-6 py-4">
-                <div class="mb-6 font-bold text-xl flex justify-between items-baseline">
-                    <span> Glasovalna koda</span>
-                    <span class="font-light text-base text-right"></span>
-                </div>
-                <input name="code" readonly
-                    x-bind:type="show ? 'text' : 'password'"
-                    x-data="{ show: false }"
-                    x-on:mouseover="show = true" x-on:mouseout="show = false"
-                    class="shadow appearance-none border rounded w-full py-2 px-3 leading-tight focus:outline-none"
-                    id="code" type="password" placeholder="Koda" value="{{ $code }}">
-            </div>
-        </div>
-        <div class="py-2"></div>
+
+        <x-ballot-code :code="$code" />
+
         @if (count($activeComponents) > 0)
-            @foreach ($activeComponents as $component)
-                <div class="w-full rounded overflow-hidden shadow-md mx-auto bg-white">
-                    <div class="py-6">
-                        <div class="px-7 mb-6 pb-5 font-bold text-xl flex justify-between items-baseline border-b">
-                            <span style="min-width:0;overflow-wrap:anywhere">{{ $component->title }}</span>
-                        </div>
-                        @if ($component->description)
-                            <p class="px-7 mb-6 pb-5 border-b text-justify">{{ $component->description }}</p>
-                        @endif
-                        <div class="px-7">
-                            @if ($componentTree[$component->type][$component->version]['livewireForm'])
-                                @livewire(Str::kebab($component->type) . '-livewire', ['ballot' => $ballot, 'component'
-                                => $component])
-                            @else
-                                @include($component->form_template, ['component' => $component, 'election' =>
-                                $election])
-                            @endif
-                        </div>
-                    </div>
-                </div>
-                <div class="py-6"></div>
-            @endforeach
-            @if ($code !== 'preview-mode')
-                <div class="my-6 text-center">
-                    <button type="submit" class="btn btn-blue w-full">Oddaj glas</button>
-                </div>
-            @endif
-        @else
-        <div class="max-w-screen-md mx-auto overflow-hidden shadow-md mx-auto bg-white">
-            <div class="px-6 py-4">
-                <span>Trenutno ni odprtih vprašanj</span>
+            <div class="flex flex-col gap-4">
+                @foreach ($activeComponents as $component)
+                    <x-ballot-component-card :component="$component" :election="$election"
+                        :ballot="$ballot" :componentTree="$componentTree" />
+                @endforeach
             </div>
-        </div>
+
+            @if ($code !== 'preview-mode')
+                <button type="submit" class="ballot-submit mt-6">{{ __('ballot.submit') }}</button>
+            @endif
+
+            <p class="mt-5 mb-10 text-center text-[11px] leading-relaxed text-muted">
+                {{ __('ballot.anonymous') }}<br>
+                {{ __('ballot.powered_by') }}
+            </p>
+        @else
+            <p class="text-center text-muted py-10">{{ __('ballot.session.no_open_questions') }}</p>
         @endif
     </form>
-</div>
+</x-ballot-wrapper>

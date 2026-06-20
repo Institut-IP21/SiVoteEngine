@@ -17,9 +17,13 @@
 </head>
 
 <body>
+    {{-- Two render paths share this layout:
+         • Blade views via @extends fill the `body` section (e.g. the standalone ballot).
+         • Full-page Livewire components (the live session page) render into `$slot`.
+         `$slot` is undefined for @extends views, so the null-coalesce keeps them working. --}}
     @section('body')
     @show
-    @yield('content')
+    {{ $slot ?? '' }}
     @livewireScripts
 
 </body>

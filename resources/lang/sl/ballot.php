@@ -23,6 +23,9 @@ return [
         ],
     ],
     'expired' => 'Glasovanje za to glasovnico je že zaključeno.',
+    'session' => [
+        'no_open_questions' => 'Trenutno ni odprtih vprašanj. Stran se samodejno posodobi, ko se odpre naslednje.',
+    ],
     'voteId' => 'Glasovalna koda',
     'code_info' => 'Koda, ki ste jo prejeli (in je tudi del povezave, ki vas je pripeljala sem), je način, kako sistem ve, da imate pravico glasovati, ne da bi vedel, kdo ste. Zato jo hranite zase in je ne delite z nikomer. S kodo lahko po koncu glasovanja preverite, ali so bili vaši glasovi pravilno zabeleženi.',
     'quorum' => [

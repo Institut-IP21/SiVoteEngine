@@ -7,6 +7,7 @@ use Illuminate\Contracts\View\View;
 use App\Models\Ballot;
 use App\Models\BallotComponent;
 use App\Models\Election;
+use App\Models\Personalization;
 use App\Models\Vote;
 use App\Services\BallotService;
 use Illuminate\Http\Request;
@@ -22,6 +23,7 @@ class Session extends Component
     public Election $election;
     public Ballot $ballot;
     public string $code;
+    public ?Personalization $pers = null;
     /** @var Collection<int, BallotComponent> */
     public Collection $activeComponents;
     /** @var array<string, array<string, array<string, mixed>>> */
@@ -37,6 +39,7 @@ class Session extends Component
         $this->ballot = $ballot;
         $this->applyElectionLocale();
         $this->componentTree = $service->getComponentTree();
+        $this->pers = Personalization::where('owner', $election->owner)->first();
 
         $vote = Vote::find(['id' => $request->query('code')])->first();
         $this->code = $vote->id ?? 'preview-mode';
@@ -66,6 +69,6 @@ class Session extends Component
             );
         }
 
-        return view('livewire.session-ballot', ['ballot' => $this->ballot]);
+        return view('livewire.session-ballot', ['ballot' => $this->ballot, 'pers' => $this->pers]);
     }
 }
