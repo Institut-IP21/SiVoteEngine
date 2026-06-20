@@ -60,8 +60,6 @@
          Livewire widget can't run, so we show a notice rather than a broken control. --}}
     <noscript>
         <style>.rc-interactive{display:none !important;}</style>
-        <p class="rounded-xl border border-[#f0d9a8] bg-warn-soft px-4 py-3 text-sm text-[#8a5a12]">
-            {{ __('components.rankedchoice.requires_js') }}
-        </p>
+        <x-ballot-alert :icon="false">{{ __('components.rankedchoice.requires_js') }}</x-ballot-alert>
     </noscript>
 </div>
