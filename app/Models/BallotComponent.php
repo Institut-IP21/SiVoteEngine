@@ -30,6 +30,7 @@ use Illuminate\Support\Str;
  * @property-read Ballot|null $ballot
  * @property-read string $component_path
  * @property-read string|null $type_name
+ * @property-read string|null $type_hint
  * @property-read string $form_template
  * @property-read string $form_template_livewire
  * @property-read string $result_template
@@ -116,6 +117,21 @@ class BallotComponent extends Model
         }
 
         return $registry->resolve($this->type, $this->version)->getMetadata()->strings['name'] ?? null;
+    }
+
+    /**
+     * The voter-facing interaction hint for this component's type (e.g. "Choose one
+     * option."), from the component's getStrings()['hint'] via the registry — same
+     * single source as the name, instead of a loose lang key in each form blade.
+     */
+    public function getTypeHintAttribute(): ?string
+    {
+        $registry = app(ComponentRegistry::class);
+        if (! $registry->has($this->type, $this->version)) {
+            return null;
+        }
+
+        return $registry->resolve($this->type, $this->version)->getMetadata()->strings['hint'] ?? null;
     }
 
     public function getFormTemplateAttribute(): string

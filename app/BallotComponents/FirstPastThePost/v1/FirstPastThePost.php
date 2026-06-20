@@ -32,6 +32,7 @@ final class FirstPastThePost extends AbstractBallotComponent
         return [
             'name' => __('components.fptp.name'),
             'description' => __('components.fptp.description'),
+            'hint' => __('components.fptp.hint'),
         ];
     }
 

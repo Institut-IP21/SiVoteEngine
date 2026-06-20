@@ -4,7 +4,7 @@
      server round-trips — so it can't throw the cross-origin "page expired" (419). The
      real ballot and the standalone full-page preview use the interactive widget. --}}
 <div data-ranked-choice-preview>
-    <p class="text-[13px] text-muted leading-relaxed">{{ __('components.rankedchoice.hint') }}</p>
+    <p class="text-[13px] text-muted leading-relaxed">{{ $component->type_hint }}</p>
     <p class="mt-2 mb-3.5 text-[11px] font-semibold text-muted">
         {{ __('components.rankedchoice.counter', ['selected' => 0, 'total' => count($options)]) }}
     </p>

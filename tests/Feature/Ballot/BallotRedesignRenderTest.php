@@ -109,6 +109,30 @@ class BallotRedesignRenderTest extends TestCase
         $this->assertNull($component->type_name);
     }
 
+    public function test_type_hint_accessor_resolves_the_hint_from_metadata(): void
+    {
+        // The voter-facing hint now comes from each component's getStrings()['hint']
+        // via the registry (the single source), not a loose lang key in the blade.
+        $map = [
+            'YesNo' => 'components.yesno.hint',
+            'FirstPastThePost' => 'components.fptp.hint',
+            'RankedChoice' => 'components.rankedchoice.hint',
+            'ApprovalVote' => 'components.approval.hint',
+        ];
+        foreach ($map as $type => $key) {
+            $component = $this->ballotWith($type, ['A', 'B'])->components()->first();
+            $this->assertSame(__($key), $component->type_hint);
+        }
+    }
+
+    public function test_type_hint_accessor_is_null_for_an_unregistered_type(): void
+    {
+        $component = $this->ballotWith('FirstPastThePost', ['A', 'B'])->components()->first();
+        $component->type = 'NotARealType';
+
+        $this->assertNull($component->type_hint);
+    }
+
     public function test_customer_brand_color_is_emitted_as_an_inline_override_when_set(): void
     {
         $ballot = $this->ballotWith('YesNo', ['yes', 'no'], owner: (string) fake()->uuid());

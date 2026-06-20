@@ -1,6 +1,6 @@
 @php $total = count($component->options); @endphp
 <div data-ranked-choice>
-    <p class="text-[13px] text-muted leading-relaxed">{{ __('components.rankedchoice.hint') }}</p>
+    <p class="text-[13px] text-muted leading-relaxed">{{ $component->type_hint }}</p>
     <p class="mt-2 mb-3.5 text-[11px] font-semibold text-muted">
         {{ __('components.rankedchoice.counter', ['selected' => $selected->count(), 'total' => $total]) }}
     </p>

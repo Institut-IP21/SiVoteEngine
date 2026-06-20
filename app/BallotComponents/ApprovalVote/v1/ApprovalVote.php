@@ -32,6 +32,7 @@ final class ApprovalVote extends AbstractBallotComponent
         return [
             'name' => __('components.approval.name'),
             'description' => __('components.approval.description'),
+            'hint' => __('components.approval.hint'),
         ];
     }
 

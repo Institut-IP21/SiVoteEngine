@@ -40,6 +40,7 @@ final class RankedChoice extends AbstractBallotComponent
         return [
             'name' => __('components.rankedchoice.name'),
             'description' => __('components.rankedchoice.description'),
+            'hint' => __('components.rankedchoice.hint'),
         ];
     }
 

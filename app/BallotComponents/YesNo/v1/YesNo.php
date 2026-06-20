@@ -41,6 +41,7 @@ final class YesNo extends AbstractBallotComponent
         return [
             'name' => __('components.yesno.name'),
             'description' => __('components.yesno.description'),
+            'hint' => __('components.yesno.hint'),
         ];
     }
 
