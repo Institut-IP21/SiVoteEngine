@@ -26,10 +26,8 @@ return [
     'voteId' => 'Vote ID',
     'code_info' => 'The code you received (also part of the link that brought you here) is how the system knows you are eligible to vote without knowing who you are. Keep it to yourself and do not share it. After voting, you can use it to check that your votes were recorded correctly.',
     'quorum' => [
-        'label' => 'Quorum',
         'met' => 'Quorum met',
-        'status_failed' => 'Quorum not met',
-        // The "result not binding" banner (D11): suppresses the winner verdict.
+        // The "result not binding" message (D11): suppresses the winner verdict.
         'not_met' => 'Quorum not met — turnout :turnout of required :quorum; result not binding.',
         'status' => ':votes / :quorum votes',
     ],

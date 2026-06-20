@@ -26,9 +26,7 @@ return [
     'voteId' => 'Glasovalna koda',
     'code_info' => 'Koda, ki ste jo prejeli (in je tudi del povezave, ki vas je pripeljala sem), je način, kako sistem ve, da imate pravico glasovati, ne da bi vedel, kdo ste. Zato jo hranite zase in je ne delite z nikomer. S kodo lahko po koncu glasovanja preverite, ali so bili vaši glasovi pravilno zabeleženi.',
     'quorum' => [
-        'label' => 'Kvorum',
         'met' => 'Kvorum dosežen',
-        'status_failed' => 'Kvorum ni dosežen',
         'not_met' => 'Sklepčnost ni dosežena — udeležba :turnout od zahtevanih :quorum; izid ni zavezujoč.',
         'status' => ':votes / :quorum glasov',
     ],
