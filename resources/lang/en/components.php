@@ -37,6 +37,7 @@ return [
         'remaining' => 'Remaining options',
         'add' => 'Add :name to your ranking',
         'add_short' => 'Add',
+        'preview_static' => 'Drag-to-rank is interactive on the live ballot.',
         'move_up' => 'Move :name up',
         'move_down' => 'Move :name down',
         'move_top' => 'Move :name to the top',

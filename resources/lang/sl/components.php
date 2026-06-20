@@ -37,6 +37,7 @@ return [
         'remaining' => 'Preostale možnosti',
         'add' => 'Dodaj :name na seznam',
         'add_short' => 'Dodaj',
+        'preview_static' => 'Razvrščanje s povleci-in-spusti je interaktivno na živi glasovnici.',
         'move_up' => 'Premakni :name navzgor',
         'move_down' => 'Premakni :name navzdol',
         'move_top' => 'Premakni :name na vrh',

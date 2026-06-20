@@ -80,6 +80,50 @@ class BallotPreviewTest extends TestCase
             ->assertStatus(200);
     }
 
+    /**
+     * @return array{0: Election, 1: Ballot}
+     */
+    private function makeRankedBallot(): array
+    {
+        $election = Election::factory()->create();
+        $ballot = Ballot::factory()->create([
+            'election_id' => $election->id,
+            'active' => false,
+            'mode' => Ballot::MODE_BASIC,
+        ]);
+        BallotComponent::factory()->create([
+            'ballot_id' => $ballot->id,
+            'type' => 'RankedChoice',
+            'version' => 'v1',
+            'options' => ['Alice', 'Bjorn', 'Chen'],
+        ]);
+
+        return [$election, $ballot];
+    }
+
+    public function test_embedded_preview_renders_ranked_choice_static_not_livewire(): void
+    {
+        // In the cross-origin builder iframe (?embed=1) the Livewire widget can't keep a
+        // session (third-party cookies → CSRF 419), so embed renders a static version.
+        [$election, $ballot] = $this->makeRankedBallot();
+
+        $this->get("/election/{$election->id}/ballot/{$ballot->id}/preview?embed=1")
+            ->assertStatus(200)
+            ->assertSee('data-ranked-choice-preview', false)
+            ->assertDontSee('ranked-choice-livewire', false);
+    }
+
+    public function test_standalone_preview_keeps_the_interactive_ranked_choice_widget(): void
+    {
+        // The full-page preview is a same-origin top-level page; the live widget works.
+        [$election, $ballot] = $this->makeRankedBallot();
+
+        $this->get("/election/{$election->id}/ballot/{$ballot->id}/preview")
+            ->assertStatus(200)
+            ->assertSee('ranked-choice-livewire', false)
+            ->assertDontSee('data-ranked-choice-preview', false);
+    }
+
     public function test_preview_allows_framing_by_the_web_app_origin(): void
     {
         config(['app.web_app_url' => 'https://app.example.test']);

@@ -128,6 +128,16 @@ class BallotComponent extends Model
         return $this->type . '/' . $this->version . '/form_livewire';
     }
 
+    /**
+     * Static, non-interactive form used in the embedded builder preview, where the
+     * cross-origin iframe can't carry the engine session a Livewire widget needs
+     * (third-party-cookie blocking → CSRF 419). Shows the control without server round-trips.
+     */
+    public function getFormTemplatePreviewAttribute(): string
+    {
+        return $this->type . '/' . $this->version . '/form_preview';
+    }
+
     public function getResultTemplateAttribute(): string
     {
         return $this->type . '/' . $this->version . '/result';
