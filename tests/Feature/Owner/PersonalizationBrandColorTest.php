@@ -115,4 +115,28 @@ class PersonalizationBrandColorTest extends TestCase
             'brand_color' => '#102030',
         ]);
     }
+
+    public function test_get_personalization_returns_defaults_for_a_new_owner(): void
+    {
+        // The branding page reads this on mount; a never-personalized owner must get
+        // a clean 200 with null fields (firstOrNew), not a 404.
+        $this->getJson('/api/owner/personalization', $this->headers())
+            ->assertSuccessful()
+            ->assertJsonPath('data.photo_url', null)
+            ->assertJsonPath('data.brand_color', null);
+    }
+
+    public function test_get_personalization_returns_stored_values(): void
+    {
+        Personalization::create([
+            'owner' => $this->owner,
+            'photo_url' => 'https://engine.test/storage/logos/x.png',
+            'brand_color' => '#34B6DF',
+        ]);
+
+        $this->getJson('/api/owner/personalization', $this->headers())
+            ->assertSuccessful()
+            ->assertJsonPath('data.brand_color', '#34B6DF')
+            ->assertJsonPath('data.photo_url', 'https://engine.test/storage/logos/x.png');
+    }
 }

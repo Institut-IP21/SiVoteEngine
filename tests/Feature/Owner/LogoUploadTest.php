@@ -86,6 +86,33 @@ class LogoUploadTest extends TestCase
         Storage::disk('public')->assertDirectoryEmpty('logos');
     }
 
+    public function test_svg_body_in_a_text_file_is_accepted_and_sanitized(): void
+    {
+        // A file the OS sniffs as text/* (not image/svg+xml) but whose body is an
+        // <svg> must still be accepted via the content check and sanitized.
+        $dirty = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"8\" height=\"8\">"
+            . "<script>steal()</script><rect width=\"8\" height=\"8\"/></svg>";
+
+        $res = $this->post('/api/owner/logo', [
+            'logo' => UploadedFile::fake()->createWithContent('brand.txt', $dirty),
+        ], $this->headers());
+
+        $res->assertSuccessful();
+        $path = $this->expectedBase() . '.svg';
+        Storage::disk('public')->assertExists($path);
+        $this->assertStringNotContainsStringIgnoringCase('<script', (string) Storage::disk('public')->get($path));
+    }
+
+    public function test_text_file_without_an_svg_root_is_rejected(): void
+    {
+        $res = $this->post('/api/owner/logo', [
+            'logo' => UploadedFile::fake()->createWithContent('notes.txt', 'just some plain text, no markup'),
+        ], $this->headers());
+
+        $res->assertStatus(422);
+        Storage::disk('public')->assertDirectoryEmpty('logos');
+    }
+
     public function test_unsupported_type_is_rejected(): void
     {
         $res = $this->post('/api/owner/logo', [
