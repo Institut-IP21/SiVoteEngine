@@ -60,7 +60,9 @@ class Session extends Component
     {
         $this->applyElectionLocale();
 
-        $this->activeComponents = $this->ballot->components()->get()->filter(fn($component) => $component->active);
+        // Only the currently-open questions. Filter in SQL (this runs on every
+        // wire:poll cycle, per connected voter) rather than loading every component.
+        $this->activeComponents = $this->ballot->components()->where('active', true)->get();
 
         if ($this->code !== 'preview-mode') {
             ActiveSessionVoter::updateOrCreate(
