@@ -33,12 +33,15 @@ class AllowWebAppFraming
         // would otherwise still block on the SAMEORIGIN value.)
         $response->headers->remove('X-Frame-Options');
 
-        $webAppOrigin = (string) config('app.web_app_url');
+        // Only a well-formed http(s) origin may be interpolated into the CSP — never
+        // an unvalidated config value (defends against a misconfig/tamper widening
+        // frame-ancestors). An empty/invalid value falls back to 'self' only.
+        $webAppOrigin = trim((string) config('app.web_app_url'));
+        $ancestors = preg_match('#^https?://[^\s\'"]+$#D', $webAppOrigin)
+            ? "'self' {$webAppOrigin}"
+            : "'self'";
 
-        $response->headers->set(
-            'Content-Security-Policy',
-            "frame-ancestors 'self' " . $webAppOrigin
-        );
+        $response->headers->set('Content-Security-Policy', "frame-ancestors {$ancestors}");
 
         return $response;
     }
