@@ -39,10 +39,7 @@ class PersonalizationBrandColorTest extends TestCase
 
     public function test_a_valid_hex_brand_color_is_stored_and_returned(): void
     {
-        $res = $this->submit([
-            'photo_url' => 'https://example.test/logo.png',
-            'brand_color' => '#34B6DF',
-        ]);
+        $res = $this->submit(['brand_color' => '#34B6DF']);
 
         $res->assertSuccessful();
         $res->assertJsonPath('data.brand_color', '#34B6DF');
@@ -52,9 +49,9 @@ class PersonalizationBrandColorTest extends TestCase
         ]);
     }
 
-    public function test_brand_color_is_optional_logo_only_update_still_works(): void
+    public function test_brand_color_is_optional(): void
     {
-        $res = $this->submit(['photo_url' => 'https://example.test/logo.png']);
+        $res = $this->submit([]);
 
         $res->assertSuccessful();
         $this->assertDatabaseHas('personalizations', [
@@ -63,13 +60,27 @@ class PersonalizationBrandColorTest extends TestCase
         ]);
     }
 
+    public function test_photo_url_is_ignored_here_no_remote_url_ingestion(): void
+    {
+        // Logos only enter via the upload endpoint (same-origin). A photo_url posted
+        // to this endpoint — remote or otherwise — must never be persisted.
+        $res = $this->submit([
+            'photo_url' => 'https://evil.test/track.png',
+            'brand_color' => '#102030',
+        ]);
+
+        $res->assertSuccessful();
+        $this->assertDatabaseHas('personalizations', [
+            'owner' => $this->owner,
+            'brand_color' => '#102030',
+            'photo_url' => null,
+        ]);
+    }
+
     #[DataProvider('invalidColors')]
     public function test_an_invalid_brand_color_is_rejected(string $bad): void
     {
-        $res = $this->submit([
-            'photo_url' => 'https://example.test/logo.png',
-            'brand_color' => $bad,
-        ]);
+        $res = $this->submit(['brand_color' => $bad]);
 
         $res->assertStatus(400);
         $this->assertDatabaseMissing('personalizations', ['owner' => $this->owner]);
@@ -88,39 +99,19 @@ class PersonalizationBrandColorTest extends TestCase
         ];
     }
 
-    public function test_logo_only_update_preserves_an_existing_brand_color(): void
-    {
-        // The current web_app flow sends only photo_url; it must NOT wipe a set color.
-        Personalization::create([
-            'owner' => $this->owner,
-            'photo_url' => 'https://example.test/old.png',
-            'brand_color' => '#abcabc',
-        ]);
-
-        $this->submit(['photo_url' => 'https://example.test/new.png'])->assertSuccessful();
-
-        $this->assertDatabaseHas('personalizations', [
-            'owner' => $this->owner,
-            'photo_url' => 'https://example.test/new.png',
-            'brand_color' => '#abcabc',
-        ]);
-    }
-
     public function test_updating_color_does_not_wipe_an_existing_logo(): void
     {
         Personalization::create([
             'owner' => $this->owner,
-            'photo_url' => 'https://example.test/logo.png',
+            'photo_url' => 'https://engine.test/storage/logos/x.png',
         ]);
 
-        $this->submit([
-            'photo_url' => 'https://example.test/logo.png',
-            'brand_color' => '#102030',
-        ])->assertSuccessful();
+        $this->submit(['brand_color' => '#102030'])->assertSuccessful();
 
+        // brand_color set; the previously-uploaded logo is left untouched.
         $this->assertDatabaseHas('personalizations', [
             'owner' => $this->owner,
-            'photo_url' => 'https://example.test/logo.png',
+            'photo_url' => 'https://engine.test/storage/logos/x.png',
             'brand_color' => '#102030',
         ]);
     }
