@@ -124,8 +124,18 @@ class ElectionApiController extends Controller
         return new ElectionResource($election);
     }
 
-    public function delete(Election $election, Request $request): bool|null
+    public function delete(Election $election, Request $request): JsonResponse|bool|null
     {
+        // Refuse to delete an election while any of its ballots is open — deleting it
+        // would discard a live vote (and its cast ballots). The caller must close the
+        // open ballot first. This is the authoritative guard; the GUI mirrors it.
+        if ($election->active) {
+            return response()->json(
+                ['error' => 'Cannot delete an election while a ballot is open.'],
+                409
+            );
+        }
+
         return $election->delete();
     }
 }

@@ -153,4 +153,35 @@ class ElectionCrudTest extends TestCase
             ->getJson("/api/election/$el->id")
             ->assertStatus(404);
     }
+
+    public function test_delete_election_blocked_when_ballot_open(): void
+    {
+        $el = Election::factory()->hasBallots(1, ['active' => true])->create();
+
+        $this->withHeaders(['Authorization' => '123123123', 'Owner' => $el->owner])
+            ->deleteJson("/api/election/$el->id")
+            ->assertStatus(409)
+            ->assertJson(['error' => 'Cannot delete an election while a ballot is open.']);
+
+        // The election (and its open ballot) must still exist.
+        $this->assertDatabaseHas('elections', ['id' => $el->id]);
+        $this->withHeaders(['Authorization' => '123123123', 'Owner' => $el->owner])
+            ->getJson("/api/election/$el->id")
+            ->assertStatus(200);
+    }
+
+    public function test_delete_election_allowed_when_ballot_closed(): void
+    {
+        // A finished (but not active) ballot must not block deletion.
+        $el = Election::factory()->hasBallots(1, ['active' => false, 'finished' => true])->create();
+
+        $this->withHeaders(['Authorization' => '123123123', 'Owner' => $el->owner])
+            ->deleteJson("/api/election/$el->id")
+            ->assertStatus(200);
+
+        // Soft-deleted → no longer fetchable.
+        $this->withHeaders(['Authorization' => '123123123', 'Owner' => $el->owner])
+            ->getJson("/api/election/$el->id")
+            ->assertStatus(404);
+    }
 }
