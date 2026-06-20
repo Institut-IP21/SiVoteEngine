@@ -19,13 +19,9 @@
             <span class="text-[11px] font-semibold uppercase tracking-[0.05em] text-muted">{{ $sample->type_name }}</span>
         </div>
         <div class="mt-4">
-            @foreach ($sample->options as $i => $option)
-                <label class="opt-row" for="preview-opt-{{ $i }}">
-                    <span class="opt-ctrl opt-ctrl--radio" aria-hidden="true"></span>
-                    <input type="radio" id="preview-opt-{{ $i }}" name="preview" value="{{ $option }}" disabled />
-                    <span class="opt-row__label">{{ $option }}</span>
-                </label>
-            @endforeach
+            {{-- The real shared option rows — radio for single-choice/Yes-No, checkbox
+                 for approval — so each question type previews faithfully. --}}
+            <x-ballot-option-list :component="$sample" :election="$election" :type="$control" :localize="$localize" />
         </div>
     </div>
 

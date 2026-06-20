@@ -9,6 +9,8 @@ return [
     'preview' => [
         'warning' => 'Ta predogled bo dostopen 15 minut, potem pa boste morali ponovno klikniti na gumb za predogled v nadzorni plošči.',
         'sample_question' => 'Vzorčno vprašanje',
+        'sample_motion' => 'Ali se predlagani sklep sprejme?',
+        'sample_options' => ['Možnost A', 'Možnost B', 'Možnost C'],
     ],
     'result' => [
         'not_yet' => 'Izid glasovanja še ni na voljo.',

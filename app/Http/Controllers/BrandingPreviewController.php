@@ -23,9 +23,42 @@ use Illuminate\Contracts\View\View;
  */
 class BrandingPreviewController extends Controller
 {
+    /**
+     * Per-type sample definitions. The branding page lets the organiser switch the
+     * previewed question type (default Yes/No) so they see their logo + accent colour
+     * on every kind of ballot. Each maps to its real component type + control style.
+     *
+     * Only types whose voter-facing control is faithfully a row of options are listed:
+     * YesNo + FirstPastThePost (radios) and ApprovalVote (checkboxes). RankedChoice is
+     * intentionally omitted — its real voter UI is a ranking interaction, so rendering
+     * it as plain radios here would misrepresent it.
+     *
+     * @var array<string, array{label_key:string, control:string}>
+     */
+    private const SAMPLES = [
+        'YesNo' => ['label_key' => 'ballot.preview.sample_motion', 'control' => 'radio'],
+        'FirstPastThePost' => ['label_key' => 'ballot.preview.sample_question', 'control' => 'radio'],
+        'ApprovalVote' => ['label_key' => 'ballot.preview.sample_question', 'control' => 'checkbox'],
+    ];
+
     public function show(string $owner): Factory|View
     {
         $pers = Personalization::where('owner', $owner)->first();
+
+        // The previewed question type is chosen on the branding page (?type=…),
+        // defaulting to a Yes/No motion. Unknown values fall back to Yes/No.
+        $type = (string) request()->query('type', 'YesNo');
+        if (! array_key_exists($type, self::SAMPLES)) {
+            $type = 'YesNo';
+        }
+        $sample = self::SAMPLES[$type];
+
+        // Sample options, already localized for the org's locale (YesNo uses its real
+        // preset labels; the others use generic localized "Option A/B/C"). Passed with
+        // localize=false since they are final display strings.
+        $options = $type === 'YesNo'
+            ? [__('components.yesno.yes'), __('components.yesno.no')]
+            : array_values((array) __('ballot.preview.sample_options'));
 
         // Transient (never-saved) sample. IDs are arbitrary; nothing is persisted.
         $election = new Election(['title' => 'Sample', 'abstainable' => false, 'owner' => $owner]);
@@ -37,11 +70,11 @@ class BrandingPreviewController extends Controller
         $ballot->setRelation('election', $election);
 
         $component = new BallotComponent([
-            'title' => __('ballot.preview.sample_question'),
+            'title' => __($sample['label_key']),
             'description' => null,
-            'type' => 'FirstPastThePost',
+            'type' => $type,
             'version' => 'v1',
-            'options' => ['Option A', 'Option B', 'Option C'],
+            'options' => $options,
             'order' => 0,
         ]);
         $component->id = 'preview-component';
@@ -51,8 +84,11 @@ class BrandingPreviewController extends Controller
         // (x-ballot-wrapper) the name `$component` is reserved (the component instance).
         return view('branding-preview', [
             'pers' => $pers,
+            'election' => $election,
             'ballot' => $ballot,
             'sample' => $component,
+            'control' => $sample['control'],
+            'localize' => false,
         ]);
     }
 }

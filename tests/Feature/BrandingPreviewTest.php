@@ -23,9 +23,31 @@ class BrandingPreviewTest extends TestCase
 
         $res->assertOk();
         // The real shell + a sample question render (no personalization row needed).
+        // The default sample is a Yes/No motion (radio controls).
         $res->assertSee('ballot-submit', false);
-        $res->assertSee('Option A');
+        $res->assertSee(__('components.yesno.yes'));
         $res->assertSee('opt-ctrl--radio', false);
+    }
+
+    public function test_question_type_is_selectable_via_query(): void
+    {
+        $owner = fake()->uuid();
+
+        // Choose-one shows the lettered options as radios.
+        $fptp = $this->get('/branding-preview/' . $owner . '?type=FirstPastThePost');
+        $fptp->assertOk();
+        $fptp->assertSee('Option A');
+        $fptp->assertSee('opt-ctrl--radio', false);
+
+        // Approval shows checkbox controls.
+        $approval = $this->get('/branding-preview/' . $owner . '?type=ApprovalVote');
+        $approval->assertOk();
+        $approval->assertSee('opt-ctrl--check', false);
+
+        // An unknown type falls back to the Yes/No default rather than erroring.
+        $bogus = $this->get('/branding-preview/' . $owner . '?type=Nonsense');
+        $bogus->assertOk();
+        $bogus->assertSee(__('components.yesno.yes'));
     }
 
     public function test_applies_the_saved_brand_color(): void
