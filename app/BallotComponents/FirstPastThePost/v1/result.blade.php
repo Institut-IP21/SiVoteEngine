@@ -7,7 +7,7 @@ $quorumMet = $quorumMet ?? true;
 <x-ballot-results-table :shareLabel="__('components.share_valid')">
     @foreach ($result['state'] as $option => $votes)
     <div
-        class="flex flex-row {{ $quorumMet && count($result['winners']) > 1 && in_array($option, $result['winners']) ? 'bg-yellow-100' : '' }}{{ $quorumMet && count($result['winners']) === 1 && in_array($option, $result['winners']) ? 'winner bg-green-200' : '' }}">
+        class="flex flex-row {{ $quorumMet && count($result['winners']) > 1 && in_array($option, $result['winners']) ? 'bg-warn-soft' : '' }}{{ $quorumMet && count($result['winners']) === 1 && in_array($option, $result['winners']) ? 'winner bg-secure-soft' : '' }}">
         <x-ballot-results-table-row>
             {{ $option }}
         </x-ballot-results-table-row>
@@ -23,7 +23,7 @@ $quorumMet = $quorumMet ?? true;
 </x-ballot-results-table>
 
 @if ($result['abstentions'] > 0)
-<div class="flex flex-row mt-2 text-gray-600">
+<div class="flex flex-row mt-2 text-muted">
     <x-ballot-results-table-row>
         {{ __('components.fptp.abstain') }}
     </x-ballot-results-table-row>
@@ -34,7 +34,7 @@ $quorumMet = $quorumMet ?? true;
 @endif
 
 @if ($result['invalid'] > 0)
-<div class="flex flex-row text-gray-600">
+<div class="flex flex-row text-muted">
     <x-ballot-results-table-row>
         {{ __('components.fptp.invalid') }}
     </x-ballot-results-table-row>
@@ -45,7 +45,7 @@ $quorumMet = $quorumMet ?? true;
 @endif
 
 @if ($quorumMet && $result['winner'] === 'tie')
-<div class="p-4 text-center block mt-6 bg-yellow-200">
+<div class="p-4 text-center mt-6 rounded-xl font-semibold bg-warn-soft text-warn-fg">
     {{ __('components.fptp.tie') }} {{ implode(', ', $result['winners']) }}
 </div>
 @endif

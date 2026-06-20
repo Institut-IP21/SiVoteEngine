@@ -1,14 +1,14 @@
 @php $quorumMet = $quorumMet ?? true; @endphp
-<div class="something" x-data="{ show_elimination: {{ $quorumMet ? 'false' : 'true' }} }">
+<div x-data="{ show_elimination: {{ $quorumMet ? 'false' : 'true' }} }">
     @if ($quorumMet)
     @if ($results[$component->id]['results']['result']['conclussive'])
-    <button class="w-full text-center bg-green-200 hover:bg-green-400 p-3"
+    <button class="w-full text-center rounded-xl font-semibold p-3 bg-secure-soft text-secure hover:brightness-95 transition"
         x-on:click="show_elimination = !show_elimination">
         {{ __('components.rankedchoice.winner_is') }}
         {{ $results[$component->id]['results']['result']['conclussive_winner'] }}
     </button>
     @else
-    <button class="w-full text-center bg-yellow-200 hover:bg-yellow-400 p-3"
+    <button class="w-full text-center rounded-xl font-semibold p-3 bg-warn-soft text-warn-fg hover:brightness-95 transition"
         x-on:click="show_elimination = !show_elimination">
         {{ __('components.rankedchoice.no_winner') }}
         {{ implode(', ', $results[$component->id]['results']['result']['winners']) }}.

@@ -20,6 +20,11 @@
     --color-warn-soft: #fff4e5;
     --color-warn-line: #f0d9a8;
     --color-warn-fg: #8a5a12;
+    /* Verdict semantics on the results page — mirrors web_app's secure/danger. */
+    --color-secure: #13a04a;
+    --color-secure-soft: #e9f8ef;
+    --color-danger: #c0392b;
+    --color-danger-soft: #fdece9;
 }
 
 [x-cloak] { display: none !important; }

@@ -71,12 +71,12 @@ class BallotQuorumRenderTest extends TestCase
         // Prominent "result not binding" message.
         $response->assertSeeText($this->bannerText($ballot));
         // #6: a SINGLE quorum warning — the old separate red banner (border-red-400) is
-        // gone; everything is now in the one panel (border-red-300).
+        // gone; everything is now in the one panel (#3 tokenized it to border-danger).
         $response->assertDontSee('border-red-400', false);
         // Tallies still render (Ana row visible).
         $response->assertSeeText('Ana');
         // No winner highlight when quorum fails.
-        $response->assertDontSee('winner bg-green-200', false);
+        $response->assertDontSee('winner bg-secure-soft', false);
     }
 
     public function test_quorum_met_shows_winner_and_no_banner(): void
@@ -89,7 +89,7 @@ class BallotQuorumRenderTest extends TestCase
         $response->assertOk();
         $response->assertDontSeeText($this->bannerText($ballot));
         // The winning option is highlighted.
-        $response->assertSee('winner bg-green-200', false);
+        $response->assertSee('winner bg-secure-soft', false);
     }
 
     public function test_null_quorum_shows_winner_and_no_banner(): void
@@ -100,6 +100,6 @@ class BallotQuorumRenderTest extends TestCase
 
         $response->assertOk();
         $response->assertDontSeeText('result not binding');
-        $response->assertSee('winner bg-green-200', false);
+        $response->assertSee('winner bg-secure-soft', false);
     }
 }

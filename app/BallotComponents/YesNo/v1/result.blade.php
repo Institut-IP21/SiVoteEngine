@@ -7,7 +7,7 @@ $quorumMet = $quorumMet ?? true;
 <x-ballot-results-table :shareLabel="__('components.share_valid')">
     @foreach ($result['state'] as $option => $votes)
     <div
-        class="flex flex-row {{ $quorumMet && $result['passed'] && in_array($option, $result['winners']) ? 'winner bg-green-200' : '' }}">
+        class="flex flex-row {{ $quorumMet && $result['passed'] && in_array($option, $result['winners']) ? 'winner bg-secure-soft' : '' }}">
         <x-ballot-results-table-row>
             {{ __("components.yesno.$option") }}
         </x-ballot-results-table-row>
@@ -21,7 +21,7 @@ $quorumMet = $quorumMet ?? true;
     @endforeach
 
     @if ($result['abstentions'] > 0)
-    <div class="flex flex-row text-gray-500">
+    <div class="flex flex-row text-muted">
         <x-ballot-results-table-row>
             {{ __('components.yesno.abstain') }}
         </x-ballot-results-table-row>
@@ -33,7 +33,7 @@ $quorumMet = $quorumMet ?? true;
     @endif
 
     @if ($result['invalid'] > 0)
-    <div class="flex flex-row text-gray-500">
+    <div class="flex flex-row text-muted">
         <x-ballot-results-table-row>
             {{ __('components.yesno.invalid') }}
         </x-ballot-results-table-row>
@@ -47,15 +47,15 @@ $quorumMet = $quorumMet ?? true;
 
 @if ($quorumMet)
 @if ($result['passed'])
-<div class="p-4 text-center block mt-6 bg-green-200">
+<div class="p-4 text-center mt-6 rounded-xl font-semibold bg-secure-soft text-secure">
     {{ __('components.yesno.carried') }}
 </div>
 @elseif ($result['winner'] === 'tie')
-<div class="p-4 text-center block mt-6 bg-yellow-200">
+<div class="p-4 text-center mt-6 rounded-xl font-semibold bg-warn-soft text-warn-fg">
     {{ __('components.yesno.not_carried_tied', ['yes' => $result['state']['yes'] ?? 0, 'no' => $result['state']['no'] ?? 0]) }}
 </div>
 @else
-<div class="p-4 text-center block mt-6 bg-yellow-200">
+<div class="p-4 text-center mt-6 rounded-xl font-semibold bg-warn-soft text-warn-fg">
     {{ __('components.yesno.not_carried') }}
 </div>
 @endif

@@ -6,24 +6,26 @@
 <x-ballot-wrapper :pers="$pers">
     <x-ballot-logo :pers="$pers" />
 
-    <div class="text-center w-full mt-10 pb-12">
-        <h1 class="text-2xl sm:text-3xl font-bold">
-            Rezultati glasovanja:
-        </h1>
-        <div class="text-1xl sm:text-2xl font-bold" style="overflow-wrap:anywhere">
-            {{ $ballot->title }}
+    {{-- Results header — same eyebrow + heading treatment as the voting shell (x-ballot-title). --}}
+    <div class="text-center mb-7 sm:mb-9">
+        <div class="text-[11px] uppercase tracking-[0.09em] text-muted font-bold mb-1.5">
+            {{ __('ballot.result.title') }}
         </div>
+        <h1 class="text-[25px] sm:text-[31px] leading-[1.12] font-extrabold tracking-[-0.02em] text-ink"
+            style="overflow-wrap:anywhere">
+            {{ $ballot->title }}
+        </h1>
     </div>
 
-    {{-- Single quorum panel (#6): figures + verdict in ONE box. Green when met; red
-         and stating "result not binding" (D11) when not — no second warning. The
-         component result views still suppress the winner verdict when quorum_met is false. --}}
+    {{-- Single quorum panel (#6): figures + verdict in ONE box. Secure (green) when met;
+         danger (red) and stating "result not binding" (D11) when not — no second warning.
+         The component result views still suppress the winner verdict when quorum_met is false. --}}
     @if ($ballot->quorum)
-    <div class="w-full max-w-xl mx-auto mb-8 rounded-lg p-4 text-center font-semibold
-        {{ $ballot->quorum_met ? 'bg-green-100 text-green-800 border border-green-300' : 'bg-red-100 text-red-800 border border-red-300' }}">
+    <div class="w-full max-w-xl mx-auto mb-8 rounded-2xl border p-4 text-center font-semibold
+        {{ $ballot->quorum_met ? 'bg-secure-soft text-secure border-secure' : 'bg-danger-soft text-danger border-danger' }}">
         @if ($ballot->quorum_met)
             <div class="text-lg">{{ __('ballot.quorum.met') }}</div>
-            <div class="text-sm font-normal mt-1">
+            <div class="text-sm font-normal mt-1 text-ink">
                 {{ trans_choice('ballot.quorum.status', $ballot->votes_count, ['votes' => $ballot->votes_count, 'quorum' => $ballot->quorum]) }}
             </div>
         @else
@@ -33,20 +35,23 @@
     @endif
 
     @if ($ballot->components)
-    <div class="h-full flex flex-col mt-3 sm:mt-8">
-        @foreach ($ballot->components as $component)
-        <div class="w-full rounded overflow-hidden shadow bg-white mb-10 p-5 sm:px-8 sm:pt-7 sm:pb-8">
-            <x-ballot-component.title :component="$component" />
-
-            <x-ballot-component.desc :component="$component" />
-            <div class="px-7">
-                @include($component->result_template, ['component' => $component, 'election' => $election, 'quorumMet' => $ballot->quorum_met])
-            </div>
+        <div class="flex flex-col gap-4">
+            @foreach ($ballot->components as $component)
+                <div class="bg-white border border-line rounded-2xl shadow-[0_1px_2px_rgba(16,30,40,.05)] p-5 sm:p-6">
+                    <x-ballot-component.title :component="$component" />
+                    <x-ballot-component.desc :component="$component" />
+                    <div class="mt-4">
+                        @include($component->result_template, ['component' => $component, 'election' => $election, 'quorumMet' => $ballot->quorum_met])
+                    </div>
+                </div>
+            @endforeach
         </div>
-        @endforeach
-    </div>
+
+        <p class="mt-5 mb-10 text-center text-[11px] leading-relaxed text-muted">
+            {{ __('ballot.powered_by') }}
+        </p>
     @else
-    <span class="mx-auto">No components!</span>
+        <p class="text-center text-muted py-10">{{ __('ballot.no_questions') }}</p>
     @endif
 </x-ballot-wrapper>
 @endsection
