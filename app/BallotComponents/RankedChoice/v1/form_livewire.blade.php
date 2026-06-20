@@ -14,7 +14,9 @@
             <ul data-rc-sortable wire:key="ranked-list">
                 @foreach ($selected as $option)
                     <li class="rc-ranked" data-name="{{ $option['name'] }}" wire:key="r-{{ md5($option['name']) }}">
-                        <span class="rc-grip" aria-hidden="true" title="{{ __('components.rankedchoice.drag') }}">⠿</span>
+                        <span class="rc-grip" aria-hidden="true" title="{{ __('components.rankedchoice.drag') }}">
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h16M4 16h16" /></svg>
+                        </span>
                         <button type="button" class="rc-badge"
                             wire:click="moveToTop(@js($option['name']))"
                             aria-label="{{ __('components.rankedchoice.move_top', ['name' => $option['name']]) }}">{{ $option['rank'] }}</button>
@@ -23,12 +25,12 @@
                         <span class="rc-break" aria-hidden="true"></span>
                         <span class="flex items-center gap-0.5 sm:ml-auto">
                             <button type="button" class="rc-ico" wire:click="up(@js($option['name']))" @disabled($loop->first)
-                                aria-label="{{ __('components.rankedchoice.move_up', ['name' => $option['name']]) }}">↑</button>
+                                aria-label="{{ __('components.rankedchoice.move_up', ['name' => $option['name']]) }}"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 15l7-7 7 7" /></svg></button>
                             <button type="button" class="rc-ico" wire:click="down(@js($option['name']))" @disabled($loop->last)
-                                aria-label="{{ __('components.rankedchoice.move_down', ['name' => $option['name']]) }}">↓</button>
+                                aria-label="{{ __('components.rankedchoice.move_down', ['name' => $option['name']]) }}"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 9l-7 7-7-7" /></svg></button>
                             <span class="w-px h-5 bg-line mx-1" aria-hidden="true"></span>
                             <button type="button" class="rc-ico rc-ico--rm" wire:click="remove(@js($option['name']))"
-                                aria-label="{{ __('components.rankedchoice.remove', ['name' => $option['name']]) }}">✕</button>
+                                aria-label="{{ __('components.rankedchoice.remove', ['name' => $option['name']]) }}"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18L18 6M6 6l12 12" /></svg></button>
                         </span>
                     </li>
                 @endforeach
