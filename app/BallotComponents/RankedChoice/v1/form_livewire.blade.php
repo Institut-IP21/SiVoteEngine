@@ -5,6 +5,13 @@
         {{ __('components.rankedchoice.counter', ['selected' => $selected->count(), 'total' => $total]) }}
     </p>
 
+    {{-- Ranked choice abstains implicitly (by ranking nothing). When the election allows
+         abstaining and nothing is ranked yet, say so explicitly — other question types
+         show an "abstain" option, this one can't. --}}
+    @if ($abstainable && $selected->isEmpty())
+        <div class="mb-3.5"><x-ballot-alert :icon="false">{{ __('components.rankedchoice.abstain_note') }}</x-ballot-alert></div>
+    @endif
+
     {{-- Screen-reader announcement for every add / move / remove --}}
     <div class="sr-only" role="status" aria-live="polite">{{ $announce }}</div>
 
@@ -20,7 +27,7 @@
                         <button type="button" class="rc-badge"
                             wire:click="moveToTop(@js($option['name']))"
                             aria-label="{{ __('components.rankedchoice.move_top', ['name' => $option['name']]) }}">{{ $option['rank'] }}</button>
-                        <span class="flex-1 min-w-0 text-[15px] font-semibold text-brand-fg leading-snug"
+                        <span class="flex-1 min-w-0 text-[15px] font-semibold text-ink leading-snug" style="overflow-wrap:anywhere"
                             aria-label="{{ __('components.rankedchoice.position', ['name' => $option['name'], 'rank' => $option['rank'], 'total' => $selected->count()]) }}">{{ $option['name'] }}</span>
                         <span class="rc-break" aria-hidden="true"></span>
                         <span class="flex items-center gap-0.5 sm:ml-auto">
@@ -46,7 +53,7 @@
                 <button type="button" class="rc-unranked" wire:click="select(@js($option['name']))" wire:key="u-{{ md5($option['name']) }}"
                     aria-label="{{ __('components.rankedchoice.add', ['name' => $option['name']]) }}">
                     <span class="rc-badge-empty" aria-hidden="true"></span>
-                    <span class="flex-1 min-w-0 text-[15px] text-ink leading-snug">{{ $option['name'] }}</span>
+                    <span class="flex-1 min-w-0 text-[15px] text-ink leading-snug" style="overflow-wrap:anywhere">{{ $option['name'] }}</span>
                     <span class="text-[13px] font-bold text-brand-dark flex-shrink-0">{{ __('components.rankedchoice.add_short') }}</span>
                 </button>
             @endforeach

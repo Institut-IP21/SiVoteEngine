@@ -33,6 +33,7 @@ return [
         'name' => 'Ranked choice question',
         'description' => 'Voters rank multiple options in order of their preference.',
         'hint' => 'Tap in order — 1 = favourite. Rank as many or as few as you like; you need not rank all.',
+        'abstain_note' => 'No options ranked — submitting this question blank counts as abstaining.',
         'counter' => 'Ranked: :selected of :total',
         'remaining' => 'Remaining options',
         'add' => 'Add :name to your ranking',

@@ -33,6 +33,7 @@ return [
         'name' => 'Razvrščanje vrednosti',
         'description' => 'Glasovalci seznam možnosti uredijo po vrsti glede na preferenco.',
         'hint' => 'Pritisnite po vrsti — 1 = najljubši. Razvrstite poljubno število; ni treba razvrstiti vseh.',
+        'abstain_note' => 'Nobena možnost ni razvrščena — oddaja praznega vprašanja pomeni vzdržanost.',
         'counter' => 'Razvrščeni: :selected od :total',
         'remaining' => 'Preostale možnosti',
         'add' => 'Dodaj :name na seznam',

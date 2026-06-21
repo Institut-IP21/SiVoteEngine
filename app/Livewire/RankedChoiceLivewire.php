@@ -27,10 +27,15 @@ class RankedChoiceLivewire extends Component
     #[Locked]
     public string $announce = '';
 
+    /** Whether the election allows abstaining (ranking nothing = an abstention here). */
+    #[Locked]
+    public bool $abstainable = false;
+
     public function mount(Ballot $ballot, BallotComponent $component): void
     {
         $this->ballot = $ballot;
         $this->component = $component;
+        $this->abstainable = (bool) $ballot->election?->abstainable;
         $this->rankees = collect($this->component->options)->map(fn($option) => [
             'name' => $option,
             'rank' => null
