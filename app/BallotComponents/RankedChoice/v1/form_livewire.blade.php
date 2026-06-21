@@ -27,8 +27,11 @@
                         <button type="button" class="rc-badge"
                             wire:click="moveToTop(@js($option['name']))"
                             aria-label="{{ __('components.rankedchoice.move_top', ['name' => $option['name']]) }}">{{ $option['rank'] }}</button>
-                        <span class="flex-1 min-w-0 text-[15px] font-semibold text-ink leading-snug" style="overflow-wrap:anywhere"
-                            aria-label="{{ __('components.rankedchoice.position', ['name' => $option['name'], 'rank' => $option['rank'], 'total' => $selected->count()]) }}">{{ $option['name'] }}</span>
+                        @include($component->component_path . '/_option_label', [
+                            'name' => $option['name'],
+                            'bold' => true,
+                            'ariaLabel' => __('components.rankedchoice.position', ['name' => $option['name'], 'rank' => $option['rank'], 'total' => $selected->count()]),
+                        ])
                         <span class="rc-break" aria-hidden="true"></span>
                         <span class="flex items-center gap-0.5 sm:ml-auto">
                             <button type="button" class="rc-ico" wire:click="up(@js($option['name']))" @disabled($loop->first)
@@ -50,12 +53,7 @@
                 <p class="mb-2 text-[11px] uppercase tracking-[0.07em] font-bold text-muted">{{ __('components.rankedchoice.remaining') }}</p>
             @endif
             @foreach ($unselected as $option)
-                <button type="button" class="rc-unranked" wire:click="select(@js($option['name']))" wire:key="u-{{ md5($option['name']) }}"
-                    aria-label="{{ __('components.rankedchoice.add', ['name' => $option['name']]) }}">
-                    <span class="rc-badge-empty" aria-hidden="true"></span>
-                    <span class="flex-1 min-w-0 text-[15px] text-ink leading-snug" style="overflow-wrap:anywhere">{{ $option['name'] }}</span>
-                    <span class="text-[13px] font-bold text-brand-dark flex-shrink-0">{{ __('components.rankedchoice.add_short') }}</span>
-                </button>
+                @include($component->component_path . '/_unranked_option', ['name' => $option['name'], 'interactive' => true])
             @endforeach
         @endif
 

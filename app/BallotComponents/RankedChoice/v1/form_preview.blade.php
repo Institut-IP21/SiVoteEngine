@@ -11,11 +11,7 @@
 
     <div class="rc-interactive" style="pointer-events:none" aria-hidden="true">
         @foreach ($options as $option)
-            <div class="rc-unranked" data-rc-preview-option>
-                <span class="rc-badge-empty" aria-hidden="true"></span>
-                <span class="flex-1 min-w-0 text-[15px] text-ink leading-snug" style="min-width:0;overflow-wrap:anywhere">{{ $option }}</span>
-                <span class="text-[13px] font-bold text-brand-dark flex-shrink-0">{{ __('components.rankedchoice.add_short') }}</span>
-            </div>
+            @include($component->component_path . '/_unranked_option', ['name' => $option])
         @endforeach
     </div>
 
