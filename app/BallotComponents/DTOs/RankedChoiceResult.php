@@ -15,12 +15,16 @@ final readonly class RankedChoiceResult implements ComponentResult
     /**
      * @param array<int, array<string, mixed>> $rounds Elimination rounds (flat, oldest first)
      * @param array<string> $winners Conclusive winner (1) or the tied labels (non-conclusive)
+     * @param array{cast?: int, blank?: int, invalid_only?: int, counted?: int} $accounting Ballot reconciliation (audit)
+     * @param array<string, array<int, int>> $preferences First-preference position matrix (option × rank), audit cross-check
      */
     public function __construct(
         public array $rounds,
         public array $winners,
         public bool $conclusive,
         public ?string $conclusiveWinner,
+        public array $accounting = [],
+        public array $preferences = [],
     ) {}
 
     public static function empty(): self
@@ -39,8 +43,10 @@ final readonly class RankedChoiceResult implements ComponentResult
      * (conclusive) or null with an optional `tied` list (non-conclusive).
      *
      * @param array<int, array<string, mixed>> $rounds
+     * @param array{cast?: int, blank?: int, invalid_only?: int, counted?: int} $accounting
+     * @param array<string, array<int, int>> $preferences
      */
-    public static function fromRounds(array $rounds): self
+    public static function fromRounds(array $rounds, array $accounting = [], array $preferences = []): self
     {
         if ($rounds === []) {
             return self::empty();
@@ -51,7 +57,7 @@ final readonly class RankedChoiceResult implements ComponentResult
         // PHPStan sees this as always-true, but the runtime check is retained.
         // @phpstan-ignore-next-line function.alreadyNarrowedType
         if (!is_array($final)) {
-            return new self(rounds: $rounds, winners: [], conclusive: false, conclusiveWinner: null);
+            return new self(rounds: $rounds, winners: [], conclusive: false, conclusiveWinner: null, accounting: $accounting, preferences: $preferences);
         }
 
         $winner = $final['winner'] ?? null;
@@ -62,6 +68,8 @@ final readonly class RankedChoiceResult implements ComponentResult
                 winners: [$winner],
                 conclusive: true,
                 conclusiveWinner: $winner,
+                accounting: $accounting,
+                preferences: $preferences,
             );
         }
 
@@ -76,6 +84,8 @@ final readonly class RankedChoiceResult implements ComponentResult
             winners: $tied,
             conclusive: false,
             conclusiveWinner: null,
+            accounting: $accounting,
+            preferences: $preferences,
         );
     }
 
@@ -89,6 +99,8 @@ final readonly class RankedChoiceResult implements ComponentResult
                 'conclussive' => $this->conclusive, // Note: preserving original typo for view compatibility
                 'conclussive_winner' => $this->conclusiveWinner,
             ],
+            'accounting' => $this->accounting,
+            'preferences' => $this->preferences,
         ];
     }
 }

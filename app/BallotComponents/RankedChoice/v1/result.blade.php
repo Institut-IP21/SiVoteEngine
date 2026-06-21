@@ -22,6 +22,10 @@
     $leadName = array_key_first($standing);
     $leadVotes = $leadName === null ? 0 : $standing[$leadName];
     $leadPct = (int) round($leadVotes / $denom * 100);
+
+    // Audit cross-checks (see the disclosure below).
+    $accounting = is_array($res['accounting'] ?? null) ? $res['accounting'] : [];
+    $preferences = is_array($res['preferences'] ?? null) ? $res['preferences'] : [];
 @endphp
 <div x-data="{ open: false }">
     {{-- Plain-language outcome — always visible, no rounds/transfers/exhausted jargon. --}}
@@ -91,11 +95,58 @@
             <span>{{ __('components.rankedchoice.how_counted') }}</span>
             <svg class="w-4 h-4 flex-shrink-0" style="transition: transform .15s ease" x-bind:style="open ? 'transform: rotate(180deg)' : ''" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6" /></svg>
         </button>
-        <div class="mt-3 flex flex-col gap-3" x-show="open" style="display: none;">
+        <div class="mt-3 flex flex-col gap-5" x-show="open" style="display: none;">
             <p class="text-[13px] text-muted leading-relaxed">{{ __('components.rankedchoice.how_counted_hint') }}</p>
-            @foreach ($rounds as $i => $round)
-            @include($component->component_path . '/round', ['round' => $round, 'component' => $component, 'i' => $i, 'round_prefix' => ''])
-            @endforeach
+
+            {{-- Round-by-round narrative: count → eliminate → transfer → carry forward. --}}
+            <div class="flex flex-col gap-3">
+                @foreach ($rounds as $i => $round)
+                @include($component->component_path . '/round', ['round' => $round, 'next' => $rounds[$i + 1] ?? null, 'component' => $component, 'i' => $i, 'total' => $roundCount])
+                @if ($i + 1 < $roundCount)
+                <p class="text-center text-[11px] text-muted">{{ __('components.rankedchoice.carried_into', ['n' => $i + 2]) }}</p>
+                @endif
+                @endforeach
+            </div>
+
+            {{-- Full tabulation matrix (dense cross-check). --}}
+            <div>
+                <p class="mb-2 text-[11px] uppercase tracking-[0.07em] font-bold text-muted">{{ __('components.rankedchoice.full_tabulation') }}</p>
+                @include($component->component_path . '/tabulation', ['rounds' => $rounds, 'component' => $component])
+            </div>
+
+            {{-- First-preference position matrix (independent cross-check on round 1). --}}
+            @if ($preferences !== [])
+            <div>
+                <p class="mb-1 text-[11px] uppercase tracking-[0.07em] font-bold text-muted">{{ __('components.rankedchoice.first_preferences') }}</p>
+                <p class="mb-2 text-[12px] text-muted leading-relaxed">{{ __('components.rankedchoice.first_preferences_hint') }}</p>
+                @include($component->component_path . '/preferences', ['preferences' => $preferences, 'component' => $component])
+            </div>
+            @endif
+
+            {{-- Ballot accounting — so the totals visibly reconcile. --}}
+            @if ($accounting !== [])
+            <div>
+                <p class="mb-2 text-[11px] uppercase tracking-[0.07em] font-bold text-muted">{{ __('components.rankedchoice.accounting') }}</p>
+                <dl class="text-sm divide-y" style="border:1px solid var(--color-line); border-radius:.75rem">
+                    <div class="flex justify-between gap-3 px-3 py-2" style="border-bottom:1px solid var(--color-line)">
+                        <dt class="text-muted">{{ __('components.rankedchoice.acc_cast') }}</dt>
+                        <dd class="font-semibold text-ink">{{ $accounting['cast'] ?? 0 }}</dd>
+                    </div>
+                    <div class="flex justify-between gap-3 px-3 py-2" style="border-bottom:1px solid var(--color-line)">
+                        <dt class="text-muted">{{ __('components.rankedchoice.acc_counted') }}</dt>
+                        <dd class="font-semibold text-ink">{{ $accounting['counted'] ?? 0 }}</dd>
+                    </div>
+                    <div class="flex justify-between gap-3 px-3 py-2" style="border-bottom:1px solid var(--color-line)">
+                        <dt class="text-muted">{{ __('components.rankedchoice.acc_blank') }}</dt>
+                        <dd class="font-semibold text-ink">{{ $accounting['blank'] ?? 0 }}</dd>
+                    </div>
+                    <div class="flex justify-between gap-3 px-3 py-2">
+                        <dt class="text-muted">{{ __('components.rankedchoice.acc_invalid') }}</dt>
+                        <dd class="font-semibold text-ink">{{ $accounting['invalid_only'] ?? 0 }}</dd>
+                    </div>
+                </dl>
+            </div>
+            @endif
         </div>
     </div>
     @endif

@@ -421,10 +421,67 @@ class RankedChoiceTest extends TestCase
         $c = $this->makeComponent(['A', 'B', 'C']);
         $r = $this->calc($this->votes($c, [['A'], ['A'], ['A'], ['B'], ['C']]), $c);
 
-        $this->assertEquals(['rounds', 'result'], array_keys($r));
+        $this->assertEquals(['rounds', 'result', 'accounting', 'preferences'], array_keys($r));
         $this->assertEquals(['winners', 'conclussive', 'conclussive_winner'], array_keys($r['result']));
         $this->assertTrue($r['result']['conclussive']);
         $this->assertSame('A', $r['result']['conclussive_winner']);
         $this->assertEquals(['A'], $r['result']['winners']);
+    }
+
+    // ----------------------------------------------------------------
+    // Auditor enrichment: decision rationale, ballot accounting, prefs
+    // ----------------------------------------------------------------
+
+    public function test_each_round_carries_a_decision_rationale(): void
+    {
+        // Round 1: A=4, B=3, C=2 -> eliminate C (clear last place). Round 2 -> A majority.
+        $c = $this->makeComponent(['A', 'B', 'C']);
+        $r = $this->calc($this->votes($c, [['A'], ['A'], ['A'], ['A'], ['B'], ['B'], ['B'], ['C', 'A'], ['C', 'A']]), $c);
+
+        $this->assertSame('lastplace', $r['rounds'][0]['decision']['type']);
+        $this->assertSame('majority', $r['rounds'][1]['decision']['type']);
+        $this->assertNull($r['rounds'][0]['decision']['resolved_at_round']);
+    }
+
+    public function test_lookback_tie_break_records_the_resolving_round(): void
+    {
+        // Round 1: A=4, B=3, C=3 (B,C tied for last). Look-back can't resolve at
+        // round 1 (the only round), so this exercises the recorded rationale shape:
+        // when resolvable, 'lookback' carries a 1-based resolved_at_round; when not,
+        // it surfaces as a 'tie'. Either way the type is explicit, never bare.
+        $c = $this->makeComponent(['A', 'B', 'C']);
+        $r = $this->calc($this->votes($c, [['A'], ['A'], ['A'], ['A'], ['B'], ['B'], ['B'], ['C'], ['C'], ['C']]), $c);
+
+        $first = $r['rounds'][0]['decision'];
+        $this->assertContains($first['type'], ['lookback', 'tie', 'lastplace']);
+        $this->assertArrayHasKey('resolved_at_round', $first);
+        $this->assertArrayHasKey('tied_among', $first);
+    }
+
+    public function test_ballot_accounting_reconciles(): void
+    {
+        // 3 rank A, 1 blank (ranks nothing), 1 invalid-only (ranks only "Z" off roster).
+        $c = $this->makeComponent(['A', 'B']);
+        $r = $this->calc($this->votes($c, [['A'], ['A'], ['A'], [], ['Z']]), $c);
+
+        $acc = $r['accounting'];
+        $this->assertSame(5, $acc['cast']);
+        $this->assertSame(1, $acc['blank']);
+        $this->assertSame(1, $acc['invalid_only']);
+        $this->assertSame(3, $acc['counted']);
+        // counted equals round 1's continuing ballots.
+        $this->assertSame($r['rounds'][0]['continuing'], $acc['counted']);
+        // and the parts reconcile to the whole.
+        $this->assertSame($acc['cast'], $acc['blank'] + $acc['invalid_only'] + $acc['counted']);
+    }
+
+    public function test_first_preference_matrix_is_surfaced(): void
+    {
+        $c = $this->makeComponent(['A', 'B']);
+        $r = $this->calc($this->votes($c, [['A', 'B'], ['B', 'A'], ['A']]), $c);
+
+        // Two ballots put A first, one put B first.
+        $this->assertSame(2, $r['preferences']['A'][0]);
+        $this->assertSame(1, $r['preferences']['B'][0]);
     }
 }

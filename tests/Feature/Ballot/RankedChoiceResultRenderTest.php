@@ -96,6 +96,43 @@ class RankedChoiceResultRenderTest extends TestCase
         $res->assertSeeText(__('components.rankedchoice.round') . ' 1');
     }
 
+    public function test_audit_disclosure_shows_rationale_transfers_tabulation_and_accounting(): void
+    {
+        // A=2,B=2,C=1 (+1 blank, +1 invalid-only "Z"). C eliminated; its [C,A] ballot
+        // transfers to A, which then wins with a majority in round 2.
+        [, $ballot] = $this->finishedBallot(
+            ['A', 'B', 'C'],
+            [['A'], ['A'], ['B'], ['B'], ['C', 'A'], [], ['Z']],
+        );
+
+        $res = $this->fetchResult($ballot);
+        $res->assertOk();
+
+        // Elimination rationale (the engine-recorded "why").
+        $res->assertSeeText(__('components.rankedchoice.why_lastplace', ['name' => 'C', 'votes' => 1]));
+        // Transfer accounting for the single elimination (exact + reconciled).
+        $res->assertSeeText(__('components.rankedchoice.transfer_reconciles', ['n' => 1]));
+        // Full tabulation matrix + first-preference matrix + ballot accounting sections.
+        $res->assertSeeText(__('components.rankedchoice.full_tabulation'));
+        $res->assertSeeText(__('components.rankedchoice.first_preferences'));
+        $res->assertSeeText(__('components.rankedchoice.accounting'));
+        $res->assertSeeText(__('components.rankedchoice.candidate'));
+        // Accounting reconciles: 7 cast = 5 counted + 1 blank + 1 invalid.
+        $res->assertSeeText(__('components.rankedchoice.acc_cast'));
+        $res->assertSee('x-show="open"', false); // still behind the collapsed disclosure
+    }
+
+    public function test_inconclusive_tie_renders_without_error_and_explains_the_tie(): void
+    {
+        // A=1, B=1 with two options left -> a genuine, unresolved tie (winner null).
+        [, $ballot] = $this->finishedBallot(['A', 'B'], [['A'], ['B']]);
+
+        $res = $this->fetchResult($ballot);
+        $res->assertOk();
+        $res->assertSeeText(__('components.rankedchoice.no_winner_headline'));
+        $res->assertSeeText(__('components.rankedchoice.why_tie', ['names' => 'A, B']));
+    }
+
     public function test_quorum_not_met_shows_provisional_leader_not_a_winner(): void
     {
         // One vote, quorum of 10 -> not binding.

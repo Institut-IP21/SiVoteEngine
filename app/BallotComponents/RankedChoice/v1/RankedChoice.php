@@ -62,7 +62,58 @@ final class RankedChoice extends AbstractBallotComponent
 
         $rounds = $this->runIteration($votes, $component);
 
-        return RankedChoiceResult::fromRounds($rounds);
+        return RankedChoiceResult::fromRounds(
+            $rounds,
+            $this->accountBallots($votes, $component),
+            $this->getTotals($votes, $component),
+        );
+    }
+
+    /**
+     * Ballot accounting for the audit view (secrecy-safe aggregates): how many
+     * ballots were cast, left this question BLANK (ranked nothing), or were
+     * INVALID for it (ranked only options outside the roster — the engine drops
+     * these silently, so an auditor cannot otherwise reconcile the totals). The
+     * remainder (`counted`) equals the first round's CONTINUING ballots.
+     *
+     * @param Collection<int, \App\Models\Vote> $votes
+     * @return array{cast: int, blank: int, invalid_only: int, counted: int}
+     */
+    private function accountBallots(Collection $votes, BallotComponent $component): array
+    {
+        /** @var list<string> $valid */
+        $valid = array_values(array_map('strval', $component->options ?? []));
+        $cast = $votes->count();
+        $blank = 0;
+        $invalidOnly = 0;
+
+        foreach ($votes as $vote) {
+            $values = $vote->values ?? null;
+            $ranking = (is_array($values) && array_key_exists($component->id, $values)) ? $values[$component->id] : null;
+
+            if (!is_array($ranking) || count($ranking) === 0) {
+                $blank++;
+                continue;
+            }
+
+            $rankedAnyValid = false;
+            foreach ($ranking as $pref) {
+                if (is_scalar($pref) && in_array((string) $pref, $valid, true)) {
+                    $rankedAnyValid = true;
+                    break;
+                }
+            }
+            if (!$rankedAnyValid) {
+                $invalidOnly++;
+            }
+        }
+
+        return [
+            'cast' => $cast,
+            'blank' => $blank,
+            'invalid_only' => $invalidOnly,
+            'counted' => $cast - $blank - $invalidOnly,
+        ];
     }
 
     /**
@@ -104,14 +155,17 @@ final class RankedChoice extends AbstractBallotComponent
             $round = $this->decorateRound($state, $continuing, $exhausted);
             if ($top === 0) {
                 $round['winner'] = null;
+                $round['decision'] = $this->decision('exhausted_all');
                 return [...$rounds, $round];
             }
             $winners = array_keys($state, $top, true);
             if (count($winners) > 1) {
                 $round['winner'] = null;
                 $round['tied'] = array_map('strval', $winners);
+                $round['decision'] = $this->decision('tie', array_map('strval', $winners));
             } else {
                 $round['winner'] = (string) $winners[0];
+                $round['decision'] = $this->decision($hasMajority ? 'majority' : 'final_two');
             }
             return [...$rounds, $round];
         }
@@ -120,34 +174,55 @@ final class RankedChoice extends AbstractBallotComponent
         $min = min($state);
         /** @var list<string> $omitees */
         $omitees = array_map('strval', array_keys($state, $min, true));
+        $decision = $this->decision('lastplace');
 
         if ($min === 0) {
             // Zero-vote batch elimination (D6.1): drop every zero-vote option.
             if (count($omitees) === count($state)) {
                 $round = $this->decorateRound($state, $continuing, $exhausted);
                 $round['winner'] = null;
+                $round['decision'] = $this->decision('exhausted_all');
                 return [...$rounds, $round];
             }
             $eliminate = $omitees;
+            $decision = $this->decision('zerobatch', $omitees);
         } elseif (count($omitees) === 1) {
             $eliminate = $omitees[0];
         } else {
             // Non-zero last-place tie (D6.2/D6.3): deterministic look-back.
-            $eliminate = $this->breakTieByLookback($omitees, $rounds);
-            if ($eliminate === null) {
+            $lookback = $this->breakTieByLookback($omitees, $rounds);
+            if ($lookback === null) {
                 $round = $this->decorateRound($state, $continuing, $exhausted);
                 $round['winner'] = null;
                 $round['tied'] = $omitees;
+                $round['decision'] = $this->decision('tie', $omitees);
                 return [...$rounds, $round];
             }
+            $eliminate = $lookback['option'];
+            // resolved_at_round is 1-based for display.
+            $decision = $this->decision('lookback', $omitees, $lookback['round'] + 1);
         }
 
         $round = $this->decorateRound($state, $continuing, $exhausted);
         $round = $this->annotateStateForOmission($round, $omit, $eliminate);
+        $round['decision'] = $decision;
         $nextOmit = is_array($eliminate) ? [...$omit, ...$eliminate] : [...$omit, $eliminate];
         $rounds = [...$rounds, $round];
 
         return $this->runIteration($votes, $component, $rounds, $nextOmit);
+    }
+
+    /**
+     * Build a round's elimination/outcome rationale (the one audit fact not
+     * derivable from the tallies alone — notably which prior round broke a
+     * look-back tie). $type ∈ majority|final_two|lastplace|zerobatch|lookback|tie|exhausted_all.
+     *
+     * @param list<string> $tiedAmong options that were tied for last (lookback/tie/zerobatch)
+     * @return array{type: string, tied_among: list<string>, resolved_at_round: int|null}
+     */
+    private function decision(string $type, array $tiedAmong = [], ?int $resolvedAtRound = null): array
+    {
+        return ['type' => $type, 'tied_among' => $tiedAmong, 'resolved_at_round' => $resolvedAtRound];
     }
 
     /**
@@ -229,11 +304,16 @@ final class RankedChoice extends AbstractBallotComponent
      * several share that minimum, narrow and look at still-earlier rounds. Returns
      * null only when symmetric through ALL earlier rounds (genuinely tied, D6.3).
      *
+     * Returns the eliminated option together with the (0-based) prior round index
+     * that resolved the tie, so the audit view can name it; null when symmetric
+     * through ALL earlier rounds (genuinely tied, D6.3).
+     *
      * @param list<string> $omitees
      * @param array<int, array<string, mixed>> $rounds prior rounds, oldest first
      * @param int|null $before exclusive upper bound on the round index to inspect
+     * @return array{option: string, round: int}|null
      */
-    private function breakTieByLookback(array $omitees, array $rounds, ?int $before = null): ?string
+    private function breakTieByLookback(array $omitees, array $rounds, ?int $before = null): ?array
     {
         $start = $before === null ? count($rounds) - 1 : $before - 1;
         for ($r = $start; $r >= 0; $r--) {
@@ -250,7 +330,7 @@ final class RankedChoice extends AbstractBallotComponent
             /** @var list<string> $lowest */
             $lowest = array_map('strval', array_keys($vals, $priorMin, true));
             if (count($lowest) === 1) {
-                return $lowest[0];
+                return ['option' => $lowest[0], 'round' => $r];
             }
             return $this->breakTieByLookback($lowest, $rounds, $r);
         }
