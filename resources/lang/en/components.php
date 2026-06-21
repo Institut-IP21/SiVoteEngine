@@ -50,10 +50,21 @@ return [
         'drag' => 'Drag to reorder',
         'requires_js' => 'Ranking this question requires JavaScript. Please enable it and refresh the page.',
         'round' => 'Round',
-        'winner_is' => 'The winner is',
-        'no_winner' => 'There is no conclussive winner, the possible outcomes are',
         'continuing' => 'Continuing ballots',
-        'exhausted' => 'Exhausted ballots'
+        'exhausted' => 'Exhausted ballots',
+        // Result-first display (progressive disclosure).
+        'final_standing' => 'Final standing',
+        'winner_headline' => 'Winner: :name',
+        'no_winner_headline' => 'No outright winner',
+        'provisional_leader' => 'Provisional leader: :name',
+        'outcome_majority' => 'Won outright with a majority of first preferences (:pct%).',
+        'outcome_after_rounds' => 'Won after :rounds counting rounds: as the lowest options were eliminated, their votes transferred to voters’ next choice until :name passed 50%.',
+        'outcome_tie' => 'No option reached a majority — :names tied at :pct%.',
+        'no_majority' => 'No option reached a majority.',
+        'outcome_not_binding' => 'Quorum was not met, so this result is not binding. :name led with :pct% of continuing ballots.',
+        'how_counted' => 'How the count worked',
+        'how_counted_hint' => 'Ranked choice counts in rounds. Each round counts every ballot’s top remaining choice; the option with the fewest votes is eliminated and its ballots move to their next choice, until one option has a majority.',
+        'standing_note' => 'Shares are of the :continuing ballots counted in the final round.'
     ],
     'approval' => [
         'name' => 'Approval vote question',

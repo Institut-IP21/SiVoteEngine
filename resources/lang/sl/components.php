@@ -50,10 +50,21 @@ return [
         'drag' => 'Povleci za razvrstitev',
         'requires_js' => 'Za razvrščanje tega vprašanja je potreben JavaScript. Prosimo, omogočite ga in osvežite stran.',
         'round' => 'Krog',
-        'winner_is' => 'Zmagovalec je',
-        'no_winner' => 'Zmagovalca ni mogoče določiti, možni zmagovalci so',
         'continuing' => 'Glasovnice v igri',
-        'exhausted' => 'Izčrpane glasovnice'
+        'exhausted' => 'Izčrpane glasovnice',
+        // Prikaz, ki najprej pove izid (postopno razkrivanje).
+        'final_standing' => 'Končni izid',
+        'winner_headline' => 'Zmagovalec: :name',
+        'no_winner_headline' => 'Ni enoznačnega zmagovalca',
+        'provisional_leader' => 'Vodilni (začasno): :name',
+        'outcome_majority' => 'Zmaga z večino prvih izbir (:pct %).',
+        'outcome_after_rounds' => 'Zmaga po :rounds krogih štetja: ko so bile izločene možnosti z najmanj glasovi, so se njihovi glasovi prenesli na naslednjo izbiro, dokler :name ni presegel/la 50 %.',
+        'outcome_tie' => 'Nobena možnost ni dosegla večine — izenačeni: :names pri :pct %.',
+        'no_majority' => 'Nobena možnost ni dosegla večine.',
+        'outcome_not_binding' => 'Kvorum ni bil dosežen, zato izid ni zavezujoč. :name vodi z :pct % glasovnic v igri.',
+        'how_counted' => 'Kako je potekalo štetje',
+        'how_counted_hint' => 'Razvrščevalno glasovanje šteje v krogih. V vsakem krogu se upošteva najvišja preostala izbira vsake glasovnice; možnost z najmanj glasovi se izloči, njene glasovnice pa se prenesejo na naslednjo izbiro, dokler ena možnost ne doseže večine.',
+        'standing_note' => 'Deleži so izračunani glede na :continuing glasovnic, štetih v zadnjem krogu.'
     ],
     'approval' => [
         'name' => 'Odobritveni glas',
