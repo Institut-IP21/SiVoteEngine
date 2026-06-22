@@ -2,32 +2,28 @@
 $result = $results[$component->id]['results'];
 $voters = $result['voters'];
 $quorumMet = $quorumMet ?? true;
+$winners = $result['winners'];
+$multi = count($winners) > 1;
+
+$rows = [];
+foreach ($result['state'] as $option => $votes) {
+    $isWin = $quorumMet && in_array($option, $winners, true);
+    $rows[] = [
+        'label' => $option,
+        'votes' => $votes,
+        // D2: per-voter approval rate (approvals ÷ participating voters).
+        'pct' => $voters > 0 ? $votes / $voters * 100 : 0,
+        'state' => $isWin ? ($multi ? 'tied' : 'winner') : 'normal',
+    ];
+}
 @endphp
 
-<x-ballot-results-table :shareLabel="__('components.approval.rate')">
+<x-ballot-result-bars :rows="$rows" :shareLabel="__('components.approval.rate')" />
 
-    @foreach ($result['state'] as $option => $votes)
-    <div
-        class="flex flex-row {{ $quorumMet && count($result['winners']) > 1 && in_array($option, $result['winners']) ? 'bg-warn-soft' : '' }}{{ $quorumMet && in_array($option, $result['winners']) ? ' winner bg-secure-soft' : '' }}">
-        <x-ballot-results-table-row>
-            {{ $option }}
-        </x-ballot-results-table-row>
-        <x-ballot-results-table-row>
-            {{ $votes }}
-        </x-ballot-results-table-row>
-        <x-ballot-results-table-row>
-            {{-- D2: per-voter approval rate (approvals ÷ participating voters); rows may sum past 100%. --}}
-            {{ $voters > 0 ? round(($votes / $voters) * 100, 2) : 0 }}
-        </x-ballot-results-table-row>
-    </div>
-    @endforeach
-
-</x-ballot-results-table>
-
-<div class="mt-4 text-sm text-muted">
-    <div>{{ __('components.fptp.abstain') }}: {{ $result['abstentions'] }}</div>
+<div class="mt-3 flex flex-col gap-0.5 text-[13px] text-muted">
+    <div class="flex justify-between gap-3"><span>{{ __('components.fptp.abstain') }}</span><span>{{ $result['abstentions'] }}</span></div>
     @if ($result['invalid'] > 0)
-    <div>{{ __('components.fptp.invalid') }}: {{ $result['invalid'] }}</div>
+    <div class="flex justify-between gap-3"><span>{{ __('components.fptp.invalid') }}</span><span>{{ $result['invalid'] }}</span></div>
     @endif
 </div>
 
