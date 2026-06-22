@@ -27,6 +27,8 @@ class BallotApiController extends Controller
             'description'    => 'nullable|string|min:5',
             'email_template' => 'nullable|string|min:5',
             'email_subject'  => 'nullable|string|min:5',
+            'result_email_template' => 'nullable|string|min:5',
+            'result_email_subject'  => 'nullable|string|min:5',
             'is_secret'      => 'sometimes|boolean',
             // D11: a quorum, when set, must be a positive turnout threshold.
             'quorum'         => 'sometimes|nullable|integer|min:1',
@@ -46,6 +48,8 @@ class BallotApiController extends Controller
             'description'    => $params['description'] ?? '',
             'email_template' => $params['email_template'] ?? '',
             'email_subject'  => $params['email_subject'] ?? '',
+            'result_email_template' => $params['result_email_template'] ?? '',
+            'result_email_subject'  => $params['result_email_subject'] ?? '',
             'title'          => $params['title'],
             'is_secret'      => $params['is_secret'] ?? true,
             'quorum'         => $params['quorum'] ?? null,
@@ -101,6 +105,8 @@ class BallotApiController extends Controller
             'description' => 'nullable|string|min:5',
             'email_template' => 'nullable|string|min:5',
             'email_subject' => 'nullable|string|min:5',
+            'result_email_template' => 'nullable|string|min:5',
+            'result_email_subject' => 'nullable|string|min:5',
             'quorum' => 'nullable|integer|min:1',
         ];
 
@@ -122,6 +128,14 @@ class BallotApiController extends Controller
 
         if (array_key_exists('email_subject', $params)) {
             $ballot->email_subject = $params['email_subject'];
+        }
+
+        if (array_key_exists('result_email_template', $params)) {
+            $ballot->result_email_template = $params['result_email_template'];
+        }
+
+        if (array_key_exists('result_email_subject', $params)) {
+            $ballot->result_email_subject = $params['result_email_subject'];
         }
 
         if (array_key_exists('quorum', $params)) {

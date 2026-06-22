@@ -24,6 +24,8 @@ use Dyrynda\Database\Support\CascadeSoftDeletes;
  * @property string $title
  * @property string|null $email_subject
  * @property string|null $email_template
+ * @property string|null $result_email_subject
+ * @property string|null $result_email_template
  * @property string|null $description
  * @property bool $active
  * @property bool $finished
@@ -90,6 +92,8 @@ class Ballot extends Model
         'description' => '',
         'email_subject' => '',
         'email_template' => '',
+        'result_email_subject' => '',
+        'result_email_template' => '',
         'is_secret' => true,
         'mode' => self::MODE_BASIC,
         'quorum' => null,
@@ -102,6 +106,8 @@ class Ballot extends Model
         'description',
         'email_subject',
         'email_template',
+        'result_email_subject',
+        'result_email_template',
         'is_secret',
         'mode',
         'quorum',

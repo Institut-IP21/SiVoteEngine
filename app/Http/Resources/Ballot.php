@@ -47,6 +47,8 @@ class Ballot extends JsonResource
             'description' => $this->description,
             'email_subject' => $this->email_subject,
             'email_template' => $this->email_template,
+            'result_email_subject' => $this->result_email_subject,
+            'result_email_template' => $this->result_email_template,
             'preview_url' => $preview_url,
             'quorum' => $this->quorum,
             'components' => BallotComponent::collection($this->components)->keyBy('id')
