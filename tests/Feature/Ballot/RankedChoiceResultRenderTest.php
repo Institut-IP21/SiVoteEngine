@@ -62,8 +62,8 @@ class RankedChoiceResultRenderTest extends TestCase
         $res->assertOk();
         $res->assertSeeText(__('components.rankedchoice.winner_headline', ['name' => 'A']));
         $res->assertSeeText(__('components.rankedchoice.outcome_majority', ['pct' => 100]));
-        // Final standing section is present.
-        $res->assertSeeText(__('components.rankedchoice.final_standing'));
+        // Final-standing bars carry the share-of-continuing caption.
+        $res->assertSeeText(__('components.rankedchoice.standing_note', ['continuing' => 3]));
     }
 
     public function test_multi_round_winner_shows_after_rounds_sentence(): void
@@ -96,7 +96,7 @@ class RankedChoiceResultRenderTest extends TestCase
         $res->assertSeeText(__('components.rankedchoice.round') . ' 1');
     }
 
-    public function test_audit_disclosure_shows_rationale_transfers_tabulation_and_accounting(): void
+    public function test_audit_disclosure_shows_the_tabulation_preferences_and_accounting(): void
     {
         // A=2,B=2,C=1 (+1 blank, +1 invalid-only "Z"). C eliminated; its [C,A] ballot
         // transfers to A, which then wins with a majority in round 2.
@@ -108,17 +108,15 @@ class RankedChoiceResultRenderTest extends TestCase
         $res = $this->fetchResult($ballot);
         $res->assertOk();
 
-        // Elimination rationale (the engine-recorded "why").
-        $res->assertSeeText(__('components.rankedchoice.why_lastplace', ['name' => 'C', 'votes' => 1]));
-        // Transfer accounting for the single elimination (exact + reconciled).
-        $res->assertSeeText(__('components.rankedchoice.transfer_reconciles', ['n' => 1]));
-        // Full tabulation matrix + first-preference matrix + ballot accounting sections.
+        // The single tabulation matrix + first-preference matrix + ballot accounting.
         $res->assertSeeText(__('components.rankedchoice.full_tabulation'));
         $res->assertSeeText(__('components.rankedchoice.first_preferences'));
         $res->assertSeeText(__('components.rankedchoice.accounting'));
         $res->assertSeeText(__('components.rankedchoice.candidate'));
         // Accounting reconciles: 7 cast = 5 counted + 1 blank + 1 invalid.
         $res->assertSeeText(__('components.rankedchoice.acc_cast'));
+        // The matrix scrolls horizontally rather than widening the page.
+        $res->assertSee('overflow-x-auto', false);
         $res->assertSee('x-show="open"', false); // still behind the collapsed disclosure
     }
 
@@ -130,7 +128,7 @@ class RankedChoiceResultRenderTest extends TestCase
         $res = $this->fetchResult($ballot);
         $res->assertOk();
         $res->assertSeeText(__('components.rankedchoice.no_winner_headline'));
-        $res->assertSeeText(__('components.rankedchoice.why_tie', ['names' => 'A, B']));
+        $res->assertSeeText(__('components.rankedchoice.outcome_tie', ['names' => 'A, B', 'pct' => 50]));
     }
 
     public function test_quorum_not_met_shows_provisional_leader_not_a_winner(): void
@@ -140,11 +138,12 @@ class RankedChoiceResultRenderTest extends TestCase
 
         $res = $this->fetchResult($ballot);
         $res->assertOk();
-        $res->assertSeeText(__('components.rankedchoice.provisional_leader', ['name' => 'A']));
-        $res->assertSeeText(__('components.rankedchoice.outcome_not_binding', ['name' => 'A', 'pct' => 100]));
-        // No binding-winner sentence when the result is not binding. (The round-by-round
-        // audit detail may still name a round winner — quorum is a separate ballot gate —
-        // so we assert against the public outcome sentence, not the bare "Winner" word.)
+        // The standing bars still render the leader's name...
+        $res->assertSeeText('A');
+        // ...but there is no binding winner banner when quorum fails (consistent with the
+        // other question types, which rely on the page-level "result not binding" panel).
+        $res->assertDontSeeText(__('components.rankedchoice.winner_headline', ['name' => 'A']));
         $res->assertDontSeeText(__('components.rankedchoice.outcome_majority', ['pct' => 100]));
+        $res->assertDontSee('winner bg-secure-soft', false);
     }
 }
