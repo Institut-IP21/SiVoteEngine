@@ -63,7 +63,9 @@ return [
         'no_majority' => 'No option reached a majority.',
         'outcome_not_binding' => 'Quorum was not met, so this result is not binding. :name led with :pct% of continuing ballots.',
         'how_counted' => 'How the count worked',
-        'how_counted_hint' => 'Ranked choice counts in rounds. Each round counts every ballot’s top remaining choice; the option with the fewest votes is eliminated and its ballots move to their next choice, until one option has a majority.',
+        'how_counted_hint' => 'Ranked choice is counted in rounds. In each round, every ballot counts toward its highest-ranked option still in the running. If no option holds more than half of those votes, the option with the fewest is eliminated and each of its ballots moves to that voter’s next remaining choice. When two or more options tie for last, the tie is broken by looking back at earlier rounds — the option that was behind earlier is eliminated, never by chance. A ballot whose every ranked option has been eliminated becomes “exhausted” and no longer counts toward the majority. This repeats until one option holds a majority of the ballots still counting.',
+        'count_log_heading' => 'What happened each round',
+        'log_exhausted' => ':n ballots became exhausted (no further ranked choice).',
         'standing_note' => 'Shares are of the :continuing ballots counted in the final round.',
         // Auditor round-by-round detail.
         'round_n' => 'Round :n',

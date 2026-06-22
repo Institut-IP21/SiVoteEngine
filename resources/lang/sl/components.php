@@ -63,7 +63,9 @@ return [
         'no_majority' => 'Nobena možnost ni dosegla večine.',
         'outcome_not_binding' => 'Kvorum ni bil dosežen, zato izid ni zavezujoč. :name vodi z :pct % glasovnic v igri.',
         'how_counted' => 'Kako je potekalo štetje',
-        'how_counted_hint' => 'Razvrščevalno glasovanje šteje v krogih. V vsakem krogu se upošteva najvišja preostala izbira vsake glasovnice; možnost z najmanj glasovi se izloči, njene glasovnice pa se prenesejo na naslednjo izbiro, dokler ena možnost ne doseže večine.',
+        'how_counted_hint' => 'Razvrščevalno glasovanje se šteje v krogih. V vsakem krogu vsaka glasovnica šteje za svojo najvišje uvrščeno možnost, ki je še v igri. Če nobena možnost nima več kot polovice teh glasov, se izloči možnost z najmanj glasovi, vsaka njena glasovnica pa se prenese na naslednjo preostalo izbiro tega volivca. Kadar je za zadnje mesto izenačenih več možnosti, se izenačenje razreši s pogledom na prejšnje kroge — izloči se možnost, ki je bila prej v zaostanku, nikoli z žrebom. Glasovnica, ki ima vse svoje uvrščene možnosti izločene, postane »izčrpana« in ne šteje več k večini. To se ponavlja, dokler ena možnost ne doseže večine glasovnic, ki še štejejo.',
+        'count_log_heading' => 'Kaj se je zgodilo v vsakem krogu',
+        'log_exhausted' => ':n glasovnic je postalo izčrpanih (brez nadaljnje razvrščene izbire).',
         'standing_note' => 'Deleži so izračunani glede na :continuing glasovnic, štetih v zadnjem krogu.',
         // Revizijski prikaz po krogih.
         'round_n' => 'Krog :n',

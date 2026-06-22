@@ -82,6 +82,10 @@
             <div class="min-w-0">
                 <p class="mb-2 text-[11px] uppercase tracking-[0.07em] font-bold text-muted">{{ __('components.rankedchoice.full_tabulation') }}</p>
                 @include($component->component_path . '/tabulation', ['rounds' => $rounds, 'component' => $component])
+
+                {{-- Plain-text log of every elimination, look-back and exhausted movement. --}}
+                <p class="mt-4 mb-2 text-[11px] uppercase tracking-[0.07em] font-bold text-muted">{{ __('components.rankedchoice.count_log_heading') }}</p>
+                @include($component->component_path . '/count_log', ['rounds' => $rounds, 'component' => $component])
             </div>
 
             {{-- First-preference position matrix (independent cross-check on round 1). --}}

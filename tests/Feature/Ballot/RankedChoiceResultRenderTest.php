@@ -110,6 +110,9 @@ class RankedChoiceResultRenderTest extends TestCase
 
         // The single tabulation matrix + first-preference matrix + ballot accounting.
         $res->assertSeeText(__('components.rankedchoice.full_tabulation'));
+        // The plain-text count log under the table explains every elimination.
+        $res->assertSeeText(__('components.rankedchoice.count_log_heading'));
+        $res->assertSeeText(__('components.rankedchoice.why_lastplace', ['name' => 'C', 'votes' => 1]));
         $res->assertSeeText(__('components.rankedchoice.first_preferences'));
         $res->assertSeeText(__('components.rankedchoice.accounting'));
         $res->assertSeeText(__('components.rankedchoice.candidate'));
