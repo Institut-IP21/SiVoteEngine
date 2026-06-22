@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AdminStatsController;
 use App\Http\Controllers\BallotApiController;
 use App\Http\Controllers\BallotComponentApiController;
 use App\Http\Controllers\ElectionApiController;
@@ -64,6 +65,13 @@ Route::middleware('api')->prefix('owner')->group(function () {
     Route::get('/personalization', [OwnerController::class, 'getPersonalization'])->name('owner.personalization.get');
     Route::post('/personalization', [OwnerController::class, 'updatePersonalization'])->name('owner.personalization');
     Route::post('/logo', [OwnerController::class, 'uploadLogo'])->name('owner.logo');
+});
+
+// Global operator-panel endpoint: behind the shared-token ApiAuth (the `api`
+// middleware group), but cross-owner — the Owner header is present yet IGNORED,
+// like the operator panel's other admin endpoints.
+Route::middleware('api')->prefix('admin')->group(function () {
+    Route::get('/stats', [AdminStatsController::class, 'stats'])->name('admin.stats');
 });
 
 Route::fallback(function () {
