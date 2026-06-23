@@ -5,6 +5,7 @@ return [
     'submit' => 'Cast vote',
     'anonymous' => 'Your vote will be recorded anonymously.',
     'powered_by' => 'Voting runs on the open-source SiVote system and the eGlasovanje.si platform.',
+    'wordmark' => 'eGlasovanje',
     'no_questions' => 'This ballot has no questions yet.',
     'preview' => [
         'warning' => 'This view will be available for 15 minutes. After that, you need a new link.',

@@ -46,5 +46,34 @@ class BrandPaletteTest extends TestCase
         $this->assertStringContainsString('--color-brand-dark: color-mix(in srgb, #34b6df 82%, #000);', $vars);
         $this->assertStringContainsString('--color-brand-soft: color-mix(in srgb, #34b6df 10%, #fff);', $vars);
         $this->assertStringContainsString('--color-brand-fg: #11161a;', $vars);
+        // The hover fill carries its own auto-contrast ink (see darkForeground).
+        $this->assertStringContainsString('--color-brand-dark-fg: #11161a;', $vars);
+    }
+
+    public function test_dark_darkens_the_accent_toward_black(): void
+    {
+        // Mirrors the CSS color-mix(in srgb, accent 82%, #000) — each channel * 0.82.
+        $this->assertSame('#2b95b7', BrandPalette::fromHex('#34b6df')->dark());
+        $this->assertSame('#000000', BrandPalette::fromHex('#000000')->dark());
+    }
+
+    #[DataProvider('darkForegroundCases')]
+    public function test_dark_foreground_stays_readable_on_the_hover_fill(string $bg, string $expected): void
+    {
+        // Regression guard for the hardcoded white hover ink: light accents must keep dark
+        // ink on the darkened hover fill, where white would drop below AA.
+        $this->assertSame($expected, BrandPalette::fromHex($bg)->darkForeground());
+    }
+
+    /** @return array<string, array{0: string, 1: string}> */
+    public static function darkForegroundCases(): array
+    {
+        return [
+            'light blue -> dark'   => ['#34b6df', '#11161a'],
+            'light yellow -> dark' => ['#f1c40f', '#11161a'],
+            'light pink -> dark'   => ['#ffd1dc', '#11161a'],
+            'green -> white'       => ['#0e833b', '#ffffff'],
+            'near-black -> white'  => ['#222222', '#ffffff'],
+        ];
     }
 }

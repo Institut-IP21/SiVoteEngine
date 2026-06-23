@@ -10,7 +10,9 @@
         $pct = (float) ($row['pct'] ?? 0);
         $isWinner = $state === 'winner';
         $isTied = $state === 'tied';
-        $fill = $isWinner ? 'var(--color-secure)' : ($isTied ? 'var(--color-warn)' : 'var(--color-brand)');
+        // Loser/normal rows are neutral grey (#c2ced4, matching the in-app track) — NOT
+        // --color-brand: the brand colour signals "live/interactive", never a defeated option.
+        $fill = $isWinner ? 'var(--color-secure)' : ($isTied ? 'var(--color-warn)' : '#c2ced4');
         // Trim trailing zeros: 66.7, 50, 100 — clean but precise enough; the raw count sits beside it.
         $pctLabel = rtrim(rtrim(number_format($pct, 1, '.', ''), '0'), '.');
     @endphp

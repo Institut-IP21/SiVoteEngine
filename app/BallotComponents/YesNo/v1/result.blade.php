@@ -14,6 +14,24 @@ foreach ($result['state'] as $option => $votes) {
 }
 @endphp
 
+@if ($quorumMet)
+@if ($result['passed'])
+<div class="p-4 text-center mb-4 rounded-xl font-semibold bg-secure-soft text-secure">
+    {{ __('components.yesno.carried') }}
+</div>
+@elseif ($result['winner'] === 'tie')
+<div class="p-4 text-center mb-4 rounded-xl font-semibold bg-warn-soft text-warn-fg">
+    {{ __('components.yesno.not_carried_tied', ['yes' => $result['state']['yes'] ?? 0, 'no' => $result['state']['no'] ?? 0]) }}
+</div>
+@else
+<div class="p-4 text-center mb-4 rounded-xl font-semibold bg-warn-soft text-warn-fg">
+    {{ __('components.yesno.not_carried') }}
+</div>
+@endif
+@else
+<x-ballot-component.not-binding />
+@endif
+
 <x-ballot-result-bars :rows="$rows" :shareLabel="__('components.share_valid')" />
 
 @if ($result['abstentions'] > 0 || $result['invalid'] > 0)
@@ -25,20 +43,4 @@ foreach ($result['state'] as $option => $votes) {
     <div class="flex justify-between gap-3"><span>{{ __('components.yesno.invalid') }}</span><span>{{ $result['invalid'] }}</span></div>
     @endif
 </div>
-@endif
-
-@if ($quorumMet)
-@if ($result['passed'])
-<div class="p-4 text-center mt-6 rounded-xl font-semibold bg-secure-soft text-secure">
-    {{ __('components.yesno.carried') }}
-</div>
-@elseif ($result['winner'] === 'tie')
-<div class="p-4 text-center mt-6 rounded-xl font-semibold bg-warn-soft text-warn-fg">
-    {{ __('components.yesno.not_carried_tied', ['yes' => $result['state']['yes'] ?? 0, 'no' => $result['state']['no'] ?? 0]) }}
-</div>
-@else
-<div class="p-4 text-center mt-6 rounded-xl font-semibold bg-warn-soft text-warn-fg">
-    {{ __('components.yesno.not_carried') }}
-</div>
-@endif
 @endif

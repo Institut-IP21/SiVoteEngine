@@ -12,6 +12,7 @@
     --color-brand-dark: #1b8fb8;
     --color-brand-soft: #e8f7fc;
     --color-brand-fg: #053040;
+    --color-brand-dark-fg: #053040; /* readable ink on the darkened hover fill — auto-contrast for org accents (BrandPalette::darkForeground) */
     --color-ink: #11161a;
     --color-muted: #6b7c85;
     --color-line: #e2e8ed;
@@ -252,7 +253,7 @@ h1, h2, h3, h4, h5, h6 {
     transition: background-color 0.12s ease;
 }
 
-.ballot-submit:hover { background: var(--color-brand-dark); color: #fff; }
+.ballot-submit:hover { background: var(--color-brand-dark); color: var(--color-brand-dark-fg); }
 
 // BUTTONS
 .btn {

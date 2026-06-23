@@ -19,6 +19,7 @@
     $denom = $continuing > 0 ? $continuing : 1;
     $roundCount = count($rounds);
     $leadPct = (int) round((($standing ? reset($standing) : 0)) / $denom * 100);
+    $leaderName = $standing !== [] ? array_key_first($standing) : null;
 
     $rows = [];
     foreach ($standing as $name => $votes) {
@@ -36,13 +37,17 @@
     $preferences = is_array($res['preferences'] ?? null) ? $res['preferences'] : [];
 @endphp
 <div x-data="{ open: false }">
-    {{-- Final standing — same bar component the other question types use. --}}
-    <x-ballot-result-bars :rows="$rows" :shareLabel="__('components.rankedchoice.standing_note', ['continuing' => $continuing])" />
-
-    {{-- Verdict banner — same treatment as YesNo / FPTP (suppressed when quorum fails). --}}
-    @if ($quorumMet)
-    @if ($conclusive && $winnerName !== null)
-    <div class="p-4 text-center mt-6 rounded-xl font-semibold bg-secure-soft text-secure">
+    {{-- Verdict first: the outcome, then the final-round standing as its evidence. --}}
+    @if (! $quorumMet)
+    <x-ballot-component.not-binding>
+        @if ($leaderName !== null)
+            {{ __('components.rankedchoice.outcome_not_binding', ['name' => $leaderName, 'pct' => $leadPct]) }}
+        @else
+            {{ __('components.not_binding') }}
+        @endif
+    </x-ballot-component.not-binding>
+    @elseif ($conclusive && $winnerName !== null)
+    <div class="p-4 text-center mb-4 rounded-xl font-semibold bg-secure-soft text-secure">
         {{ __('components.rankedchoice.winner_headline', ['name' => $winnerName]) }}
         <div class="mt-1 text-sm font-normal text-ink">
             @if ($roundCount <= 1)
@@ -53,7 +58,7 @@
         </div>
     </div>
     @else
-    <div class="p-4 text-center mt-6 rounded-xl font-semibold bg-warn-soft text-warn-fg">
+    <div class="p-4 text-center mb-4 rounded-xl font-semibold bg-warn-soft text-warn-fg">
         {{ __('components.rankedchoice.no_winner_headline') }}
         <div class="mt-1 text-sm font-normal text-ink">
             @if (count($tied) > 0)
@@ -64,7 +69,9 @@
         </div>
     </div>
     @endif
-    @endif
+
+    {{-- Final standing — same bar component the other question types use. --}}
+    <x-ballot-result-bars :rows="$rows" :shareLabel="__('components.rankedchoice.standing_note', ['continuing' => $continuing])" />
 
     {{-- Progressive disclosure: the auditor-grade tabulation, collapsed by default. --}}
     @if ($roundCount > 0)

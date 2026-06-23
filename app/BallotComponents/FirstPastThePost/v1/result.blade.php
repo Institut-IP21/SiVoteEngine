@@ -18,6 +18,18 @@ foreach ($result['state'] as $option => $votes) {
 }
 @endphp
 
+@if (! $quorumMet)
+<x-ballot-component.not-binding />
+@elseif ($decided)
+<div class="p-4 text-center mb-4 rounded-xl font-semibold bg-secure-soft text-secure">
+    {{ __('components.fptp.winner_is', ['name' => $result['winner']]) }}
+</div>
+@elseif ($result['winner'] === 'tie')
+<div class="p-4 text-center mb-4 rounded-xl font-semibold bg-warn-soft text-warn-fg">
+    {{ __('components.fptp.tie') }} {{ implode(', ', $result['winners']) }}
+</div>
+@endif
+
 <x-ballot-result-bars :rows="$rows" :shareLabel="__('components.share_valid')" />
 
 @if ($result['abstentions'] > 0 || $result['invalid'] > 0)
@@ -28,11 +40,5 @@ foreach ($result['state'] as $option => $votes) {
     @if ($result['invalid'] > 0)
     <div class="flex justify-between gap-3"><span>{{ __('components.fptp.invalid') }}</span><span>{{ $result['invalid'] }}</span></div>
     @endif
-</div>
-@endif
-
-@if ($quorumMet && $result['winner'] === 'tie')
-<div class="p-4 text-center mt-6 rounded-xl font-semibold bg-warn-soft text-warn-fg">
-    {{ __('components.fptp.tie') }} {{ implode(', ', $result['winners']) }}
 </div>
 @endif

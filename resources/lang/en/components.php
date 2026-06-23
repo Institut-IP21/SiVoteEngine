@@ -8,6 +8,7 @@ return [
     'tie' => 'Tie',
     'oftotal' => 'Share (%)',
     'share_valid' => 'Share of valid votes (%)',
+    'not_binding' => 'Not binding — quorum was not met, so this outcome is advisory only.',
     'yesno' => [
         'yes' => 'Yes',
         'no' => 'No',
@@ -27,7 +28,8 @@ return [
         'hint' => 'Choose one candidate.',
         'invalid' => 'Invalid',
         'tie' => 'The outcome is a tie. The following options received the same number of votes: ',
-        'description' => 'Voters choose one item from a list of options.'
+        'description' => 'Voters choose one item from a list of options.',
+        'winner_is' => 'Winner: :name'
     ],
     'rankedchoice' => [
         'name' => 'Ranked choice question',
@@ -104,7 +106,9 @@ return [
         'name' => 'Approval vote question',
         'description' => 'Voters approve of any number of options from a list.',
         'hint' => 'Choose one or more options.',
-        'rate' => 'Approval rate (%)'
+        'rate' => 'Approval rate (%)',
+        'winner_is' => 'Most approved: :name',
+        'tie' => 'The outcome is a tie. The following options received the same number of approvals: '
     ],
     'created' => [
         'success' => 'Component created.'

@@ -39,6 +39,25 @@ final class BrandPalette
             : self::WHITE;
     }
 
+    /** The hover/active fill: the accent darkened 18% toward black (mirrors the CSS color-mix). */
+    public function dark(): string
+    {
+        $r = (int) round(hexdec(substr($this->color, 1, 2)) * 0.82);
+        $g = (int) round(hexdec(substr($this->color, 3, 2)) * 0.82);
+        $b = (int) round(hexdec(substr($this->color, 5, 2)) * 0.82);
+
+        return sprintf('#%02x%02x%02x', $r, $g, $b);
+    }
+
+    /**
+     * Readable text colour on the *darkened* hover fill — recomputed against `dark()` so a
+     * light accent keeps dark ink on hover instead of flipping to unreadable white.
+     */
+    public function darkForeground(): string
+    {
+        return self::fromHex($this->dark())?->foreground() ?? self::WHITE;
+    }
+
     /** WCAG contrast ratio between the accent and another #rrggbb colour. */
     public function contrast(string $other): float
     {
@@ -56,9 +75,10 @@ final class BrandPalette
     public function cssVars(): string
     {
         return sprintf(
-            '--color-brand: %1$s; --color-brand-dark: color-mix(in srgb, %1$s 82%%, #000); --color-brand-soft: color-mix(in srgb, %1$s 10%%, #fff); --color-brand-fg: %2$s;',
+            '--color-brand: %1$s; --color-brand-dark: color-mix(in srgb, %1$s 82%%, #000); --color-brand-soft: color-mix(in srgb, %1$s 10%%, #fff); --color-brand-fg: %2$s; --color-brand-dark-fg: %3$s;',
             $this->color,
             $this->foreground(),
+            $this->darkForeground(),
         );
     }
 

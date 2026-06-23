@@ -8,6 +8,7 @@ return [
     'tie' => 'Izenačen',
     'oftotal' => 'Delež (%)',
     'share_valid' => 'Delež veljavnih glasov (%)',
+    'not_binding' => 'Ni zavezujoče — kvorum ni bil dosežen, zato je ta izid zgolj informativen.',
     'yesno' => [
         'yes' => 'Da',
         'no' => 'Ne',
@@ -27,7 +28,8 @@ return [
         'hint' => 'Izberite enega kandidata.',
         'invalid' => 'Neveljavno',
         'tie' => 'Izid je neodločen. Isto število glasov so prejeli: ',
-        'description' => 'Glasovalci izberejo natančno eno izmed izbir.'
+        'description' => 'Glasovalci izberejo natančno eno izmed izbir.',
+        'winner_is' => 'Zmagovalec: :name'
     ],
     'rankedchoice' => [
         'name' => 'Razvrščanje vrednosti',
@@ -104,7 +106,9 @@ return [
         'name' => 'Odobritveni glas',
         'description' => 'Glasovalci označijo, katere izmed možnosti na seznamu podpirajo.',
         'hint' => 'Izberite eno ali več možnosti.',
-        'rate' => 'Stopnja podpore (%)'
+        'rate' => 'Stopnja podpore (%)',
+        'winner_is' => 'Največ podpore: :name',
+        'tie' => 'Izid je neodločen. Isto število podpor so prejeli: '
     ],
     'created' => [
         'success' => 'Komponenta ustvarjena.'

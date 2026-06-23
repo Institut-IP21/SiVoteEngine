@@ -4,7 +4,18 @@
 
 @section('body')
 <x-ballot-wrapper :pers="$pers">
-    <x-ballot-logo :pers="$pers" />
+    @if ($pers && $pers->photo_url)
+        <x-ballot-logo :pers="$pers" />
+    @else
+        {{-- Brand band fallback: with no tenant logo this public page would read as a raw
+             engine page, so anchor it in the brand with the eGlasovanje wordmark. --}}
+        <div class="flex justify-center mb-5 sm:mb-6">
+            <span class="inline-flex items-center gap-2 rounded-full bg-brand-soft border border-line px-4 py-2 font-extrabold tracking-[-0.01em] text-brand-fg">
+                <span class="h-2.5 w-2.5 rounded-full bg-brand" aria-hidden="true"></span>
+                {{ __('ballot.wordmark') }}
+            </span>
+        </div>
+    @endif
 
     {{-- Results header — same eyebrow + heading treatment as the voting shell (x-ballot-title). --}}
     <div class="text-center mb-7 sm:mb-9">
