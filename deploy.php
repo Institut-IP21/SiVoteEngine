@@ -47,8 +47,6 @@ host('production')
 task('deploy', [
     'deploy:prepare',
     'deploy:vendors',
-    'bun:install',
-    'bun:production',
     'artisan:storage:link',
     'artisan:migrate',
     'artisan:evote:cache',
