@@ -10,6 +10,7 @@ use App\Traits\Encryptable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * @property string $id
@@ -37,6 +38,7 @@ class Vote extends Model
     /** @use HasFactory<VoteFactory> */
     use HasFactory;
     use HasUuidV4;
+    use SoftDeletes;
 
     // Random v4 UUID primary key (ballot secrecy): never ordered. See HasUuidV4.
     protected $keyType = 'string';

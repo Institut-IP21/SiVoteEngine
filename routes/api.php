@@ -67,10 +67,8 @@ Route::middleware('api')->prefix('owner')->group(function () {
     Route::post('/logo', [OwnerController::class, 'uploadLogo'])->name('owner.logo');
 });
 
-// Global operator-panel endpoint: behind the shared-token ApiAuth (the `api`
-// middleware group), but cross-owner — the Owner header is present yet IGNORED,
-// like the operator panel's other admin endpoints.
-Route::middleware('api')->prefix('admin')->group(function () {
+// Cross-owner: the Owner header is present but IGNORED here.
+Route::middleware(['api', 'auth.api.admin'])->prefix('admin')->group(function () {
     Route::get('/stats', [AdminStatsController::class, 'stats'])->name('admin.stats');
 });
 

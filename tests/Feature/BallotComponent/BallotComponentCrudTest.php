@@ -86,7 +86,7 @@ class BallotComponentCrudTest extends TestCase
             ->state([ 'owner' => $owner])
             ->has(
                 Ballot::factory()
-                    ->state([ 'active' => true ])
+                    ->state([ 'active' => false ])
             )
             ->create();
 

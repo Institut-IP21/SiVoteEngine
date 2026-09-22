@@ -26,7 +26,7 @@ class BallotComponentDeleteTest extends TestCase
             ->expectsOutputToContain("Component 'Old Component' has been deleted")
             ->assertExitCode(0);
 
-        $this->assertDatabaseMissing('ballot_components', ['id' => $component->id]);
+        $this->assertSoftDeleted('ballot_components', ['id' => $component->id]);
     }
 
     public function test_requires_confirmation(): void

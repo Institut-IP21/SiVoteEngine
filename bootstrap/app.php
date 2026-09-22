@@ -20,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
             'auth.api' => \App\Http\Middleware\ApiAuth::class,
+            'auth.api.admin' => \App\Http\Middleware\EnsureApiAdmin::class,
             // Enforce parent/child ownership on nested route models (election >
             // ballot > component) so an owner authorized on one election cannot
             // reach another election's ballot/component (cross-tenant IDOR).
@@ -28,14 +29,15 @@ return Application::configure(basePath: dirname(__DIR__))
             'frame.webapp' => \App\Http\Middleware\AllowWebAppFraming::class,
         ]);
 
+        // Throttle before ApiAuth so token guessing is limited too.
         $middleware->api(prepend: [
+            'throttle:api',
             \App\Http\Middleware\ApiAuth::class,
             \App\Http\Middleware\SetLocale::class,
         ]);
 
-        // Behind a reverse proxy (nginx); trust forwarded headers so the client
-        // IP used by the `votes` rate limiter is the real voter, not the proxy.
-        $middleware->trustProxies(at: '*');
+        // Not '*': that lets any client forge X-Forwarded-For past the per-IP `votes` limiter.
+        $middleware->trustProxies(at: ['127.0.0.1', '::1']);
 
         $middleware->redirectGuestsTo('/login');
         $middleware->redirectUsersTo('/home');
@@ -44,12 +46,12 @@ return Application::configure(basePath: dirname(__DIR__))
         //
     })
     ->booted(function () {
-        // Rate-limit public vote submissions per client IP (replaces the
-        // RouteServiceProvider boot in the pre-slim skeleton).
         RateLimiter::for('votes', fn (Request $request) => Limit::perMinute(60)->by($request->ip() ?? 'unknown'));
 
-        // Explicit bindings so nested model resolution + ScopeRouteBindings see
-        // hydrated Election/Ballot/Component instances (he only bound component).
+        RateLimiter::for('api', fn (Request $request) => Limit::perMinute(120)
+            ->by(((string) $request->header('Authorization', '')) . '|' . ($request->ip() ?? 'unknown')));
+
+        // Explicit bindings so ScopeRouteBindings sees hydrated Election/Ballot/Component instances.
         Route::bind('election', fn ($value) => Election::findOrFail($value));
         Route::bind('ballot', fn ($value) => Ballot::findOrFail($value));
         Route::bind('component', fn ($value) => BallotComponent::findOrFail($value));

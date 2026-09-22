@@ -21,6 +21,19 @@ class BallotComponentApiController extends Controller
         protected readonly BallotService $ballotService,
     ) {}
 
+    /** Cast votes reference component options, so a locked ballot's questions must not change. */
+    private function lockedResponse(Ballot $ballot): ?Response
+    {
+        if ($ballot->locked) {
+            return response(
+                ['error' => __('This Ballot is locked and cannot be edited.')],
+                409
+            );
+        }
+
+        return null;
+    }
+
     /** @return array{data: array<mixed>} */
     public function list(Election $election): array
     {
@@ -29,8 +42,12 @@ class BallotComponentApiController extends Controller
         ];
     }
 
-    public function create(Election $election, Ballot $ballot, Request $request): JsonResponse|ComponentResource
+    public function create(Election $election, Ballot $ballot, Request $request): JsonResponse|ComponentResource|Response
     {
+        if ($locked = $this->lockedResponse($ballot)) {
+            return $locked;
+        }
+
         $params = $request->all();
         $settings = [
             'title' => 'required|string|min:1',
@@ -132,8 +149,12 @@ class BallotComponentApiController extends Controller
         return new ComponentResource($component);
     }
 
-    public function update(Election $election, Ballot $ballot, BallotComponent $component, Request $request): JsonResponse|ComponentResource
+    public function update(Election $election, Ballot $ballot, BallotComponent $component, Request $request): JsonResponse|ComponentResource|Response
     {
+        if ($locked = $this->lockedResponse($ballot)) {
+            return $locked;
+        }
+
         $params = $request->all();
         $settings = [
             'title' => 'bail|required|string|min:1',
@@ -265,19 +286,31 @@ class BallotComponentApiController extends Controller
         return ['pass_threshold' => $value];
     }
 
-    public function delete(Election $election, Ballot $ballot, BallotComponent $component): bool|null
+    public function delete(Election $election, Ballot $ballot, BallotComponent $component): bool|null|Response
     {
+        if ($locked = $this->lockedResponse($ballot)) {
+            return $locked;
+        }
+
         return $component->delete();
     }
 
-    public function activate(Election $election, Ballot $ballot, BallotComponent $component): bool
+    public function activate(Election $election, Ballot $ballot, BallotComponent $component): bool|Response
     {
+        if ($locked = $this->lockedResponse($ballot)) {
+            return $locked;
+        }
+
         $component->active = true;
         return $component->save();
     }
 
-    public function deactivate(Election $election, Ballot $ballot, BallotComponent $component): bool
+    public function deactivate(Election $election, Ballot $ballot, BallotComponent $component): bool|Response
     {
+        if ($locked = $this->lockedResponse($ballot)) {
+            return $locked;
+        }
+
         $component->active = false;
         $component->finished = true;
         return $component->save();

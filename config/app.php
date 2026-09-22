@@ -16,7 +16,10 @@ return [
     'name' => env('APP_NAME', 'Laravel'),
 
     'api' => [
-        'authlist' => explode(',', (string) env('API_TOKEN_LIST', ''))
+        'authlist' => explode(',', (string) env('API_TOKEN_LIST', '')),
+        'admin_authlist' => array_values(array_filter(
+            explode(',', (string) env('API_ADMIN_TOKEN_LIST', ''))
+        )),
     ],
 
     'cli' => [
