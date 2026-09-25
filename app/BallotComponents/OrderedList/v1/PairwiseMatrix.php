@@ -48,11 +48,10 @@ final class PairwiseMatrix
                         continue;
                     }
 
-                    $xIn = isset($posOf[$x]);
-                    $yIn = isset($posOf[$y]);
+                    $xPos = $posOf[$x] ?? null;
+                    $yPos = $posOf[$y] ?? null;
 
-                    $xPreferred = ($xIn && !$yIn)
-                        || ($xIn && $yIn && $posOf[$x] < $posOf[$y]);
+                    $xPreferred = $xPos !== null && ($yPos === null || $xPos < $yPos);
 
                     if ($xPreferred) {
                         $this->prefers[$x][$y]++;
