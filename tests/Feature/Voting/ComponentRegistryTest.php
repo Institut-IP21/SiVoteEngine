@@ -21,7 +21,7 @@ class ComponentRegistryTest extends TestCase
     public function test_get_types_returns_all_registered_types(): void
     {
         $this->assertEqualsCanonicalizing(
-            ['YesNo', 'FirstPastThePost', 'RankedChoice', 'ApprovalVote'],
+            ['YesNo', 'FirstPastThePost', 'RankedChoice', 'ApprovalVote', 'OrderedList'],
             $this->registry->getTypes()
         );
     }

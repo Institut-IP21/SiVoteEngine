@@ -7,6 +7,7 @@ namespace App\BallotComponents\Support;
 use App\BallotComponents\ApprovalVote\v1\ApprovalVote;
 use App\BallotComponents\Contracts\BallotComponentInterface;
 use App\BallotComponents\FirstPastThePost\v1\FirstPastThePost;
+use App\BallotComponents\OrderedList\v1\OrderedList;
 use App\BallotComponents\RankedChoice\v1\RankedChoice;
 use App\BallotComponents\YesNo\v1\YesNo;
 use Illuminate\Contracts\Container\Container;
@@ -24,6 +25,7 @@ final class ComponentRegistry
         'FirstPastThePost' => ['v1' => FirstPastThePost::class],
         'RankedChoice' => ['v1' => RankedChoice::class],
         'ApprovalVote' => ['v1' => ApprovalVote::class],
+        'OrderedList' => ['v1' => OrderedList::class],
     ];
 
     public function __construct(
