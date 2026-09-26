@@ -29,7 +29,8 @@ class BallotResolveTie extends Command
                             {--by= : Identifier of the person/role recording the resolution}';
 
     /** @var string */
-    protected $description = 'Record a validated post-close runner resolution for an OrderedList tie';
+    protected $description = 'Record a validated post-close runner resolution for an OrderedList tie '
+        . '(candidate labels containing commas are not supported via --cluster/--order)';
 
     public function __construct(
         private readonly BallotService $ballotService,
@@ -52,6 +53,18 @@ class BallotResolveTie extends Command
             return 1;
         }
 
+        /** @var \App\Models\Ballot $ballot */
+        $ballot = $component->ballot;
+
+        // A runner resolution settles what the VOTES left undecided; it can
+        // only be recorded once the ballot has actually closed and no more
+        // votes can change the locked partial order it is resolving against.
+        if (!$ballot->finished) {
+            $this->error('This ballot has not finished yet — a runner resolution can only be recorded once the ballot is closed.');
+
+            return 1;
+        }
+
         $cluster = $this->parseLabelList((string) $this->option('cluster'));
         $order = $this->parseLabelList((string) $this->option('order'));
         $by = (string) ($this->option('by') ?? '');
@@ -63,9 +76,6 @@ class BallotResolveTie extends Command
             return 1;
         }
 
-        /** @var \App\Models\Ballot $ballot */
-        $ballot = $component->ballot;
-
         $results = $this->ballotService->calculateResults($ballot);
         $componentResult = $results[$component->id]['results'] ?? null;
         if (!is_array($componentResult) || !array_key_exists('bands', $componentResult)) {
@@ -76,10 +86,8 @@ class BallotResolveTie extends Command
 
         /** @var list<array{candidates:list<string>,span:array{0:int,1:int},internal_constraints:list<array{winner:string,loser:string}>,head_to_head:array<string,array<string,int>>,affects_cutoff:bool}> $bands */
         $bands = $componentResult['bands'];
-        /** @var array{remaining_seats:int,candidates:list<string>,internal_constraints:list<array{winner:string,loser:string}>,head_to_head:array<string,array<string,int>>}|null $cutoffDecision */
-        $cutoffDecision = $componentResult['cutoff_decision'];
 
-        $matchedCluster = $this->findMatchingCluster($cluster, $bands, $cutoffDecision);
+        $matchedCluster = $this->findMatchingCluster($cluster, $bands);
         if ($matchedCluster === null) {
             $this->error('No current unresolved tie matches --cluster.');
 
@@ -133,16 +141,19 @@ class BallotResolveTie extends Command
     }
 
     /**
-     * Find the surfaced band or cutoff cluster whose candidate SET equals the
-     * requested --cluster, exactly as RunnerResolutionApplier matches a
-     * stored resolution to a cluster.
+     * Find the surfaced band whose candidate SET equals the requested
+     * --cluster, exactly as RunnerResolutionApplier matches a stored
+     * resolution to a cluster. Resolvable clusters are the bands ONLY: the
+     * cutoff decision is a display/summary of the contested subset (see
+     * PositionResolver), not a separate resolvable unit -- a resolution
+     * always has to fully order the band it belongs to, even when that band
+     * also chains in already-elected/excluded neighbors.
      *
      * @param list<string> $requestedCluster
      * @param list<array{candidates:list<string>,span:array{0:int,1:int},internal_constraints:list<array{winner:string,loser:string}>,head_to_head:array<string,array<string,int>>,affects_cutoff:bool}> $bands
-     * @param array{remaining_seats:int,candidates:list<string>,internal_constraints:list<array{winner:string,loser:string}>,head_to_head:array<string,array<string,int>>}|null $cutoffDecision
      * @return list<string>|null
      */
-    private function findMatchingCluster(array $requestedCluster, array $bands, ?array $cutoffDecision): ?array
+    private function findMatchingCluster(array $requestedCluster, array $bands): ?array
     {
         $target = $this->signature($requestedCluster);
 
@@ -150,10 +161,6 @@ class BallotResolveTie extends Command
             if ($this->signature($band['candidates']) === $target) {
                 return $band['candidates'];
             }
-        }
-
-        if ($cutoffDecision !== null && $this->signature($cutoffDecision['candidates']) === $target) {
-            return $cutoffDecision['candidates'];
         }
 
         return null;

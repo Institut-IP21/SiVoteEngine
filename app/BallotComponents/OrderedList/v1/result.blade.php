@@ -15,47 +15,41 @@
     $pairwise = $res['pairwise'];
     $accounting = $res['accounting'];
 
-    // Success = there is no unresolved tie left anywhere in the list. A band
-    // that straddles the seat cutoff is still just one of $bands (it's the
-    // same PositionResolver band, only flagged affects_cutoff), so "every
-    // band is resolved by the runner" already covers the cutoff case too —
-    // once the runner settles it, the result reads as a firm election, not
-    // a permanently-contested one.
-    $success = $hasResult && ($bands === [] || ($final !== null && $final['complete']));
+    // A band is "resolved" once every one of its members appears in $final
+    // with tied === false (guarded: a member missing from $final['order']
+    // altogether -- can't happen once $final exists, but never trust an
+    // unguarded array access here -- counts as still tied).
+    $bandIsResolved = fn (array $band) => $final !== null && collect($band['candidates'])->every(
+        fn ($m) => (collect($final['order'])->firstWhere('candidate', $m)['tied'] ?? true) === false
+    );
 
-    // "M seats contested": when the cutoff itself is undecided, M is exactly
-    // the DTO's own remaining_seats (how many of the K seats have no settled
-    // occupant yet). Otherwise membership is settled and the only open
-    // question is the final ORDER among some already-elected/excluded
-    // candidates — M there is how many of their ranking slots fall within
-    // the top K (an unresolved tie's own span can overshoot K when it
-    // straddles the boundary in the general case, but affects_cutoff already
-    // routes that case through cutoffDecision above).
-    $contestedCount = 0;
+    // The only bands that can still affect the K reported seats are the ones
+    // whose span starts at or before the cutoff; a band entirely below K
+    // (span[0] > K) is display-only ordering entanglement among
+    // already-excluded candidates. Success = a fully-determined election:
+    // no such band exists, or every one of them has been resolved by the
+    // runner (mirrors RunnerResolutionApplier's own "complete" rule).
+    $topKBands = array_values(array_filter($bands, fn ($b) => ($b['span'][0] ?? 1) <= $seats));
+    $success = $hasResult && ($topKBands === [] || ($final !== null && ($final['complete'] ?? false)));
+
+    // When not final, report two INDEPENDENT figures rather than one
+    // conflated count: membership (does this seat have a settled occupant at
+    // all?) and ordering (the occupants are settled, only their relative
+    // order within the top K isn't). A band can only ever contribute to one
+    // of the two -- a straddling band (span[1] > seats) is membership-doubt
+    // and is exactly what cutoff_decision already summarizes; a band wholly
+    // inside the top K (span[1] <= seats) is a pure order-tie among already-
+    // elected candidates.
+    $membershipContested = $cutoffDecision !== null ? $cutoffDecision['remaining_seats'] : null;
+    $orderTiesCount = 0;
     if ($hasResult && ! $success) {
-        if ($cutoffDecision !== null) {
-            $contestedCount = $cutoffDecision['remaining_seats'];
-        } else {
-            $candidateIndex = [];
-            foreach ($ranking as $idx => $entry) {
-                $candidateIndex[$entry['candidate']] = $idx;
+        foreach ($bands as $band) {
+            if (($band['span'][1] ?? 0) > $seats) {
+                continue;
             }
-
-            $contested = [];
-            foreach ($bands as $band) {
-                $resolvedBand = $final !== null && collect($band['candidates'])->every(
-                    fn ($m) => collect($final['order'])->firstWhere('candidate', $m)['tied'] === false
-                );
-                if ($resolvedBand) {
-                    continue;
-                }
-                foreach ($band['candidates'] as $c) {
-                    if (($candidateIndex[$c] ?? PHP_INT_MAX) < $seats) {
-                        $contested[$c] = true;
-                    }
-                }
+            if (! $bandIsResolved($band)) {
+                $orderTiesCount++;
             }
-            $contestedCount = count($contested);
         }
     }
 @endphp
@@ -74,7 +68,12 @@
         </div>
     @else
         <div class="p-4 text-center mb-4 rounded-xl font-semibold bg-warn-soft text-warn-fg">
-            {{ __('components.orderedlist.contested_headline', ['count' => $contestedCount]) }}
+            @if ($membershipContested !== null)
+                <p class="m-0">{{ __('components.orderedlist.contested_headline', ['count' => $membershipContested]) }}</p>
+            @endif
+            @if ($orderTiesCount > 0)
+                <p class="m-0">{{ __('components.orderedlist.order_ties_note', ['count' => $orderTiesCount]) }}</p>
+            @endif
         </div>
     @endif
 

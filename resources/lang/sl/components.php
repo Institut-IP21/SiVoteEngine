@@ -119,6 +119,7 @@ return [
         'no_result_yet' => 'Za to vprašanje še ni preštetih glasov.',
         'elected_headline' => 'Izvoljeno — :seats mest',
         'contested_headline' => ':count mest je spornih — čaka se na vodjo štetja',
+        'order_ties_note' => ':count že izvoljenih mest še potrebuje dokončno določitev vrstnega reda — čaka se na vodjo štetja',
         'position' => ':name, mesto :pos od :total',
         'band_span' => 'Mesta :from–:to',
         'tie_awaiting' => 'Izenačeno po glasovih — čaka se na vodjo štetja',

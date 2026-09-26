@@ -30,13 +30,13 @@ class BallotResolveTieTest extends TestCase
     /**
      * @return array{0: Ballot, 1: BallotComponent}
      */
-    private function contestedCutoffBallot(): array
+    private function contestedCutoffBallot(bool $finished = true): array
     {
         $election = Election::factory()->create(['locale' => 'en', 'abstainable' => false]);
         $ballot = Ballot::factory()->create([
             'election_id' => $election->id,
-            'active' => false,
-            'finished' => true,
+            'active' => !$finished,
+            'finished' => $finished,
         ]);
         $component = BallotComponent::factory()->create([
             'ballot_id' => $ballot->id,
@@ -112,5 +112,59 @@ class BallotResolveTieTest extends TestCase
 
         $component->refresh();
         $this->assertNull($component->runner_resolutions);
+    }
+
+    public function test_resolution_is_refused_while_the_ballot_is_still_open(): void
+    {
+        [, $component] = $this->contestedCutoffBallot(finished: false);
+
+        $this->artisan('ballot:resolve-tie', [
+            'component' => $component->id,
+            '--cluster' => 'A,B,C',
+            '--order' => 'B,A,C',
+            '--comment' => 'Too early.',
+            '--by' => 'returning-officer',
+        ])->assertExitCode(1);
+
+        $component->refresh();
+        $this->assertNull($component->runner_resolutions);
+    }
+
+    public function test_re_resolving_an_already_resolved_cluster_appends_and_the_latest_wins(): void
+    {
+        [, $component] = $this->contestedCutoffBallot();
+
+        $this->artisan('ballot:resolve-tie', [
+            'component' => $component->id,
+            '--cluster' => 'A,B,C',
+            '--order' => 'B,A,C',
+            '--comment' => 'First draw.',
+            '--by' => 'returning-officer',
+        ])->assertExitCode(0);
+
+        // PositionResolver recomputes the surfaced band fresh from the votes
+        // each time (it doesn't know about prior resolutions), so the same
+        // cluster can be matched and re-resolved with a different order.
+        $this->artisan('ballot:resolve-tie', [
+            'component' => $component->id,
+            '--cluster' => 'A,B,C',
+            '--order' => 'A,B,C',
+            '--comment' => 'Runner reconsidered.',
+            '--by' => 'returning-officer',
+        ])->assertExitCode(0);
+
+        $component->refresh();
+        $this->assertCount(2, $component->runner_resolutions);
+        $this->assertSame(['B', 'A', 'C'], $component->runner_resolutions[0]['order']);
+        $this->assertSame(['A', 'B', 'C'], $component->runner_resolutions[1]['order']);
+
+        // RunnerResolutionApplier matches the LAST stored resolution for a
+        // cluster, so the second (most recent) order is the one that wins.
+        $service = $this->app->make(\App\Services\BallotService::class);
+        $results = $service->calculateResults($component->ballot);
+        $final = $results[$component->id]['results']['final'];
+        $this->assertNotNull($final);
+        $this->assertTrue($final['complete']);
+        $this->assertSame(['position' => 1, 'candidate' => 'A', 'tied' => false], $final['order'][0]);
     }
 }

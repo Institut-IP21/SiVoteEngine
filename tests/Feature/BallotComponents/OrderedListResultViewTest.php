@@ -85,6 +85,73 @@ class OrderedListResultViewTest extends TestCase
         $res->assertSeeText(__('components.orderedlist.tie_awaiting'));
     }
 
+    /**
+     * F3: a decided top-K with an unresolved band entirely BELOW the cutoff
+     * (never-approved C/D/E tied for the tail, seats=2) must still render the
+     * success/elected headline -- membership of the top 2 is fully settled,
+     * so this is not "seats contested".
+     */
+    public function test_decided_top_k_with_a_below_cutoff_band_shows_elected_not_contested(): void
+    {
+        [, $ballot] = $this->finishedBallot(
+            ['A', 'B', 'C', 'D', 'E'],
+            [
+                // A decisively over B, both decisively over the untouched
+                // C/D/E tail: A and B land as determined singletons at
+                // positions 1 and 2.
+                ...array_fill(0, 3, ['A', 'B']),
+                // One solo-approval ballot per tail candidate makes every
+                // C/D/E pairwise comparison tie (each beats the two
+                // unapproved others equally often across these three
+                // ballots), so C, D, E band together for positions 3-5,
+                // entirely below the seats=2 cutoff.
+                ['C'],
+                ['D'],
+                ['E'],
+            ],
+            ['seats' => 2]
+        );
+
+        $res = $this->fetchResult($ballot);
+        $res->assertOk();
+        $res->assertSeeText(__('components.orderedlist.elected_headline', ['seats' => 2]));
+        $res->assertDontSeeText(__('components.orderedlist.contested_headline', ['count' => 2]));
+        // The C/D/E tail is still shown as a tie, just not as a headline contest.
+        $res->assertSeeText(__('components.orderedlist.tie_awaiting'));
+    }
+
+    /**
+     * F3/F6: an order-tie strictly among already-elected candidates (A~B for
+     * positions 1-2, seats=2; C~D tied below the cutoff, excluded either
+     * way) must be reported as an ORDER tie, never as "seats contested" --
+     * membership of the top 2 (A and B) is not in doubt, only their relative
+     * order is.
+     */
+    public function test_order_tie_among_elected_shows_order_ties_note_not_contested(): void
+    {
+        [, $ballot] = $this->finishedBallot(
+            ['A', 'B', 'C', 'D'],
+            [
+                // A and B are approved on every one of these 6 ballots (3
+                // each way), so both decisively beat C/D, but tie 3-3 with
+                // each other: {A, B} band for positions 1-2.
+                ...array_fill(0, 3, ['A', 'B']),
+                ...array_fill(0, 3, ['B', 'A']),
+                // A single 1-1 split ties C and D for positions 3-4,
+                // entirely below the cutoff -- excluded either way.
+                ['C', 'D'],
+                ['D', 'C'],
+            ],
+            ['seats' => 2]
+        );
+
+        $res = $this->fetchResult($ballot);
+        $res->assertOk();
+        $res->assertSeeText(__('components.orderedlist.order_ties_note', ['count' => 1]));
+        $res->assertDontSeeText(__('components.orderedlist.contested_headline', ['count' => 2]));
+        $res->assertDontSeeText(__('components.orderedlist.elected_headline', ['seats' => 2]));
+    }
+
     public function test_no_votes_yet_shows_neutral_notice_without_error(): void
     {
         [, $ballot] = $this->finishedBallot(['A', 'B', 'C'], []);

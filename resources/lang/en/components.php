@@ -119,6 +119,7 @@ return [
         'no_result_yet' => 'No votes have been counted for this question yet.',
         'elected_headline' => 'Elected — :seats seats',
         'contested_headline' => ':count seats contested — awaiting the election runner',
+        'order_ties_note' => ':count already-elected seats still need their final order settled — awaiting the election runner',
         'position' => ':name, position :pos of :total',
         'band_span' => 'Positions :from–:to',
         'tie_awaiting' => 'Tied by the votes — awaiting the election runner',
