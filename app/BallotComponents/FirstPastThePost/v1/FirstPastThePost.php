@@ -31,6 +31,7 @@ final class FirstPastThePost extends AbstractBallotComponent
     {
         return [
             'name' => __('components.fptp.name'),
+            'method' => __('components.fptp.method'),
             'description' => __('components.fptp.description'),
             'hint' => __('components.fptp.hint'),
         ];
@@ -42,6 +43,15 @@ final class FirstPastThePost extends AbstractBallotComponent
         return [
             'options' => 'bail|required|array|min:2',
             'options.*' => 'bail|required|string|distinct|min:1',
+        ];
+    }
+
+    #[\Override]
+    protected function getStatuteTextParagraphs(): array
+    {
+        return [
+            'en' => $this->statuteParagraphs('statute.fptp', 'en'),
+            'sl' => $this->statuteParagraphs('statute.fptp', 'sl'),
         ];
     }
 

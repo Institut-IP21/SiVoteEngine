@@ -58,6 +58,14 @@ class BallotComponentApiController extends Controller
             ],
             'settings' => 'nullable|array',
             'settings.pass_threshold' => $this->passThresholdRule(),
+            'settings.seats' => 'sometimes|nullable|integer|min:1',
+            'settings.categories' => 'sometimes|nullable|array',
+            'settings.categories.*' => 'nullable|string',
+            'settings.quota' => 'sometimes|nullable|array',
+            'settings.quota.category' => 'required_with:settings.quota|string',
+            'settings.quota.type' => 'required_with:settings.quota|in:min,max',
+            'settings.quota.count' => 'required_with:settings.quota|integer|min:0',
+            'settings.quota.binding' => 'sometimes|boolean',
         ];
 
         if ($errors = $this->findErrors($params, $settings)) {
@@ -161,6 +169,14 @@ class BallotComponentApiController extends Controller
             ],
             'settings' => 'nullable|array',
             'settings.pass_threshold' => $this->passThresholdRule(),
+            'settings.seats' => 'sometimes|nullable|integer|min:1',
+            'settings.categories' => 'sometimes|nullable|array',
+            'settings.categories.*' => 'nullable|string',
+            'settings.quota' => 'sometimes|nullable|array',
+            'settings.quota.category' => 'required_with:settings.quota|string',
+            'settings.quota.type' => 'required_with:settings.quota|in:min,max',
+            'settings.quota.count' => 'required_with:settings.quota|integer|min:0',
+            'settings.quota.binding' => 'sometimes|boolean',
         ];
 
         if ($errors = $this->findErrors($params, $settings)) {
@@ -237,32 +253,169 @@ class BallotComponentApiController extends Controller
     }
 
     /**
-     * Build the `settings` payload from a request when a pass_threshold is supplied,
-     * mirroring the CLI's normalisation (numeric -> int/float so it round-trips as a
-     * number; preset strings pass through). Returns null when none is provided.
+     * Build the persisted `settings` payload from a request. A per-key
+     * whitelist: each of `pass_threshold` (YesNo), `seats` (ApprovalVote /
+     * OrderedList), and `categories` / `quota` (OrderedList) is independently
+     * normalised and dropped — never persisted — when absent, empty, or
+     * malformed, rather than failing the whole request; request-level
+     * rejection of clearly-invalid shapes is handled by the validation rules
+     * in create()/update(). This is a second line of defense so this method
+     * never writes obvious garbage even if it's ever reached with
+     * unvalidated input — the engine's own tally logic (`OrderedList::
+     * parseQuota`/`parseCategories`) re-validates again at calculation time.
+     *
+     * Returns null only when NONE of the whitelisted keys resolve to a
+     * value, preserving the original "omit settings entirely" semantics
+     * (e.g. a YesNo with no threshold, or any type with no settings at all,
+     * still stores `null`, not `[]`).
      *
      * @param array<string, mixed> $params
-     * @return array{pass_threshold: int|float|string}|null
+     * @return array<string, mixed>|null
      */
     private function buildSettings(array $params): ?array
     {
         if (!isset($params['settings']) || !is_array($params['settings'])) {
             return null;
         }
-        if (!array_key_exists('pass_threshold', $params['settings'])) {
+
+        /** @var array<string, mixed> $raw */
+        $raw = $params['settings'];
+        $settings = [];
+
+        if (($passThreshold = $this->buildPassThreshold($raw)) !== null) {
+            $settings['pass_threshold'] = $passThreshold;
+        }
+
+        if (($seats = $this->buildSeats($raw)) !== null) {
+            $settings['seats'] = $seats;
+        }
+
+        if (($categories = $this->buildCategories($raw)) !== null) {
+            $settings['categories'] = $categories;
+        }
+
+        if (($quota = $this->buildQuota($raw)) !== null) {
+            $settings['quota'] = $quota;
+        }
+
+        return $settings === [] ? null : $settings;
+    }
+
+    /**
+     * `pass_threshold` (YesNo): unchanged behaviour from before this method
+     * was generalized — numeric strings normalise to int/float so the value
+     * round-trips as a number; preset strings pass through untouched.
+     *
+     * @param array<string, mixed> $settings
+     */
+    private function buildPassThreshold(array $settings): int|float|string|null
+    {
+        if (!array_key_exists('pass_threshold', $settings)) {
             return null;
         }
 
-        $value = $params['settings']['pass_threshold'];
+        $value = $settings['pass_threshold'];
         if ($value === null || $value === '') {
             return null;
         }
 
-        if (is_numeric($value)) {
-            $value = $value + 0; // int|float
+        return is_numeric($value) ? $value + 0 : $value;
+    }
+
+    /**
+     * `seats` (ApprovalVote / OrderedList): a positive integer. The HTTP
+     * validation rule (`settings.seats`) already enforces this on a normal
+     * request; this normalises numeric strings to `int` and drops anything
+     * that isn't a valid positive integer rather than guessing.
+     *
+     * @param array<string, mixed> $settings
+     */
+    private function buildSeats(array $settings): ?int
+    {
+        if (!array_key_exists('seats', $settings)) {
+            return null;
         }
 
-        return ['pass_threshold' => $value];
+        $value = $settings['seats'];
+        if ($value === null || $value === '' || !is_numeric($value)) {
+            return null;
+        }
+
+        $seats = (int) $value;
+        return $seats >= 1 ? $seats : null;
+    }
+
+    /**
+     * `categories` (OrderedList): a candidate-label => category-string map.
+     * Mirrors `OrderedList::parseCategories()`'s own predicate exactly (only
+     * string values survive) so nothing is persisted here that the tally
+     * would drop anyway.
+     *
+     * @param array<string, mixed> $settings
+     * @return array<string, string>|null
+     */
+    private function buildCategories(array $settings): ?array
+    {
+        if (!array_key_exists('categories', $settings) || !is_array($settings['categories'])) {
+            return null;
+        }
+
+        $categories = [];
+        foreach ($settings['categories'] as $option => $category) {
+            if (is_string($category)) {
+                $categories[(string) $option] = $category;
+            }
+        }
+
+        return $categories === [] ? null : $categories;
+    }
+
+    /**
+     * `quota` (OrderedList): `{category, type, count, binding}`. The HTTP
+     * validation rules already enforce the basic shape (string category,
+     * type in [min,max], integer count >= 0, optional bool binding); this
+     * normalises the numeric count to `int` and defaults `binding` to true.
+     * Deliberately does NOT enforce the stricter "min needs count>=1"
+     * business rule here — `OrderedList::parseQuota()` re-checks that at
+     * tally time and drops-with-warning if it's violated, which is the
+     * intended lenient behaviour (don't 500, don't hard-fail the request
+     * over it, but don't guess either).
+     *
+     * @param array<string, mixed> $settings
+     * @return array{category:string,type:string,count:int,binding:bool}|null
+     */
+    private function buildQuota(array $settings): ?array
+    {
+        if (!array_key_exists('quota', $settings) || !is_array($settings['quota'])) {
+            return null;
+        }
+
+        $quota = $settings['quota'];
+        $category = $quota['category'] ?? null;
+        $type = $quota['type'] ?? null;
+        $count = $quota['count'] ?? null;
+        $binding = $quota['binding'] ?? null;
+
+        if (
+            !is_string($category)
+            || $category === ''
+            || !in_array($type, ['min', 'max'], true)
+            || !is_numeric($count)
+        ) {
+            return null;
+        }
+
+        $count = (int) $count;
+        if ($count < 0) {
+            return null;
+        }
+
+        return [
+            'category' => $category,
+            'type' => $type,
+            'count' => $count,
+            'binding' => is_bool($binding) ? $binding : true,
+        ];
     }
 
     public function delete(Election $election, Ballot $ballot, BallotComponent $component): bool|null

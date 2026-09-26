@@ -237,4 +237,223 @@ class BallotComponentCrudTest extends TestCase
         $c->refresh();
         $this->assertSame('three_quarters', $c->settings['pass_threshold']);
     }
+
+    /**
+     * ApprovalVote top-K: `settings.seats` passes validation AND actually
+     * persists on the model. Regression against the `buildSettings()`
+     * blocker (D7 / Lane B): before its generalization, this 200'd but
+     * silently dropped `seats` — the component stored no settings at all.
+     */
+    public function test_create_component_with_valid_seats_setting_passes_validation(): void
+    {
+        [$e, $b, $req] = $this->ownedBallot();
+
+        $req->postJson("/api/election/$e->id/ballot/$b->id/component/create", [
+            'title' => 'Committee seats',
+            'type' => 'ApprovalVote',
+            'version' => 'v1',
+            'options' => ['A', 'B', 'C'],
+            'settings' => ['seats' => 2],
+        ])->assertJsonStructure(['data' => $this->component_schema]);
+
+        $component = BallotComponent::where('ballot_id', $b->id)->firstOrFail();
+        $this->assertSame(['seats' => 2], $component->settings);
+    }
+
+    public function test_create_component_with_invalid_seats_setting_fails_validation(): void
+    {
+        [$e, $b, $req] = $this->ownedBallot();
+
+        // Below the min:1 floor.
+        $req->postJson("/api/election/$e->id/ballot/$b->id/component/create", [
+            'title' => 'Committee seats',
+            'type' => 'ApprovalVote',
+            'version' => 'v1',
+            'options' => ['A', 'B', 'C'],
+            'settings' => ['seats' => 0],
+        ])->assertJsonStructure(['field_errors' => ['settings.seats']]);
+
+        // Non-integer.
+        $req->postJson("/api/election/$e->id/ballot/$b->id/component/create", [
+            'title' => 'Committee seats',
+            'type' => 'ApprovalVote',
+            'version' => 'v1',
+            'options' => ['A', 'B', 'C'],
+            'settings' => ['seats' => 'two'],
+        ])->assertJsonStructure(['field_errors' => ['settings.seats']]);
+
+        $this->assertSame(0, BallotComponent::where('ballot_id', $b->id)->count());
+    }
+
+    public function test_update_component_accepts_seats_setting(): void
+    {
+        [$e, $b, $req] = $this->ownedBallot();
+
+        $c = BallotComponent::factory()->create([
+            'ballot_id' => $b->id,
+            'type' => 'ApprovalVote',
+            'version' => 'v1',
+            'options' => ['A', 'B', 'C'],
+        ]);
+
+        $req->postJson("/api/election/$e->id/ballot/$b->id/component/$c->id", [
+            'title' => 'Committee seats',
+            'type' => 'ApprovalVote',
+            'version' => 'v1',
+            'settings' => ['seats' => 2],
+        ])->assertJsonStructure(['data' => $this->component_schema]);
+
+        $c->refresh();
+        $this->assertSame(['seats' => 2], $c->settings);
+    }
+
+    /**
+     * OrderedList's composition/gender quota (D-Lane-B, B0/B1): `settings.categories`
+     * (a per-option label => category map) and `settings.quota`
+     * ({category,type,count,binding}) both persist through the same
+     * generalized `buildSettings()` that `seats`/`pass_threshold` use.
+     */
+    public function test_create_orderedlist_with_categories_and_quota_persists_both(): void
+    {
+        [$e, $b, $req] = $this->ownedBallot();
+
+        $req->postJson("/api/election/$e->id/ballot/$b->id/component/create", [
+            'title' => 'Committee',
+            'type' => 'OrderedList',
+            'version' => 'v1',
+            'options' => ['Alice', 'Bob', 'Carol', 'Dave'],
+            'settings' => [
+                'seats' => 2,
+                'categories' => ['Alice' => 'female', 'Carol' => 'female'],
+                'quota' => ['category' => 'female', 'type' => 'min', 'count' => 1, 'binding' => true],
+            ],
+        ])->assertJsonStructure(['data' => $this->component_schema]);
+
+        $component = BallotComponent::where('ballot_id', $b->id)->firstOrFail();
+        $this->assertSame([
+            'seats' => 2,
+            'categories' => ['Alice' => 'female', 'Carol' => 'female'],
+            'quota' => ['category' => 'female', 'type' => 'min', 'count' => 1, 'binding' => true],
+        ], $component->settings);
+    }
+
+    /**
+     * `binding` defaults to true when omitted, mirroring `OrderedList::parseQuota()`.
+     */
+    public function test_create_orderedlist_quota_defaults_binding_to_true(): void
+    {
+        [$e, $b, $req] = $this->ownedBallot();
+
+        $req->postJson("/api/election/$e->id/ballot/$b->id/component/create", [
+            'title' => 'Committee',
+            'type' => 'OrderedList',
+            'version' => 'v1',
+            'options' => ['Alice', 'Bob'],
+            'settings' => [
+                'categories' => ['Alice' => 'female'],
+                'quota' => ['category' => 'female', 'type' => 'max', 'count' => 0],
+            ],
+        ])->assertJsonStructure(['data' => $this->component_schema]);
+
+        $component = BallotComponent::where('ballot_id', $b->id)->firstOrFail();
+        $this->assertTrue($component->settings['quota']['binding']);
+    }
+
+    /**
+     * A malformed quota (missing the required `count`) is rejected at the
+     * HTTP validation layer — a 422 with field errors, never a 500, and no
+     * component is persisted.
+     */
+    public function test_create_orderedlist_with_malformed_quota_is_rejected_without_500(): void
+    {
+        [$e, $b, $req] = $this->ownedBallot();
+
+        $req->postJson("/api/election/$e->id/ballot/$b->id/component/create", [
+            'title' => 'Committee',
+            'type' => 'OrderedList',
+            'version' => 'v1',
+            'options' => ['Alice', 'Bob'],
+            'settings' => [
+                'quota' => ['category' => 'female', 'type' => 'min'], // missing count
+            ],
+        ])->assertJsonStructure(['field_errors' => ['settings.quota.count']]);
+
+        $this->assertSame(0, BallotComponent::where('ballot_id', $b->id)->count());
+    }
+
+    /**
+     * A quota that is present but not an array at all must not 500 — dropped
+     * defensively by `buildSettings()`'s second line of defense even though
+     * the HTTP validation rule (`array`) would already reject it.
+     */
+    public function test_create_orderedlist_with_non_array_quota_is_rejected_without_500(): void
+    {
+        [$e, $b, $req] = $this->ownedBallot();
+
+        $req->postJson("/api/election/$e->id/ballot/$b->id/component/create", [
+            'title' => 'Committee',
+            'type' => 'OrderedList',
+            'version' => 'v1',
+            'options' => ['Alice', 'Bob'],
+            'settings' => [
+                'quota' => 'not-an-array',
+            ],
+        ])->assertJsonStructure(['field_errors' => ['settings.quota']]);
+
+        $this->assertSame(0, BallotComponent::where('ballot_id', $b->id)->count());
+    }
+
+    /**
+     * `update()` REPLACES settings wholesale (no merge): sending only `seats`
+     * on an update must drop a previously-persisted `categories`/`quota`,
+     * not leave them dangling. This is why the web_app editor must always
+     * resend the full settings for the type on every save.
+     */
+    public function test_update_replaces_settings_wholesale_dropping_omitted_keys(): void
+    {
+        [$e, $b, $req] = $this->ownedBallot();
+
+        $c = BallotComponent::factory()->create([
+            'ballot_id' => $b->id,
+            'type' => 'OrderedList',
+            'version' => 'v1',
+            'options' => ['Alice', 'Bob'],
+            'settings' => [
+                'seats' => 1,
+                'categories' => ['Alice' => 'female'],
+                'quota' => ['category' => 'female', 'type' => 'min', 'count' => 1, 'binding' => true],
+            ],
+        ]);
+
+        $req->postJson("/api/election/$e->id/ballot/$b->id/component/$c->id", [
+            'title' => 'Committee',
+            'type' => 'OrderedList',
+            'version' => 'v1',
+            'settings' => ['seats' => 2],
+        ])->assertJsonStructure(['data' => $this->component_schema]);
+
+        $c->refresh();
+        $this->assertSame(['seats' => 2], $c->settings);
+    }
+
+    /**
+     * A YesNo component that sends a `settings` array with no usable key
+     * (e.g. an explicit empty array, or pass_threshold null/empty) still
+     * stores no settings at all — `buildSettings()` returns null, not `[]`,
+     * exactly as before it was generalized.
+     */
+    public function test_create_yesno_with_empty_settings_array_leaves_settings_null(): void
+    {
+        [$e, $b, $req] = $this->ownedBallot();
+
+        $req->postJson("/api/election/$e->id/ballot/$b->id/component/create", [
+            'title' => 'No threshold component',
+            'type' => 'YesNo',
+            'version' => 'v1',
+            'settings' => [],
+        ])->assertJsonStructure(['data' => $this->component_schema]);
+
+        $component = BallotComponent::where('ballot_id', $b->id)->firstOrFail();
+        $this->assertNull($component->settings);
+    }
 }

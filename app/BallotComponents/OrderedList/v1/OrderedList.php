@@ -45,8 +45,24 @@ final class OrderedList extends AbstractBallotComponent
     {
         return [
             'name' => __('components.orderedlist.name'),
+            'method' => __('components.orderedlist.method'),
             'description' => __('components.orderedlist.description'),
             'hint' => __('components.orderedlist.hint'),
+        ];
+    }
+
+    #[\Override]
+    protected function cardinality(): string
+    {
+        return 'multiple';
+    }
+
+    #[\Override]
+    protected function getStatuteTextParagraphs(): array
+    {
+        return [
+            'en' => $this->statuteParagraphs('statute.orderedlist', 'en'),
+            'sl' => $this->statuteParagraphs('statute.orderedlist', 'sl'),
         ];
     }
 

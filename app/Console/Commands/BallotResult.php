@@ -71,7 +71,27 @@ class BallotResult extends Command
                 }
                 $this->table(['Option', 'Votes'], $rows);
 
-                if (isset($resultData['winner'])) {
+                // Top-K components (ApprovalVote's seats>1) carry `elected`/
+                // `contested` alongside the legacy `winner`/`winners`; at
+                // seats=1 those are byte-equivalent to the single-winner
+                // shape, so only branch away from "Winner: ..." when there
+                // is genuinely more than one seat to report.
+                $seats = (int) ($resultData['seats'] ?? 1);
+
+                if ($seats > 1 && array_key_exists('elected', $resultData)) {
+                    /** @var list<string> $elected */
+                    $elected = $resultData['elected'];
+                    if ($elected !== []) {
+                        $this->line('Elected: ' . implode(', ', $elected));
+                    }
+
+                    /** @var list<string> $contested */
+                    $contested = $resultData['contested'] ?? [];
+                    if ($contested !== []) {
+                        $contestedSeats = (int) ($resultData['contested_seats'] ?? count($contested));
+                        $this->line("Contested for the last {$contestedSeats} seat(s): " . implode(', ', $contested));
+                    }
+                } elseif (isset($resultData['winner'])) {
                     $this->line("Winner: {$resultData['winner']}");
                 }
             } else {

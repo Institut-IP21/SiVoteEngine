@@ -484,4 +484,41 @@ class RankedChoiceTest extends TestCase
         $this->assertSame(2, $r['preferences']['A'][0]);
         $this->assertSame(1, $r['preferences']['B'][0]);
     }
+
+    public function test_get_statute_text_returns_nonempty_bilingual_paragraphs(): void
+    {
+        $statute = $this->component->getStatuteText();
+
+        $this->assertSame('RankedChoice', $statute->type);
+        $this->assertNotEmpty($statute->en);
+        $this->assertNotEmpty($statute->sl);
+        foreach ([...$statute->en, ...$statute->sl] as $paragraph) {
+            $this->assertNotSame('', trim($paragraph));
+        }
+    }
+
+    public function test_get_statute_text_mentions_deterministic_lookback_not_random_draw(): void
+    {
+        // D6.2/D6.3 grounding fact: the elimination-tie look-back is engine-
+        // executed but deterministic — the clause must say so explicitly, and
+        // must explicitly deny a random draw for that step.
+        $statute = $this->component->getStatuteText();
+        $en = implode(' ', $statute->en);
+
+        $this->assertStringContainsStringIgnoringCase('look', $en);
+        $this->assertStringContainsString('applied automatically and consistently by the voting system', $en);
+        $this->assertStringContainsString('does not involve any random draw', $en);
+    }
+
+    public function test_get_statute_text_terminal_tie_never_affirms_casting_vote_or_random_draw(): void
+    {
+        $statute = $this->component->getStatuteText();
+        $lower = strtolower(implode(' ', $statute->en));
+        foreach ([
+            'resolved by a casting vote', 'decided by a casting vote', 'broken by a casting vote',
+            'resolved by a random draw', 'decided by a random draw', 'broken by a random draw',
+        ] as $affirmation) {
+            $this->assertStringNotContainsString($affirmation, $lower);
+        }
+    }
 }

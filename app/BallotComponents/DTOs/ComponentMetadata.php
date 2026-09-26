@@ -10,6 +10,7 @@ final readonly class ComponentMetadata
      * @param array<string, string> $strings Localized strings (name, description, hint)
      * @param array<string, string> $optionsValidator Validation rules for options
      * @param array<string>|null $presetOptions Preset options for components that don't need custom options
+     * @param string $cardinality How many results this component elects: 'single', 'multiple', or 'decision'
      */
     public function __construct(
         public bool $needsOptions,
@@ -17,6 +18,7 @@ final readonly class ComponentMetadata
         public array $strings,
         public array $optionsValidator,
         public ?array $presetOptions = null,
+        public string $cardinality = 'single',
     ) {}
 
     /**
@@ -31,6 +33,7 @@ final readonly class ComponentMetadata
             'livewireForm' => $this->livewireForm,
             'optionsValidators' => $this->optionsValidator,
             'strings' => $this->strings,
+            'cardinality' => $this->cardinality,
         ];
     }
 }

@@ -9,12 +9,16 @@ return [
     'oftotal' => 'Share (%)',
     'share_valid' => 'Share of valid votes (%)',
     'not_binding' => 'Not binding — quorum was not met, so this outcome is advisory only.',
+    'result' => [
+        'notes_label' => 'Notes',
+    ],
     'yesno' => [
         'yes' => 'Yes',
         'no' => 'No',
         'abstain' => 'Abstain',
         'hint' => 'Choose one option.',
         'name' => 'Yes/No question',
+        'method' => 'majority vote',
         'tie' => 'The outcome is a tie.',
         'description' => 'Voters choose whether they support or oppose a single item.',
         'invalid' => 'Invalid',
@@ -24,6 +28,7 @@ return [
     ],
     'fptp' => [
         'name' => 'First past the post / Plurality question',
+        'method' => 'plurality (first-past-the-post)',
         'abstain' => 'Abstain',
         'hint' => 'Choose one candidate.',
         'invalid' => 'Invalid',
@@ -32,8 +37,9 @@ return [
         'winner_is' => 'Winner: :name'
     ],
     'rankedchoice' => [
-        'name' => 'Ranked choice question',
-        'description' => 'Voters rank multiple options in order of their preference.',
+        'name' => 'Single winner by ranking',
+        'method' => 'instant-runoff (IRV) · alternative vote',
+        'description' => 'Elects a single winner. Voters rank the candidates; if no candidate has a majority, the lowest is eliminated and their votes transfer to the next choice, until one candidate has a majority.',
         'hint' => 'Tap in order — 1 = favourite. Rank as many or as few as you like; you need not rank all.',
         'abstain_note' => 'No options ranked — submitting this question blank counts as abstaining.',
         'counter' => 'Ranked: :selected of :total',
@@ -104,15 +110,23 @@ return [
     ],
     'approval' => [
         'name' => 'Approval vote question',
-        'description' => 'Voters approve of any number of options from a list.',
+        'method' => 'approval voting',
+        'description' => 'Voters approve any number of options; the options with the most approvals are elected, up to the configured number of seats.',
         'hint' => 'Choose one or more options.',
         'rate' => 'Approval rate (%)',
         'winner_is' => 'Most approved: :name',
-        'tie' => 'The outcome is a tie. The following options received the same number of approvals: '
+        'tie' => 'The outcome is a tie. The following options received the same number of approvals: ',
+        // Seats-aware result view (top-K, D1/D3) — used when seats > 1;
+        // seats=1 keeps the classic winner_is/tie wording above.
+        'no_result_yet' => 'No votes have been counted for this question yet.',
+        'elected_headline' => 'Elected — :seats winners',
+        'contested_headline' => ':count seat(s) tied — genuinely tied; resolve per your organization\'s rules',
+        'seats_label' => 'Electing :seats winners',
     ],
     'orderedlist' => [
-        'name' => 'Ordered list question',
-        'description' => 'Voters approve any number of options and rank the ones they approve; the votes settle an ordered list by the Schulze method (beatpath).',
+        'name' => 'Ordered list of winners',
+        'method' => 'Schulze method · Condorcet (beatpath)',
+        'description' => 'Elects an ordered list of several winners — position matters. Voters approve and rank the candidates; the order is settled by the Schulze method (a Condorcet "strongest-path" method). Optional composition quota (e.g. gender balance) and a configurable number of seats.',
         'hint' => 'Approve the options you want on the list, then put your approved options in order — 1 = your top choice.',
         // Result-first display (progressive disclosure), mirroring ranked choice.
         'outcome_not_binding' => 'Quorum was not met, so this result is not binding. The order below reflects the ballots counted so far.',

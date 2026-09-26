@@ -31,6 +31,14 @@ return [
         'no_open_questions' => 'No questions are open right now. This page updates automatically when the next one opens.',
     ],
     'voteId' => 'Vote ID',
+    'tally_csv' => [
+        'question' => 'Question',
+        'option' => 'Option',
+        'count' => 'Count',
+        'rate' => 'Rate (%)',
+        'elected' => 'Elected',
+        'rank' => 'Rank/Seat',
+    ],
     'code_info' => 'The code you received (also part of the link that brought you here) is how the system knows you are eligible to vote without knowing who you are. Keep it to yourself and do not share it. After voting, you can use it to check that your votes were recorded correctly.',
     'quorum' => [
         'met' => 'Quorum met',

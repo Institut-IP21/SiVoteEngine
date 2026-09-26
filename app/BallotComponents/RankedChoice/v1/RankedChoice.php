@@ -39,6 +39,7 @@ final class RankedChoice extends AbstractBallotComponent
     {
         return [
             'name' => __('components.rankedchoice.name'),
+            'method' => __('components.rankedchoice.method'),
             'description' => __('components.rankedchoice.description'),
             'hint' => __('components.rankedchoice.hint'),
         ];
@@ -50,6 +51,15 @@ final class RankedChoice extends AbstractBallotComponent
         return [
             'options' => 'bail|required|array|min:2',
             'options.*' => 'bail|required|string|distinct|min:1',
+        ];
+    }
+
+    #[\Override]
+    protected function getStatuteTextParagraphs(): array
+    {
+        return [
+            'en' => $this->statuteParagraphs('statute.rankedchoice', 'en'),
+            'sl' => $this->statuteParagraphs('statute.rankedchoice', 'sl'),
         ];
     }
 

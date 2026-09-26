@@ -158,4 +158,30 @@ class FirstPastThePostTest extends TestCase
             $c->id => ['required', Rule::in(['Ana', 'Betty', 'abstain'])],
         ], $this->component->getSubmissionValidator($c, $election)->toArray());
     }
+
+    public function test_get_statute_text_returns_nonempty_bilingual_paragraphs(): void
+    {
+        $statute = $this->component->getStatuteText();
+
+        $this->assertSame('FirstPastThePost', $statute->type);
+        $this->assertNotEmpty($statute->en);
+        $this->assertNotEmpty($statute->sl);
+        foreach ([...$statute->en, ...$statute->sl] as $paragraph) {
+            $this->assertNotSame('', trim($paragraph));
+        }
+    }
+
+    public function test_get_statute_text_tie_clause_never_affirms_casting_vote_or_random_draw(): void
+    {
+        // Grounding fact: a plurality tie is surfaced, never broken by a casting
+        // vote or a random draw performed by the voting system.
+        $statute = $this->component->getStatuteText();
+        $lower = strtolower(implode(' ', $statute->en));
+        foreach ([
+            'resolved by a casting vote', 'decided by a casting vote', 'broken by a casting vote',
+            'resolved by a random draw', 'decided by a random draw', 'broken by a random draw',
+        ] as $affirmation) {
+            $this->assertStringNotContainsString($affirmation, $lower);
+        }
+    }
 }

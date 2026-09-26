@@ -9,12 +9,16 @@ return [
     'oftotal' => 'Delež (%)',
     'share_valid' => 'Delež veljavnih glasov (%)',
     'not_binding' => 'Ni zavezujoče — kvorum ni bil dosežen, zato je ta izid zgolj informativen.',
+    'result' => [
+        'notes_label' => 'Opombe',
+    ],
     'yesno' => [
         'yes' => 'Da',
         'no' => 'Ne',
         'abstain' => 'Vzdržan',
         'hint' => 'Izberite eno možnost.',
         'name' => 'Da/Ne vprašanje',
+        'method' => 'večinsko glasovanje',
         'tie' => 'Izid je neodločen.',
         'description' => 'Glasovalci izbirajo med Da, Ne, in glede na nastavitve, Vzdržano.',
         'invalid' => 'Neveljavno',
@@ -24,6 +28,7 @@ return [
     ],
     'fptp' => [
         'name' => 'Izbira ene vrednosti izmed večih',
+        'method' => 'relativna večina',
         'abstain' => 'Vzdržan',
         'hint' => 'Izberite enega kandidata.',
         'invalid' => 'Neveljavno',
@@ -32,8 +37,9 @@ return [
         'winner_is' => 'Zmagovalec: :name'
     ],
     'rankedchoice' => [
-        'name' => 'Razvrščanje vrednosti',
-        'description' => 'Glasovalci seznam možnosti uredijo po vrsti glede na preferenco.',
+        'name' => 'Zmagovalec po razvrstitvi',
+        'method' => 'alternativno glasovanje · IRV',
+        'description' => 'Izvoli enega zmagovalca. Glasovalci kandidate razvrstijo; če nihče nima večine, se kandidat z najmanj glasovi izloči, njegovi glasovi pa se prenesejo na naslednjo izbiro, dokler eden ne doseže večine.',
         'hint' => 'Pritisnite po vrsti — 1 = najljubši. Razvrstite poljubno število; ni treba razvrstiti vseh.',
         'abstain_note' => 'Nobena možnost ni razvrščena — oddaja praznega vprašanja pomeni vzdržanost.',
         'counter' => 'Razvrščeni: :selected od :total',
@@ -104,15 +110,23 @@ return [
     ],
     'approval' => [
         'name' => 'Odobritveni glas',
-        'description' => 'Glasovalci označijo, katere izmed možnosti na seznamu podpirajo.',
+        'method' => 'odobritveno glasovanje',
+        'description' => 'Glasovalci odobrijo poljubno število možnosti; izvoljene so možnosti z največ odobritvami, do nastavljenega števila mest.',
         'hint' => 'Izberite eno ali več možnosti.',
         'rate' => 'Stopnja podpore (%)',
         'winner_is' => 'Največ podpore: :name',
-        'tie' => 'Izid je neodločen. Isto število podpor so prejeli: '
+        'tie' => 'Izid je neodločen. Isto število podpor so prejeli: ',
+        // Prikaz izida, ki upošteva število mest (top-K, D1/D3) — uporabljeno,
+        // kadar je število mest > 1; pri enem mestu ostane besedilo winner_is/tie.
+        'no_result_yet' => 'Za to vprašanje še ni preštetih glasov.',
+        'elected_headline' => 'Izvoljeno — :seats mest',
+        'contested_headline' => ':count mest je spornih — glasovi so resnično izenačeni; razrešitev je stvar pravil vaše organizacije',
+        'seats_label' => 'Voli se :seats mest',
     ],
     'orderedlist' => [
-        'name' => 'Urejen seznam',
-        'description' => 'Glasovalci odobrijo poljubno število možnosti in razvrstijo tiste, ki jih odobrijo; vrstni red glasovi določijo po Schulzejevi metodi (metoda najmočnejše poti).',
+        'name' => 'Urejen seznam izvoljenih',
+        'method' => 'Schulzejeva metoda · Condorcet',
+        'description' => 'Izvoli urejen seznam več izvoljenih — vrstni red šteje. Glasovalci kandidate odobrijo in razvrstijo; vrstni red se določi s Schulzejevo metodo (Condorcetova metoda najmočnejše poti). Neobvezno: kvota sestave (npr. uravnotežena zastopanost spolov) in nastavljivo število mest.',
         'hint' => 'Odobrite možnosti, ki jih želite na seznamu, nato jih razvrstite po vrsti — 1 = vaša prva izbira.',
         // Prikaz, ki najprej pove izid (postopno razkrivanje), v slogu razvrščevalnega glasovanja.
         'outcome_not_binding' => 'Kvorum ni bil dosežen, zato izid ni zavezujoč. Spodnji vrstni red odraža doslej prešteto glasovanje.',

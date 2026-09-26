@@ -6,6 +6,7 @@ namespace App\BallotComponents\Contracts;
 
 use App\BallotComponents\DTOs\ComponentMetadata;
 use App\BallotComponents\DTOs\ComponentResult;
+use App\BallotComponents\DTOs\StatuteText;
 use App\BallotComponents\DTOs\ValidationRules;
 use App\Models\BallotComponent;
 use App\Models\Election;
@@ -38,6 +39,13 @@ interface BallotComponentInterface
      * Get component metadata (name, description, configuration requirements).
      */
     public function getMetadata(): ComponentMetadata;
+
+    /**
+     * Get the bilingual statute/legal-reference clause text for this component
+     * (static, admin-only reference material — see
+     * local_docs/voting-components/statute-feature-spec.md).
+     */
+    public function getStatuteText(): StatuteText;
 
     /**
      * Convert vote values to CSV format for export.

@@ -236,4 +236,42 @@ class YesNoTest extends TestCase
         $this->assertEquals('tie', $r['winner']);
         $this->assertFalse($r['passed']);
     }
+
+    public function test_get_statute_text_returns_nonempty_bilingual_paragraphs(): void
+    {
+        $statute = $this->component->getStatuteText();
+
+        $this->assertSame('YesNo', $statute->type);
+        $this->assertNotEmpty($statute->en);
+        $this->assertNotEmpty($statute->sl);
+        foreach ([...$statute->en, ...$statute->sl] as $paragraph) {
+            $this->assertNotSame('', trim($paragraph));
+        }
+    }
+
+    public function test_get_statute_text_tie_clause_never_affirms_casting_vote_or_random_draw(): void
+    {
+        // Grounding fact (D5/D9): a tie fails outright — never resolved by any
+        // casting vote or random draw. The clause states this explicitly (so it
+        // necessarily mentions both phrases, negated); the guard instead checks
+        // neither is ever framed as actually resolving/deciding the tie.
+        $statute = $this->component->getStatuteText();
+        $this->assertTieNeverAffirmsCastingVoteOrRandomDraw(implode(' ', $statute->en));
+    }
+
+    /**
+     * Shared anchor-phrase guard (statute-feature-spec.md §7/§8): no component's
+     * tie clause may claim a casting vote or a random draw actually resolves a
+     * tie — the engine surfaces every tie for the organization's own rules.
+     */
+    private function assertTieNeverAffirmsCastingVoteOrRandomDraw(string $text): void
+    {
+        $lower = strtolower($text);
+        foreach ([
+            'resolved by a casting vote', 'decided by a casting vote', 'broken by a casting vote',
+            'resolved by a random draw', 'decided by a random draw', 'broken by a random draw',
+        ] as $affirmation) {
+            $this->assertStringNotContainsString($affirmation, $lower);
+        }
+    }
 }

@@ -116,6 +116,134 @@ class BallotServiceTest extends TestCase
         $this->assertStringContainsString('Red, Blue', $csv);
     }
 
+    /**
+     * Regression: the raw per-vote CSV is seat-agnostic. A `settings.seats` value
+     * on OrderedList/ApprovalVote must not change what resultsCsv() emits — it's
+     * still exactly what each voter submitted, unaffected by tallying.
+     */
+    public function test_results_csv_round_trips_raw_values_for_ordered_list_and_multiwinner_approval(): void
+    {
+        [, $ballot, $components] = $this->make([
+            ['type' => 'OrderedList', 'version' => 'v1', 'title' => 'Board election', 'options' => ['Ana', 'Bojan', 'Cveto'], 'settings' => ['seats' => 2]],
+            ['type' => 'ApprovalVote', 'version' => 'v1', 'title' => 'Committee', 'options' => ['A', 'B', 'C'], 'settings' => ['seats' => 2]],
+        ]);
+
+        Vote::factory()->forBallot($ballot)->withValues([
+            $components[0]->id => ['Bojan', 'Ana', 'Cveto'],
+            $components[1]->id => ['A', 'C'],
+        ])->create();
+
+        $csv = $this->service->resultsCsv($ballot);
+
+        $this->assertStringContainsString('Bojan, Ana, Cveto', $csv);
+        $this->assertStringContainsString('A, C', $csv);
+    }
+
+    // ----------------------------------------------------------------
+    // resultsTallyCsv
+    // ----------------------------------------------------------------
+
+    /**
+     * @return list<string>
+     */
+    private function findCsvRow(string $csv, string $option): array
+    {
+        foreach (array_filter(explode("\n", trim($csv))) as $line) {
+            $cells = str_getcsv($line);
+            if (($cells[1] ?? null) === $option) {
+                return $cells;
+            }
+        }
+
+        $this->fail("CSV row for option '{$option}' not found in:\n{$csv}");
+    }
+
+    public function test_results_tally_csv_shows_the_elected_slate_and_ranks_for_ordered_list(): void
+    {
+        [, $ballot, $components] = $this->make([
+            ['type' => 'OrderedList', 'version' => 'v1', 'title' => 'Board election', 'options' => ['Ana', 'Bojan', 'Cveto', 'Davor'], 'settings' => ['seats' => 3]],
+        ]);
+
+        // Unanimous ranking -> a clean, undisputed Schulze order (no ties at the cutoff).
+        foreach (range(1, 3) as $ignored) {
+            Vote::factory()->forBallot($ballot)->withValues([
+                $components[0]->id => ['Ana', 'Bojan', 'Cveto', 'Davor'],
+            ])->create();
+        }
+
+        $csv = $this->service->resultsTallyCsv($ballot);
+
+        $ana = $this->findCsvRow($csv, 'Ana');
+        $this->assertSame('yes', $ana[4]);
+        $this->assertSame('1', $ana[5]);
+
+        $cveto = $this->findCsvRow($csv, 'Cveto');
+        $this->assertSame('yes', $cveto[4]);
+        $this->assertSame('3', $cveto[5]);
+
+        $davor = $this->findCsvRow($csv, 'Davor');
+        $this->assertSame('no', $davor[4]);
+        $this->assertSame('', $davor[5]);
+    }
+
+    public function test_results_tally_csv_shows_the_elected_set_and_a_contested_marker_at_a_tied_cutoff(): void
+    {
+        [, $ballot, $components] = $this->make([
+            ['type' => 'ApprovalVote', 'version' => 'v1', 'title' => 'Committee', 'options' => ['A', 'B', 'C', 'D'], 'settings' => ['seats' => 2]],
+        ]);
+
+        // A clear leader (A), a tie for the last seat (B, C), and a clear loser (D).
+        foreach (range(1, 5) as $ignored) {
+            Vote::factory()->forBallot($ballot)->withValues([$components[0]->id => ['A']])->create();
+        }
+        foreach (range(1, 3) as $ignored) {
+            Vote::factory()->forBallot($ballot)->withValues([$components[0]->id => ['B']])->create();
+        }
+        foreach (range(1, 3) as $ignored) {
+            Vote::factory()->forBallot($ballot)->withValues([$components[0]->id => ['C']])->create();
+        }
+        Vote::factory()->forBallot($ballot)->withValues([$components[0]->id => ['D']])->create();
+
+        $csv = $this->service->resultsTallyCsv($ballot);
+
+        $a = $this->findCsvRow($csv, 'A');
+        $this->assertSame('5', $a[2]);
+        $this->assertSame('yes', $a[4]);
+        $this->assertSame('1', $a[5]);
+
+        // Genuinely tied for the last seat — never resolved into a fabricated winner.
+        $b = $this->findCsvRow($csv, 'B');
+        $this->assertSame('contested', $b[4]);
+        $this->assertSame('', $b[5]);
+
+        $c = $this->findCsvRow($csv, 'C');
+        $this->assertSame('contested', $c[4]);
+        $this->assertSame('', $c[5]);
+
+        $d = $this->findCsvRow($csv, 'D');
+        $this->assertSame('no', $d[4]);
+    }
+
+    public function test_results_tally_csv_has_a_header_row(): void
+    {
+        [, $ballot] = $this->make([
+            ['type' => 'YesNo', 'version' => 'v1', 'title' => 'Budget', 'options' => []],
+        ]);
+
+        $csv = $this->service->resultsTallyCsv($ballot);
+        $lines = array_filter(explode("\n", trim($csv)));
+        $header = str_getcsv((string) reset($lines));
+
+        $this->assertSame([
+            __('ballot.tally_csv.question'),
+            __('ballot.tally_csv.option'),
+            __('ballot.tally_csv.count'),
+            __('ballot.tally_csv.rate'),
+            __('ballot.tally_csv.elected'),
+            __('ballot.tally_csv.rank'),
+        ], $header);
+    }
+
     // ----------------------------------------------------------------
     // Component registry surface exposed through the service
     // ----------------------------------------------------------------

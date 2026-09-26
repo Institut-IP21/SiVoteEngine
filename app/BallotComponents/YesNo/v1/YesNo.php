@@ -40,8 +40,24 @@ final class YesNo extends AbstractBallotComponent
     {
         return [
             'name' => __('components.yesno.name'),
+            'method' => __('components.yesno.method'),
             'description' => __('components.yesno.description'),
             'hint' => __('components.yesno.hint'),
+        ];
+    }
+
+    #[\Override]
+    protected function cardinality(): string
+    {
+        return 'decision';
+    }
+
+    #[\Override]
+    protected function getStatuteTextParagraphs(): array
+    {
+        return [
+            'en' => $this->statuteParagraphs('statute.yesno', 'en'),
+            'sl' => $this->statuteParagraphs('statute.yesno', 'sl'),
         ];
     }
 

@@ -77,6 +77,17 @@
         </div>
     @endif
 
+    @if (! empty($res['warnings']))
+    <div class="mb-4 text-[12px] text-muted">
+        <p class="mb-1 text-[11px] uppercase tracking-[0.07em] font-bold text-muted">{{ __('components.result.notes_label') }}</p>
+        <ul class="list-disc ml-4 space-y-0.5">
+            @foreach ($res['warnings'] as $warning)
+            <li>{{ $warning }}</li>
+            @endforeach
+        </ul>
+    </div>
+    @endif
+
     @if ($hasResult)
         @include($component->component_path . '/_ranking', ['res' => $res, 'component' => $component])
 

@@ -620,4 +620,43 @@ class OrderedListTest extends TestCase
             static fn (string $w): bool => str_contains($w, 'duplicate candidate labels')
         ));
     }
+
+    public function test_get_statute_text_returns_nonempty_bilingual_paragraphs(): void
+    {
+        $statute = $this->component->getStatuteText();
+
+        $this->assertSame('OrderedList', $statute->type);
+        $this->assertNotEmpty($statute->en);
+        $this->assertNotEmpty($statute->sl);
+        foreach ([...$statute->en, ...$statute->sl] as $paragraph) {
+            $this->assertNotSame('', trim($paragraph));
+        }
+    }
+
+    public function test_get_statute_text_never_names_stv_droop_or_surplus_transfer(): void
+    {
+        // FLAG 3 (statute-content-draft.md Notes §4): the composition
+        // requirement is NOT a vote-based STV/Droop-quota mechanism — the
+        // clause text must never suggest otherwise.
+        $statute = $this->component->getStatuteText();
+        $en = strtolower(implode(' ', $statute->en));
+        $sl = strtolower(implode(' ', $statute->sl));
+
+        foreach (['stv', 'droop', 'surplus transfer'] as $forbidden) {
+            $this->assertStringNotContainsString($forbidden, $en);
+            $this->assertStringNotContainsString($forbidden, $sl);
+        }
+    }
+
+    public function test_get_statute_text_cutoff_tie_never_affirms_casting_vote_or_random_draw(): void
+    {
+        $statute = $this->component->getStatuteText();
+        $lower = strtolower(implode(' ', $statute->en));
+        foreach ([
+            'resolved by a casting vote', 'decided by a casting vote', 'broken by a casting vote',
+            'resolved by a random draw', 'decided by a random draw', 'broken by a random draw',
+        ] as $affirmation) {
+            $this->assertStringNotContainsString($affirmation, $lower);
+        }
+    }
 }

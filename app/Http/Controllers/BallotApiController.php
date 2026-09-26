@@ -93,6 +93,19 @@ class BallotApiController extends Controller
         return response(['data' => $csv], 200);
     }
 
+    /**
+     * The TALLIED outcome as CSV (who's elected/contested per question), as
+     * opposed to votesCsv()'s raw per-vote export.
+     */
+    public function resultTallyCsv(Election $election, Ballot $ballot, Request $request): ResponseFactory|Response
+    {
+        if (!$ballot->finished) {
+            return response(__('ballot.result.not_yet'), 400);
+        }
+        $csv = $this->ballotService->resultsTallyCsv($ballot);
+        return response(['data' => $csv], 200);
+    }
+
     public function update(Election $election, Ballot $ballot, Request $request): JsonResponse|BallotResource
     {
         if ($ballot->locked) {
