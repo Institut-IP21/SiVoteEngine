@@ -236,6 +236,169 @@ class OrderedListTest extends TestCase
         $this->assertSame('corrected', $r['official']);
     }
 
+    /**
+     * Regression for the vote-decisive quota re-run bug: a fully-"complete"
+     * top-K (the runner resolved the ONLY blocking band, {A,B}) coexists
+     * with an unresolved band entirely BELOW the cutoff ({D,E}, non-blocking
+     * for completeness by design). A binding min-quota on D/E's category
+     * must not promote either one by arbitrary roster/array order -- it has
+     * to defer until the runner also settles that tie.
+     */
+    public function test_binding_quota_defers_rather_than_seating_a_tied_candidate(): void
+    {
+        $c = $this->makeComponentWithResolutions(
+            ['A', 'B', 'C', 'D', 'E'],
+            [
+                'seats' => 3,
+                'categories' => ['A' => 'Eng', 'B' => 'Eng', 'C' => 'Eng', 'D' => 'Sales', 'E' => 'Sales'],
+                'quota' => ['category' => 'Sales', 'type' => 'min', 'count' => 1, 'binding' => true],
+            ],
+            [[
+                'cluster' => ['A', 'B'],
+                'order' => ['B', 'A'],
+                'comment' => 'Coin toss.',
+                'resolved_by' => 'returning-officer',
+                'resolved_at' => '2026-09-26T10:00:00Z',
+            ]],
+        );
+        $votes = $this->votes($c, [['A', 'B', 'C', 'D'], ['B', 'A', 'C', 'E']]);
+
+        $r = $this->calc($votes, $c);
+
+        $this->assertNotNull($r['final']);
+        $this->assertTrue($r['final']['complete']);
+
+        $this->assertSame('natural', $r['official']);
+        $this->assertNotNull($r['corrected']);
+        $this->assertTrue($r['corrected']['provisional']);
+        $this->assertFalse($r['corrected']['infeasible']);
+        $this->assertSame(['B', 'A', 'C'], $r['corrected']['order']);
+        $this->assertNotContains('D', $r['corrected']['order']);
+        $this->assertNotContains('E', $r['corrected']['order']);
+        $this->assertNotEmpty(array_filter(
+            $r['warnings'],
+            static fn (string $w): bool => str_contains($w, 'needs the runner')
+        ));
+    }
+
+    /**
+     * Same scenario with the tied pair's roster order flipped (E before D
+     * instead of D before E). If the fix truly removes the roster-order
+     * dependency, the deferred result must be byte-identical -- proving
+     * there is no coin flip hiding behind array order.
+     */
+    public function test_swapping_the_tied_pair_in_the_roster_yields_the_identical_deferred_result(): void
+    {
+        $c = $this->makeComponentWithResolutions(
+            ['A', 'B', 'C', 'E', 'D'],
+            [
+                'seats' => 3,
+                'categories' => ['A' => 'Eng', 'B' => 'Eng', 'C' => 'Eng', 'D' => 'Sales', 'E' => 'Sales'],
+                'quota' => ['category' => 'Sales', 'type' => 'min', 'count' => 1, 'binding' => true],
+            ],
+            [[
+                'cluster' => ['A', 'B'],
+                'order' => ['B', 'A'],
+                'comment' => 'Coin toss.',
+                'resolved_by' => 'returning-officer',
+                'resolved_at' => '2026-09-26T10:00:00Z',
+            ]],
+        );
+        $votes = $this->votes($c, [['A', 'B', 'C', 'D'], ['B', 'A', 'C', 'E']]);
+
+        $r = $this->calc($votes, $c);
+
+        $this->assertSame('natural', $r['official']);
+        $this->assertTrue($r['corrected']['provisional']);
+        $this->assertSame(['B', 'A', 'C'], $r['corrected']['order']);
+    }
+
+    /**
+     * Once the runner ALSO settles the below-cutoff {D, E} tie, the binding
+     * quota can safely promote D over the (now-resolved) natural order,
+     * moving from deferred to officially corrected.
+     */
+    public function test_resolving_the_below_cutoff_tie_lets_the_binding_quota_apply(): void
+    {
+        $c = $this->makeComponentWithResolutions(
+            ['A', 'B', 'C', 'D', 'E'],
+            [
+                'seats' => 3,
+                'categories' => ['A' => 'Eng', 'B' => 'Eng', 'C' => 'Eng', 'D' => 'Sales', 'E' => 'Sales'],
+                'quota' => ['category' => 'Sales', 'type' => 'min', 'count' => 1, 'binding' => true],
+            ],
+            [
+                [
+                    'cluster' => ['A', 'B'],
+                    'order' => ['B', 'A'],
+                    'comment' => 'Coin toss.',
+                    'resolved_by' => 'returning-officer',
+                    'resolved_at' => '2026-09-26T10:00:00Z',
+                ],
+                [
+                    'cluster' => ['D', 'E'],
+                    'order' => ['D', 'E'],
+                    'comment' => 'Runner draw.',
+                    'resolved_by' => 'returning-officer',
+                    'resolved_at' => '2026-09-26T10:05:00Z',
+                ],
+            ],
+        );
+        $votes = $this->votes($c, [['A', 'B', 'C', 'D'], ['B', 'A', 'C', 'E']]);
+
+        $r = $this->calc($votes, $c);
+
+        $this->assertSame('corrected', $r['official']);
+        $this->assertSame(['B', 'A', 'D'], $r['corrected']['order']);
+        $this->assertFalse($r['corrected']['provisional']);
+        $this->assertSame(
+            [['candidate' => 'D', 'from' => 'below_cut', 'reason' => 'min_quota:Sales']],
+            $r['corrected']['diff']
+        );
+    }
+
+    /**
+     * FIX 2: the first run's quota-deferral warning is superseded once the
+     * re-run resolves the quota; it must not survive alongside the final
+     * "corrected" result and contradict it.
+     */
+    public function test_the_first_run_quota_deferral_warning_does_not_survive_the_reapply(): void
+    {
+        $c = $this->makeComponentWithResolutions(
+            ['A', 'B', 'C', 'D', 'E'],
+            [
+                'seats' => 3,
+                'categories' => ['A' => 'Eng', 'B' => 'Eng', 'C' => 'Eng', 'D' => 'Sales', 'E' => 'Sales'],
+                'quota' => ['category' => 'Sales', 'type' => 'min', 'count' => 1, 'binding' => true],
+            ],
+            [
+                [
+                    'cluster' => ['A', 'B'],
+                    'order' => ['B', 'A'],
+                    'comment' => 'Coin toss.',
+                    'resolved_by' => 'returning-officer',
+                    'resolved_at' => '2026-09-26T10:00:00Z',
+                ],
+                [
+                    'cluster' => ['D', 'E'],
+                    'order' => ['D', 'E'],
+                    'comment' => 'Runner draw.',
+                    'resolved_by' => 'returning-officer',
+                    'resolved_at' => '2026-09-26T10:05:00Z',
+                ],
+            ],
+        );
+        $votes = $this->votes($c, [['A', 'B', 'C', 'D'], ['B', 'A', 'C', 'E']]);
+
+        $r = $this->calc($votes, $c);
+
+        $this->assertSame('corrected', $r['official']);
+        $this->assertEmpty(array_filter(
+            $r['warnings'],
+            static fn (string $w): bool => str_contains($w, 'quota deferred') || str_contains($w, 'needs the runner')
+        ));
+    }
+
     public function test_seats_clamp_and_malformed_quota_warnings_appear_in_the_dto(): void
     {
         $c = $this->makeComponent(['A', 'B'], [

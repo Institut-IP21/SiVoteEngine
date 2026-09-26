@@ -131,6 +131,7 @@ return [
         'quota_binding_note' => 'This quota is advisory — it does not change the official result.',
         'quota_infeasible' => 'The quota cannot be satisfied with the candidates available. The votes-alone order stands.',
         'quota_provisional' => 'The quota is provisional — it needs the election runner to settle a tie first.',
+        'quota_pending_note' => 'A binding category quota still needs a tie resolved before the list is final.',
         'cutoff_note' => 'Seat cutoff — remaining positions are not elected.',
         'how_decided' => 'How the order was decided',
         'how_decided_hint' => 'Every pair of options is compared head-to-head across all ballots. Starting with the strongest margin, each decisive pair is locked in unless it would create a cycle with what is already locked, in which case it is skipped. Wherever the locked comparisons leave the order undetermined, it is shown below as a tied band; the election runner records how it was broken (e.g. a coin toss or a runoff) after the ballot closes — the engine itself never guesses.',

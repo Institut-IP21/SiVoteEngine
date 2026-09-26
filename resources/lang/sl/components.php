@@ -131,6 +131,7 @@ return [
         'quota_binding_note' => 'Ta kvota je posvetovalne narave — uradnega izida ne spreminja.',
         'quota_infeasible' => 'Kvote z razpoložljivimi kandidati ni mogoče izpolniti. Obvelja vrstni red samo po glasovih.',
         'quota_provisional' => 'Kvota je začasna — najprej mora vodja štetja razrešiti izenačenje.',
+        'quota_pending_note' => 'Zavezujoča kvota po kategorijah še potrebuje razrešitev izenačenja, preden je seznam dokončen.',
         'cutoff_note' => 'Mejnik mest — preostala mesta niso izvoljena.',
         'how_decided' => 'Kako je bil določen vrstni red',
         'how_decided_hint' => 'Vsak par možnosti se primerja neposredno prek vseh glasovnic. Od največje razlike navzdol se vsak odločilni par zaklene, razen če bi z že zaklenjenim ustvaril krog — tak par se preskoči. Kjer zaklenjene primerjave vrstnega reda ne določijo, je to spodaj prikazano kot izenačen pas; vodja štetja po zaključku glasovanja zabeleži, kako je bilo razrešeno (npr. žreb ali dodatni krog) — sistem sam nikoli ne ugiba.',

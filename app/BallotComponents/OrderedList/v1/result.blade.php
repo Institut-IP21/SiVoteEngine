@@ -14,6 +14,14 @@
     $lockInLog = $res['lock_in_log'];
     $pairwise = $res['pairwise'];
     $accounting = $res['accounting'];
+    $corrected = $res['corrected'];
+
+    // A binding quota that is still provisional (needs the runner to settle
+    // a tie before it can promote) must keep the headline from claiming a
+    // final result -- even when the top-K membership/order is otherwise
+    // fully settled. An INFEASIBLE binding quota is terminal, not pending:
+    // the natural list is genuinely final, so it must not block success.
+    $quotaPending = $corrected !== null && ($corrected['binding'] ?? false) && ($corrected['provisional'] ?? false);
 
     // A band is "resolved" once every one of its members appears in $final
     // with tied === false (guarded: a member missing from $final['order']
@@ -30,7 +38,7 @@
     // no such band exists, or every one of them has been resolved by the
     // runner (mirrors RunnerResolutionApplier's own "complete" rule).
     $topKBands = array_values(array_filter($bands, fn ($b) => ($b['span'][0] ?? 1) <= $seats));
-    $success = $hasResult && ($topKBands === [] || ($final !== null && ($final['complete'] ?? false)));
+    $success = $hasResult && ($topKBands === [] || ($final !== null && ($final['complete'] ?? false))) && ! $quotaPending;
 
     // When not final, report two INDEPENDENT figures rather than one
     // conflated count: membership (does this seat have a settled occupant at
@@ -73,6 +81,9 @@
             @endif
             @if ($orderTiesCount > 0)
                 <p class="m-0">{{ __('components.orderedlist.order_ties_note', ['count' => $orderTiesCount]) }}</p>
+            @endif
+            @if ($quotaPending)
+                <p class="m-0">{{ __('components.orderedlist.quota_pending_note') }}</p>
             @endif
         </div>
     @endif

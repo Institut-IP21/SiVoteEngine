@@ -109,6 +109,8 @@ final class OrderedList extends AbstractBallotComponent
 
         $corrected = null;
         $quotaBinding = false;
+        /** @var list<string> $quotaWarnings */
+        $quotaWarnings = [];
         if ($quota !== null) {
             $quotaCorrector = new QuotaCorrector(
                 $positions->ranking(),
@@ -120,7 +122,7 @@ final class OrderedList extends AbstractBallotComponent
             );
             $corrected = $quotaCorrector->result();
             $quotaBinding = $quota['binding'];
-            $warnings = [...$warnings, ...$quotaCorrector->warnings()];
+            $quotaWarnings = $quotaCorrector->warnings();
         }
 
         $rawResolutions = $component->getAttribute('runner_resolutions');
@@ -147,6 +149,8 @@ final class OrderedList extends AbstractBallotComponent
         if ($quota !== null && $final !== null && $final['complete']) {
             /** @var list<array{candidate:string,best_pos:int,worst_pos:int,determined:bool,status:string}> $resolvedRanking */
             $resolvedRanking = [];
+            /** @var list<string> $stillTied */
+            $stillTied = [];
             foreach ($final['order'] as $row) {
                 $position = $row['position'];
                 $resolvedRanking[] = [
@@ -156,12 +160,35 @@ final class OrderedList extends AbstractBallotComponent
                     'determined' => true,
                     'status' => $position <= $seats ? 'elected' : 'excluded',
                 ];
+                if ($row['tied']) {
+                    $stillTied[] = $row['candidate'];
+                }
             }
 
-            $resolvedQuotaCorrector = new QuotaCorrector($resolvedRanking, null, [], $categories, $quota, $seats);
+            // A "complete" top-K only means every BLOCKING band (one that
+            // could still hold a seat) was resolved -- a band entirely below
+            // the cutoff is non-blocking and can still be an unresolved tie
+            // here. QuotaCorrector reads only $band['candidates'] (via its
+            // touchesBand tie-guard); the other keys are unread but present
+            // to satisfy the typed shape. Without this, a binding quota's
+            // promotion could pick an arbitrary member of that still-tied
+            // group by roster/array order -- exactly the tiebreak this
+            // engine promises never to make.
+            /** @var list<array{candidates:list<string>,span:array{0:int,1:int},internal_constraints:list<array{winner:string,loser:string}>,head_to_head:array<string,array<string,int>>,affects_cutoff:bool}> $tiedBands */
+            $tiedBands = $stillTied === [] ? [] : [[
+                'candidates' => $stillTied,
+                'span' => [1, count($final['order'])],
+                'internal_constraints' => [],
+                'head_to_head' => [],
+                'affects_cutoff' => false,
+            ]];
+
+            $resolvedQuotaCorrector = new QuotaCorrector($resolvedRanking, null, $tiedBands, $categories, $quota, $seats);
             $corrected = $resolvedQuotaCorrector->result();
-            $warnings = [...$warnings, ...$resolvedQuotaCorrector->warnings()];
+            $quotaWarnings = $resolvedQuotaCorrector->warnings();
         }
+
+        $warnings = [...$warnings, ...$quotaWarnings];
 
         $official = ($corrected !== null && $quotaBinding && !$corrected['infeasible'] && !$corrected['provisional'])
             ? 'corrected'

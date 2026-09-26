@@ -214,6 +214,76 @@ class OrderedListResultViewTest extends TestCase
         $res->assertSeeText(__('components.orderedlist.elected_headline', ['seats' => 1]));
     }
 
+    /**
+     * Regression for the quota re-run bug: a fully-determined top-K (the
+     * runner resolved the only blocking {A,B} band) with a binding quota
+     * that still needs the below-cutoff {D,E} tie settled must NOT render
+     * the elected headline -- the headline would otherwise claim finality
+     * while the official result is still pending a runner decision.
+     */
+    public function test_deferred_quota_scenario_hides_elected_headline_and_shows_quota_pending_note(): void
+    {
+        [, $ballot] = $this->finishedBallot(
+            ['A', 'B', 'C', 'D', 'E'],
+            [['A', 'B', 'C', 'D'], ['B', 'A', 'C', 'E']],
+            [
+                'seats' => 3,
+                'categories' => ['A' => 'Eng', 'B' => 'Eng', 'C' => 'Eng', 'D' => 'Sales', 'E' => 'Sales'],
+                'quota' => ['category' => 'Sales', 'type' => 'min', 'count' => 1, 'binding' => true],
+            ],
+            resolutions: [[
+                'cluster' => ['A', 'B'],
+                'order' => ['B', 'A'],
+                'comment' => 'Coin toss.',
+                'resolved_by' => 'returning-officer',
+                'resolved_at' => '2026-09-26T10:00:00+00:00',
+            ]]
+        );
+
+        $res = $this->fetchResult($ballot);
+        $res->assertOk();
+        $res->assertDontSeeText(__('components.orderedlist.elected_headline', ['seats' => 3]));
+        $res->assertSeeText(__('components.orderedlist.quota_pending_note'));
+    }
+
+    /**
+     * Mirror case: once the runner also settles the below-cutoff {D,E} tie,
+     * the binding quota can apply and the result is genuinely final again.
+     */
+    public function test_fully_resolved_quota_scenario_shows_elected_headline(): void
+    {
+        [, $ballot] = $this->finishedBallot(
+            ['A', 'B', 'C', 'D', 'E'],
+            [['A', 'B', 'C', 'D'], ['B', 'A', 'C', 'E']],
+            [
+                'seats' => 3,
+                'categories' => ['A' => 'Eng', 'B' => 'Eng', 'C' => 'Eng', 'D' => 'Sales', 'E' => 'Sales'],
+                'quota' => ['category' => 'Sales', 'type' => 'min', 'count' => 1, 'binding' => true],
+            ],
+            resolutions: [
+                [
+                    'cluster' => ['A', 'B'],
+                    'order' => ['B', 'A'],
+                    'comment' => 'Coin toss.',
+                    'resolved_by' => 'returning-officer',
+                    'resolved_at' => '2026-09-26T10:00:00+00:00',
+                ],
+                [
+                    'cluster' => ['D', 'E'],
+                    'order' => ['D', 'E'],
+                    'comment' => 'Runner draw.',
+                    'resolved_by' => 'returning-officer',
+                    'resolved_at' => '2026-09-26T10:05:00+00:00',
+                ],
+            ]
+        );
+
+        $res = $this->fetchResult($ballot);
+        $res->assertOk();
+        $res->assertSeeText(__('components.orderedlist.elected_headline', ['seats' => 3]));
+        $res->assertDontSeeText(__('components.orderedlist.quota_pending_note'));
+    }
+
     public function test_disclosure_is_collapsed_and_shows_pairwise_matrix_and_accounting(): void
     {
         [, $ballot] = $this->finishedBallot(['A', 'B', 'C'], [['A', 'B'], ['A', 'B'], ['A']], ['seats' => 2]);
