@@ -23,6 +23,7 @@ class BallotComponentCreate extends Command
                             {--T|type= : The ballot component type}
                             {--R|variant=-1 : The version of the ballot. Defaults to latest}
                             {--P|pass-threshold= : Optional YesNo pass threshold (e.g. 50, 70, two_thirds, three_quarters)}
+                            {--S|settings= : Optional JSON settings payload (e.g. OrderedList seats/categories/quota)}
                             {--O|options=} | The options to put on the ballot';
 
     /**
@@ -52,6 +53,7 @@ class BallotComponentCreate extends Command
         $version = $this->option('variant');
         $options = $this->option('options');
         $passThreshold = $this->option('pass-threshold');
+        $settingsJson = $this->option('settings');
 
         while (!$ballotId || !Ballot::where('id', $ballotId)->exists()) {
             $ballotId = $this->ask('Please enter the ID of an existing ballot');
@@ -120,6 +122,19 @@ class BallotComponentCreate extends Command
         if (is_string($passThreshold) && $passThreshold !== '') {
             $threshold = is_numeric($passThreshold) ? $passThreshold + 0 : $passThreshold;
             $settings = ['pass_threshold' => $threshold];
+        }
+
+        // General settings payload (seats/categories/quota for OrderedList, etc.),
+        // merged on top of anything the pass-threshold shorthand already set.
+        if (is_string($settingsJson) && $settingsJson !== '') {
+            $decoded = json_decode($settingsJson, true);
+            if (!is_array($decoded)) {
+                $this->error('Invalid --settings JSON payload.');
+
+                return 1;
+            }
+            /** @var array<string, mixed> $decoded */
+            $settings = $settings === null ? $decoded : array_merge($settings, $decoded);
         }
 
         $args = [
