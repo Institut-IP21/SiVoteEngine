@@ -14,7 +14,6 @@ use Illuminate\Support\Str;
 
 /**
  * @property array<string, mixed>|null $settings Per-component settings payload (e.g. YesNo's pass_threshold).
- * @property array<int,array<string,mixed>>|null $runner_resolutions Post-close runner tie resolutions (OrderedList).
  * @property string $id
  * @property string $ballot_id
  * @property string $title
@@ -49,7 +48,6 @@ use Illuminate\Support\Str;
  * @method static Builder<static>|BallotComponent whereId($value)
  * @method static Builder<static>|BallotComponent whereOptions($value)
  * @method static Builder<static>|BallotComponent whereOrder($value)
- * @method static Builder<static>|BallotComponent whereRunnerResolutions($value)
  * @method static Builder<static>|BallotComponent whereSettings($value)
  * @method static Builder<static>|BallotComponent whereTitle($value)
  * @method static Builder<static>|BallotComponent whereType($value)
@@ -75,7 +73,6 @@ class BallotComponent extends Model
         'version',
         'options',
         'settings',
-        'runner_resolutions',
         'ballot_id',
         'active',
         'finished',
@@ -84,7 +81,6 @@ class BallotComponent extends Model
     protected $casts = [
         'options' => 'array',
         'settings' => 'array',
-        'runner_resolutions' => 'array',
         'order' => 'integer',
         'active' => 'boolean',
         'finished' => 'boolean',

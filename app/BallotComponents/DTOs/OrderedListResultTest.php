@@ -18,15 +18,13 @@ class OrderedListResultTest extends TestCase
         $this->assertSame(0, $r['accounting']['invalid_only']);
         $this->assertSame(0, $r['accounting']['counted']);
         $this->assertSame('natural', $r['official']);
-        $this->assertNull($r['final']);
         $this->assertNull($r['cutoff_decision']);
         $this->assertNull($r['corrected']);
         $this->assertSame('margins', $r['strength_measure']);
         $this->assertSame([], $r['ranking']);
         $this->assertSame([], $r['elected']);
         $this->assertSame([], $r['bands']);
-        $this->assertSame([], $r['resolutions']);
-        $this->assertSame([], $r['lock_in_log']);
+        $this->assertSame(['strength' => [], 'winners' => []], $r['beatpath']);
         $this->assertSame(['candidates' => [], 'matrix' => []], $r['pairwise']);
         $this->assertSame([], $r['warnings']);
     }
@@ -51,23 +49,6 @@ class OrderedListResultTest extends TestCase
             'internal_constraints' => [],
             'head_to_head' => ['B' => ['C' => 1], 'C' => ['B' => 0]],
         ];
-        $resolutions = [
-            [
-                'cluster' => ['B', 'C'],
-                'order' => ['B', 'C'],
-                'comment' => 'Draw held.',
-                'resolved_by' => 'chair@org',
-                'resolved_at' => '2026-09-26T20:00:00Z',
-            ],
-        ];
-        $final = [
-            'order' => [
-                ['position' => 1, 'candidate' => 'A', 'tied' => false],
-                ['position' => 2, 'candidate' => 'B', 'tied' => false],
-                ['position' => 3, 'candidate' => 'C', 'tied' => false],
-            ],
-            'complete' => true,
-        ];
         $corrected = [
             'order' => ['A', 'C'],
             'diff' => [
@@ -77,8 +58,13 @@ class OrderedListResultTest extends TestCase
             'provisional' => false,
             'binding' => true,
         ];
-        $lockInLog = [
-            ['type' => 'locked', 'winner' => 'A', 'loser' => 'B', 'for' => 3, 'against' => 1, 'margin' => 2],
+        $beatpath = [
+            'strength' => ['A' => ['B' => 3, 'C' => 3], 'B' => ['A' => null, 'C' => 2], 'C' => ['A' => null, 'B' => null]],
+            'winners' => [
+                ['winner' => 'A', 'loser' => 'B', 'strength' => 3, 'path' => ['A', 'B']],
+                ['winner' => 'A', 'loser' => 'C', 'strength' => 3, 'path' => ['A', 'C']],
+                ['winner' => 'B', 'loser' => 'C', 'strength' => 2, 'path' => ['B', 'C']],
+            ],
         ];
         $pairwise = [
             'candidates' => ['A', 'B', 'C'],
@@ -93,11 +79,9 @@ class OrderedListResultTest extends TestCase
             elected: ['A'],
             bands: $bands,
             cutoffDecision: $cutoffDecision,
-            resolutions: $resolutions,
-            final: $final,
             corrected: $corrected,
             official: 'corrected',
-            lockInLog: $lockInLog,
+            beatpath: $beatpath,
             pairwise: $pairwise,
             accounting: $accounting,
             warnings: $warnings,
@@ -113,16 +97,14 @@ class OrderedListResultTest extends TestCase
         $this->assertSame(['A'], $arr['elected']);
         $this->assertSame($bands, $arr['bands']);
         $this->assertSame($cutoffDecision, $arr['cutoff_decision']);
-        $this->assertSame($resolutions, $arr['resolutions']);
-        $this->assertSame($final, $arr['final']);
         $this->assertSame($corrected, $arr['corrected']);
         $this->assertSame('corrected', $arr['official']);
-        $this->assertSame($lockInLog, $arr['lock_in_log']);
+        $this->assertSame($beatpath, $arr['beatpath']);
         $this->assertSame($pairwise, $arr['pairwise']);
         $this->assertSame($accounting, $arr['accounting']);
         $this->assertSame($warnings, $arr['warnings']);
         $this->assertSame(
-            ['seats', 'strength_measure', 'ranking', 'elected', 'bands', 'cutoff_decision', 'resolutions', 'final', 'corrected', 'official', 'lock_in_log', 'pairwise', 'accounting', 'warnings'],
+            ['seats', 'strength_measure', 'ranking', 'elected', 'bands', 'cutoff_decision', 'corrected', 'official', 'beatpath', 'pairwise', 'accounting', 'warnings'],
             array_keys($arr)
         );
     }

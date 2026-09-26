@@ -7,10 +7,11 @@ namespace App\BallotComponents\OrderedList\v1;
 /**
  * Optional post-tally quota balancing over the determined top-K (the
  * "natural" order). Runs only when the cutoff is settled: a contested
- * cutoff always defers to the runner first (D5). Minimal-displacement:
- * swaps the fewest members needed to satisfy a min/max category quota,
- * preserving the natural relative order of everyone not swapped, and
- * refuses to guess across an unresolved tie among the swap candidates.
+ * cutoff is always SURFACED first, never guessed at (D5). Minimal-
+ * displacement: swaps the fewest members needed to satisfy a min/max
+ * category quota, preserving the natural relative order of everyone not
+ * swapped, and refuses to guess across an unresolved (surfaced) tie among
+ * the swap candidates.
  */
 final class QuotaCorrector
 {
@@ -44,7 +45,7 @@ final class QuotaCorrector
         }
         $natural = array_map(static fn (array $e): string => $e['candidate'], $naturalEntries);
 
-        // 1. Defer to the runner while the cutoff itself is contested.
+        // 1. Surface, rather than guess, while the cutoff itself is contested.
         if ($cutoffDecision !== null) {
             $order = [];
             foreach ($ranking as $entry) {
@@ -52,7 +53,7 @@ final class QuotaCorrector
                     $order[] = $entry['candidate'];
                 }
             }
-            $this->warnings[] = 'quota deferred: the cut is contested — awaiting runner';
+            $this->warnings[] = 'quota surfaced: the cut is contested — resolve per your organization\'s rules';
             $this->result = [
                 'order' => $order,
                 'diff' => [],
@@ -161,7 +162,7 @@ final class QuotaCorrector
         $demotionSet = array_slice($demoteesEntries, 0, $need);
 
         if ($this->touchesBand($promotionSet, $demotionSet, $inBand)) {
-            $this->warnings[] = 'quota needs the runner to settle a tie first';
+            $this->warnings[] = "quota surfaced: a tie must be resolved (per your organization's rules) first";
 
             return ['order' => $natural, 'diff' => [], 'infeasible' => false, 'provisional' => true, 'binding' => $binding];
         }
@@ -210,7 +211,7 @@ final class QuotaCorrector
         $demotionSet = array_slice($demoteesEntries, 0, $need);
 
         if ($this->touchesBand($promotionSet, $demotionSet, $inBand)) {
-            $this->warnings[] = 'quota needs the runner to settle a tie first';
+            $this->warnings[] = "quota surfaced: a tie must be resolved (per your organization's rules) first";
 
             return ['order' => $natural, 'diff' => [], 'infeasible' => false, 'provisional' => true, 'binding' => $binding];
         }

@@ -13,11 +13,14 @@ use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 /**
- * Locks the OrderedList result-first display (Task 11): elected/contested
- * headline, the full ordered list (with the seat-cutoff divider), the
- * optional quota comparison, and the collapsed "How the order was decided"
- * disclosure (pairwise matrix + lock-in log + accounting) — plus the
- * quorum-not-met advisory branch.
+ * Locks the OrderedList result-first display: elected/contested headline,
+ * the full ordered list (with the seat-cutoff divider), the optional quota
+ * comparison, and the collapsed "How the order was decided" disclosure
+ * (pairwise matrix + Schulze beatpath auditor + accounting) — plus the
+ * quorum-not-met advisory branch. Any genuine tie the votes leave (at the
+ * cutoff, in the order among elected candidates, or inside a quota
+ * correction) is SURFACED: there is no runner and no resolution mechanism,
+ * so it stays that way permanently, never auto-applied.
  */
 class OrderedListResultViewTest extends TestCase
 {
@@ -27,10 +30,9 @@ class OrderedListResultViewTest extends TestCase
      * @param list<string> $options
      * @param list<list<string>> $rankings
      * @param array<string, mixed> $settings
-     * @param list<array<string, mixed>> $resolutions
      * @return array{0: Election, 1: Ballot, 2: BallotComponent}
      */
-    private function finishedBallot(array $options, array $rankings, array $settings = [], ?int $quorum = null, array $resolutions = []): array
+    private function finishedBallot(array $options, array $rankings, array $settings = [], ?int $quorum = null): array
     {
         $election = Election::factory()->create(['locale' => 'en', 'abstainable' => false]);
         $ballot = Ballot::factory()->create([
@@ -45,7 +47,6 @@ class OrderedListResultViewTest extends TestCase
             'version' => 'v1',
             'options' => $options,
             'settings' => $settings === [] ? null : $settings,
-            'runner_resolutions' => $resolutions === [] ? null : $resolutions,
         ]);
 
         foreach ($rankings as $ranking) {
@@ -83,6 +84,8 @@ class OrderedListResultViewTest extends TestCase
         $res->assertOk();
         $res->assertSeeText(__('components.orderedlist.contested_headline', ['count' => 1]));
         $res->assertSeeText(__('components.orderedlist.tie_awaiting'));
+        $res->assertDontSee('runner');
+        $res->assertDontSee('Runner');
     }
 
     /**
@@ -193,98 +196,40 @@ class OrderedListResultViewTest extends TestCase
         $res->assertSeeText(__('components.orderedlist.official_badge'));
     }
 
-    public function test_runner_resolution_shows_announced_order_and_elected_headline(): void
-    {
-        [, $ballot, $component] = $this->finishedBallot(
-            ['A', 'B'],
-            [['A'], ['B']],
-            ['seats' => 1],
-            resolutions: [[
-                'cluster' => ['A', 'B'],
-                'order' => ['A', 'B'],
-                'comment' => 'Coin toss witnessed by both agents.',
-                'resolved_by' => 'returning-officer',
-                'resolved_at' => '2026-09-26T10:00:00+00:00',
-            ]]
-        );
-
-        $res = $this->fetchResult($ballot);
-        $res->assertOk();
-        $res->assertSeeText(__('components.orderedlist.runner_announced', ['comment' => 'Coin toss witnessed by both agents.']));
-        $res->assertSeeText(__('components.orderedlist.elected_headline', ['seats' => 1]));
-    }
-
     /**
-     * Regression for the quota re-run bug: a fully-determined top-K (the
-     * runner resolved the only blocking {A,B} band) with a binding quota
-     * that still needs the below-cutoff {D,E} tie settled must NOT render
-     * the elected headline -- the headline would otherwise claim finality
-     * while the official result is still pending a runner decision.
+     * A binding quota whose only eligible promotion candidate (D) is
+     * genuinely tied with another below-cutoff candidate (E) must stay
+     * PROVISIONAL forever -- there is no runner, and no resolution
+     * mechanism, that could ever pick one over the other. The headline
+     * must not claim finality while that quota correction is pending.
+     * The natural top-3 (A, B, C) itself carries no order tie, isolating
+     * this as purely a quota/surfaced-tie interaction.
      */
-    public function test_deferred_quota_scenario_hides_elected_headline_and_shows_quota_pending_note(): void
+    public function test_quota_touching_a_surfaced_tie_hides_elected_headline_and_shows_quota_pending_note(): void
     {
         [, $ballot] = $this->finishedBallot(
             ['A', 'B', 'C', 'D', 'E'],
-            [['A', 'B', 'C', 'D'], ['B', 'A', 'C', 'E']],
+            [
+                ...array_fill(0, 3, ['A', 'B', 'C']),
+                ['D'],
+                ['E'],
+            ],
             [
                 'seats' => 3,
-                'categories' => ['A' => 'Eng', 'B' => 'Eng', 'C' => 'Eng', 'D' => 'Sales', 'E' => 'Sales'],
+                'categories' => ['D' => 'Sales', 'E' => 'Sales'],
                 'quota' => ['category' => 'Sales', 'type' => 'min', 'count' => 1, 'binding' => true],
-            ],
-            resolutions: [[
-                'cluster' => ['A', 'B'],
-                'order' => ['B', 'A'],
-                'comment' => 'Coin toss.',
-                'resolved_by' => 'returning-officer',
-                'resolved_at' => '2026-09-26T10:00:00+00:00',
-            ]]
+            ]
         );
 
         $res = $this->fetchResult($ballot);
         $res->assertOk();
         $res->assertDontSeeText(__('components.orderedlist.elected_headline', ['seats' => 3]));
         $res->assertSeeText(__('components.orderedlist.quota_pending_note'));
+        $res->assertDontSee('runner');
+        $res->assertDontSee('Runner');
     }
 
-    /**
-     * Mirror case: once the runner also settles the below-cutoff {D,E} tie,
-     * the binding quota can apply and the result is genuinely final again.
-     */
-    public function test_fully_resolved_quota_scenario_shows_elected_headline(): void
-    {
-        [, $ballot] = $this->finishedBallot(
-            ['A', 'B', 'C', 'D', 'E'],
-            [['A', 'B', 'C', 'D'], ['B', 'A', 'C', 'E']],
-            [
-                'seats' => 3,
-                'categories' => ['A' => 'Eng', 'B' => 'Eng', 'C' => 'Eng', 'D' => 'Sales', 'E' => 'Sales'],
-                'quota' => ['category' => 'Sales', 'type' => 'min', 'count' => 1, 'binding' => true],
-            ],
-            resolutions: [
-                [
-                    'cluster' => ['A', 'B'],
-                    'order' => ['B', 'A'],
-                    'comment' => 'Coin toss.',
-                    'resolved_by' => 'returning-officer',
-                    'resolved_at' => '2026-09-26T10:00:00+00:00',
-                ],
-                [
-                    'cluster' => ['D', 'E'],
-                    'order' => ['D', 'E'],
-                    'comment' => 'Runner draw.',
-                    'resolved_by' => 'returning-officer',
-                    'resolved_at' => '2026-09-26T10:05:00+00:00',
-                ],
-            ]
-        );
-
-        $res = $this->fetchResult($ballot);
-        $res->assertOk();
-        $res->assertSeeText(__('components.orderedlist.elected_headline', ['seats' => 3]));
-        $res->assertDontSeeText(__('components.orderedlist.quota_pending_note'));
-    }
-
-    public function test_disclosure_is_collapsed_and_shows_pairwise_matrix_and_accounting(): void
+    public function test_disclosure_is_collapsed_and_shows_pairwise_matrix_beatpath_and_accounting(): void
     {
         [, $ballot] = $this->finishedBallot(['A', 'B', 'C'], [['A', 'B'], ['A', 'B'], ['A']], ['seats' => 2]);
 
@@ -294,7 +239,38 @@ class OrderedListResultViewTest extends TestCase
         $res->assertSee('x-show="open"', false);
         $res->assertSee('style="display: none;"', false);
         $res->assertSeeText(__('components.orderedlist.pairwise_heading'));
+        $res->assertSeeText(__('components.orderedlist.beatpath_heading'));
+        $res->assertSeeText(__('components.orderedlist.beatpath_why_heading'));
         $res->assertSeeText(__('components.orderedlist.accounting'));
         $res->assertSee('overflow-x-auto', false);
+    }
+
+    /**
+     * No trace of the old human-"runner" resolution affordance may remain
+     * anywhere on the page, across every rendered branch: contested cutoff,
+     * order-tie note, and a surfaced quota correction.
+     */
+    public function test_no_runner_affordance_appears_anywhere_on_the_page(): void
+    {
+        [, $ballot] = $this->finishedBallot(
+            ['A', 'B', 'C', 'D', 'E'],
+            [
+                ...array_fill(0, 3, ['A', 'B', 'C']),
+                ['D'],
+                ['E'],
+            ],
+            [
+                'seats' => 3,
+                'categories' => ['D' => 'Sales', 'E' => 'Sales'],
+                'quota' => ['category' => 'Sales', 'type' => 'min', 'count' => 1, 'binding' => true],
+            ]
+        );
+
+        $res = $this->fetchResult($ballot);
+        $res->assertOk();
+        $res->assertDontSee('runner');
+        $res->assertDontSee('Runner');
+        $res->assertDontSee('resolve-tie');
+        $res->assertDontSee('Ranked Pairs');
     }
 }

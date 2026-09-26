@@ -3,14 +3,11 @@
     // transparency over the whole roster, consistent with publishing the full
     // pairwise matrix). Determined candidates render as single numbered rows;
     // an unresolved band renders as a grouped, tinted block spanning its
-    // position range; a band the runner HAS resolved (present + complete in
-    // $res['final']) renders as individually-numbered rows with a small
-    // "Runner announced" note. Params: $res (OrderedListResult::toArray()),
+    // position range -- surfaced as-is, since the engine never resolves a
+    // genuine tie itself. Params: $res (OrderedListResult::toArray()),
     // $component.
     $ranking = $res['ranking'];
     $bands = $res['bands'];
-    $final = $res['final'];
-    $resolutions = $res['resolutions'];
     $seats = $res['seats'];
     $total = count($ranking);
     /** @var array<string, string> $categories */
@@ -23,32 +20,9 @@
         }
     }
 
-    $finalByCandidate = [];
-    if ($final !== null) {
-        foreach ($final['order'] as $entry) {
-            $finalByCandidate[$entry['candidate']] = $entry;
-        }
-    }
-
-    $signature = function (array $names): string {
-        $sorted = $names;
-        sort($sorted);
-        return implode("\x01", $sorted);
-    };
-
-    $resolutionByBandIndex = [];
-    foreach ($bands as $i => $band) {
-        $bandSig = $signature($band['candidates']);
-        foreach ($resolutions as $resolution) {
-            if ($signature($resolution['cluster']) === $bandSig) {
-                $resolutionByBandIndex[$i] = $resolution;
-            }
-        }
-    }
-
     // Build one display row per position/cluster, walking the ranking once so
     // band members (always contiguous, by construction) collapse into a
-    // single grouped or resolved row.
+    // single grouped row.
     $rows = [];
     $seenBand = [];
     foreach ($ranking as $idx => $entry) {
@@ -63,26 +37,7 @@
             continue;
         }
         $seenBand[$bandIndex] = true;
-        $band = $bands[$bandIndex];
-
-        $resolved = $final !== null && collect($band['candidates'])->every(
-            fn ($m) => ($finalByCandidate[$m]['tied'] ?? true) === false
-        );
-
-        if ($resolved) {
-            $members = collect($band['candidates'])
-                ->map(fn ($m) => ['candidate' => $m, 'position' => $finalByCandidate[$m]['position']])
-                ->sortBy('position')
-                ->values()
-                ->all();
-            $rows[] = [
-                'kind' => 'resolved_band',
-                'members' => $members,
-                'comment' => $resolutionByBandIndex[$bandIndex]['comment'] ?? null,
-            ];
-        } else {
-            $rows[] = ['kind' => 'band', 'band' => $band];
-        }
+        $rows[] = ['kind' => 'band', 'band' => $bands[$bandIndex]];
     }
 
     // Where to drop the plain "seat cutoff" divider: right after the row that
@@ -94,7 +49,6 @@
     foreach ($rows as $i => $row) {
         $emitted += match ($row['kind']) {
             'single' => 1,
-            'resolved_band' => count($row['members']),
             'band' => count($row['band']['candidates']),
         };
         if ($emitted === $seats && $i < count($rows) - 1) {
@@ -119,17 +73,6 @@
                     <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full text-muted" style="background:var(--color-canvas)">{{ $categories[$row['candidate']] }}</span>
                 @endif
             </li>
-        @elseif ($row['kind'] === 'resolved_band')
-            @foreach ($row['members'] as $m)
-                <li class="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 -mx-2.5 bg-secure-soft">
-                    <span class="inline-flex items-center justify-center flex-shrink-0 w-6 h-6 rounded-full text-[11px] font-bold" style="border:1px solid var(--color-line); background:#fff; color:var(--color-ink)"
-                        aria-label="{{ __('components.orderedlist.position', ['name' => $m['candidate'], 'pos' => $m['position'], 'total' => $total]) }}">{{ $m['position'] }}</span>
-                    <span class="flex-1 font-semibold text-ink" style="overflow-wrap:anywhere">{{ $m['candidate'] }}</span>
-                </li>
-            @endforeach
-            @if ($row['comment'])
-                <li class="px-2.5 -mx-2.5 text-[12px] text-muted italic">{{ __('components.orderedlist.runner_announced', ['comment' => $row['comment']]) }}</li>
-            @endif
         @else
             <li class="rounded-lg px-2.5 py-2 -mx-2.5 bg-warn-soft">
                 <p class="mb-1.5 text-[12px] font-semibold text-warn-fg">

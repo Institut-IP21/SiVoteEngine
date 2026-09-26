@@ -14,12 +14,17 @@ use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 
 /**
- * Ordered-list ballot component: elects a K-from-N ordered list via Ranked
- * Pairs (margins). Orchestrates the pure calculation classes (PairwiseMatrix
- * -> RankedPairsLock -> PositionResolver, plus the optional QuotaCorrector
- * and RunnerResolutionApplier) and returns an OrderedListResult. Ballot
+ * Ordered-list ballot component: elects a K-from-N ordered list via the
+ * Schulze method (beatpath, margins variant). Orchestrates the pure
+ * calculation classes (PairwiseMatrix -> SchulzeBeatpath -> PositionResolver,
+ * plus the optional QuotaCorrector) and returns an OrderedListResult. Ballot
  * input reuses the RankedChoice ranker: an approval-then-rank submission is
  * simply a ranking of a subset of the roster.
+ *
+ * Any residual genuine tie -- at the seat cutoff, in the order among already-
+ * elected candidates, or inside a quota correction -- is SURFACED (reported,
+ * never engine-picked): the organization's own rules (statute) name the
+ * fallback, not this component.
  */
 final class OrderedList extends AbstractBallotComponent
 {
@@ -104,11 +109,9 @@ final class OrderedList extends AbstractBallotComponent
                 elected: [],
                 bands: [],
                 cutoffDecision: null,
-                resolutions: [],
-                final: null,
                 corrected: null,
                 official: 'natural',
-                lockInLog: [],
+                beatpath: ['strength' => [], 'winners' => []],
                 pairwise: ['candidates' => $roster, 'matrix' => []],
                 accounting: $accounting,
                 warnings: $warnings,
@@ -116,8 +119,8 @@ final class OrderedList extends AbstractBallotComponent
         }
 
         $pairwiseMatrix = new PairwiseMatrix($counted, $roster);
-        $lock = new RankedPairsLock($pairwiseMatrix->decisivePairs(), $roster);
-        $positions = new PositionResolver($roster, $lock->reachable(), $pairwiseMatrix->matrix(), $seats);
+        $schulze = new SchulzeBeatpath($pairwiseMatrix->decisivePairs(), $roster);
+        $positions = new PositionResolver($roster, $schulze->reachable(), $pairwiseMatrix->matrix(), $seats);
 
         $corrected = null;
         $quotaBinding = false;
@@ -137,69 +140,6 @@ final class OrderedList extends AbstractBallotComponent
             $quotaWarnings = $quotaCorrector->warnings();
         }
 
-        $rawResolutions = $component->getAttribute('runner_resolutions');
-        /** @var list<array{cluster:list<string>,order:list<string>,comment:string,resolved_by:string,resolved_at:string}> $resolutions */
-        $resolutions = is_array($rawResolutions) ? $rawResolutions : [];
-
-        $applier = new RunnerResolutionApplier(
-            $positions->ranking(),
-            $positions->bands(),
-            $positions->cutoffDecision(),
-            $resolutions,
-            $lock->reachable(),
-            $seats,
-        );
-        $final = $applier->applied() ? $applier->result() : null;
-        $warnings = [...$warnings, ...$applier->warnings()];
-
-        // Spec §6.7: once the runner's resolution fully determines the
-        // order, the quota (if any) must be re-applied over THAT resolved
-        // ranking. The correction computed above ran against the natural,
-        // pre-resolution ranking and -- while the cutoff was still contested
-        // -- was necessarily deferred/provisional; it is never allowed to
-        // stand as "official" once a complete final order exists.
-        if ($quota !== null && $final !== null && $final['complete']) {
-            /** @var list<array{candidate:string,best_pos:int,worst_pos:int,determined:bool,status:string}> $resolvedRanking */
-            $resolvedRanking = [];
-            /** @var list<string> $stillTied */
-            $stillTied = [];
-            foreach ($final['order'] as $row) {
-                $position = $row['position'];
-                $resolvedRanking[] = [
-                    'candidate' => $row['candidate'],
-                    'best_pos' => $position,
-                    'worst_pos' => $position,
-                    'determined' => true,
-                    'status' => $position <= $seats ? 'elected' : 'excluded',
-                ];
-                if ($row['tied']) {
-                    $stillTied[] = $row['candidate'];
-                }
-            }
-
-            // A "complete" top-K only means every BLOCKING band (one that
-            // could still hold a seat) was resolved -- a band entirely below
-            // the cutoff is non-blocking and can still be an unresolved tie
-            // here. QuotaCorrector reads only $band['candidates'] (via its
-            // touchesBand tie-guard); the other keys are unread but present
-            // to satisfy the typed shape. Without this, a binding quota's
-            // promotion could pick an arbitrary member of that still-tied
-            // group by roster/array order -- exactly the tiebreak this
-            // engine promises never to make.
-            /** @var list<array{candidates:list<string>,span:array{0:int,1:int},internal_constraints:list<array{winner:string,loser:string}>,head_to_head:array<string,array<string,int>>,affects_cutoff:bool}> $tiedBands */
-            $tiedBands = $stillTied === [] ? [] : [[
-                'candidates' => $stillTied,
-                'span' => [1, count($final['order'])],
-                'internal_constraints' => [],
-                'head_to_head' => [],
-                'affects_cutoff' => false,
-            ]];
-
-            $resolvedQuotaCorrector = new QuotaCorrector($resolvedRanking, null, $tiedBands, $categories, $quota, $seats);
-            $corrected = $resolvedQuotaCorrector->result();
-            $quotaWarnings = $resolvedQuotaCorrector->warnings();
-        }
-
         $warnings = [...$warnings, ...$quotaWarnings];
 
         $official = ($corrected !== null && $quotaBinding && !$corrected['infeasible'] && !$corrected['provisional'])
@@ -212,11 +152,9 @@ final class OrderedList extends AbstractBallotComponent
             elected: $positions->elected(),
             bands: $positions->bands(),
             cutoffDecision: $positions->cutoffDecision(),
-            resolutions: $resolutions,
-            final: $final,
             corrected: $corrected,
             official: $official,
-            lockInLog: $lock->log(),
+            beatpath: ['strength' => $schulze->strength(), 'winners' => $schulze->winners()],
             pairwise: ['candidates' => $pairwiseMatrix->candidates(), 'matrix' => $pairwiseMatrix->matrix()],
             accounting: $accounting,
             warnings: $warnings,

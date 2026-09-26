@@ -14,8 +14,11 @@ use Tests\TestCase;
 
 /**
  * Orchestration tests for the OrderedList component: wires the pure
- * Ranked-Pairs calculation classes (Tasks 1-6) over parsed/accounted
- * ballots and asserts the resulting OrderedListResult shape.
+ * Schulze beatpath calculation classes over parsed/accounted ballots and
+ * asserts the resulting OrderedListResult shape. Any genuine tie the votes
+ * leave unresolved -- at the seat cutoff, in the order among already-elected
+ * candidates, or inside a quota correction -- is SURFACED: the engine never
+ * picks, and there is no resolution mechanism to apply one after the fact.
  */
 class OrderedListTest extends TestCase
 {
@@ -37,22 +40,6 @@ class OrderedListTest extends TestCase
             'type' => 'OrderedList',
             'options' => $options,
             'settings' => $settings,
-            'ballot_id' => (string) Str::uuid(),
-        ]);
-    }
-
-    /**
-     * @param list<string> $options
-     * @param array<string, mixed> $settings
-     * @param list<array<string, mixed>> $resolutions
-     */
-    private function makeComponentWithResolutions(array $options, array $settings, array $resolutions): BallotComponent
-    {
-        return BallotComponent::factory()->make([
-            'type' => 'OrderedList',
-            'options' => $options,
-            'settings' => $settings,
-            'runner_resolutions' => $resolutions,
             'ballot_id' => (string) Str::uuid(),
         ]);
     }
@@ -108,6 +95,8 @@ class OrderedListTest extends TestCase
         $this->assertSame(5, $r['accounting']['counted']);
     }
 
+    // --- cutoff-tie-surfaced -------------------------------------------
+
     public function test_genuine_tie_at_the_seat_boundary_surfaces_a_cutoff_decision(): void
     {
         $c = $this->makeComponent(['A', 'B'], ['seats' => 1]);
@@ -116,7 +105,65 @@ class OrderedListTest extends TestCase
         $r = $this->calc($votes, $c);
 
         $this->assertNotNull($r['cutoff_decision']);
+        $this->assertSame(1, $r['cutoff_decision']['remaining_seats']);
+        $this->assertEqualsCanonicalizing(['A', 'B'], $r['cutoff_decision']['candidates']);
+        // The engine makes no pick of its own: nobody is elected, and the
+        // tied pair carries no internal constraint (a genuine, symmetric tie).
         $this->assertSame([], $r['elected']);
+        $this->assertCount(1, $r['bands']);
+        $this->assertSame([], $r['bands'][0]['internal_constraints']);
+    }
+
+    /**
+     * A 3-way genuine tie band at the seat cutoff (2x['A','C'] + 2x['B'])
+     * reproduces the exact position-interval shape of
+     * PositionResolverTest::test_contested_cutoff_seats_one (A[1,2]
+     * contested, B[1,3] contested, C[2,3] excluded, one band {A,B,C} with
+     * the locked fact A>C) but built from REAL ballots through
+     * PairwiseMatrix -> SchulzeBeatpath -> PositionResolver. It is surfaced
+     * as-is, with its one locked internal fact preserved: there is no
+     * resolution mechanism to apply, and the engine makes no pick.
+     */
+    public function test_three_way_cutoff_tie_is_surfaced_with_its_locked_fact_preserved(): void
+    {
+        $c = $this->makeComponent(['A', 'B', 'C'], ['seats' => 1]);
+        $votes = $this->votes($c, [['A', 'C'], ['A', 'C'], ['B'], ['B']]);
+
+        $r = $this->calc($votes, $c);
+
+        $this->assertNotNull($r['cutoff_decision']);
+        $this->assertSame([], $r['elected']);
+        $this->assertCount(1, $r['bands']);
+        $this->assertEqualsCanonicalizing(['A', 'B', 'C'], $r['bands'][0]['candidates']);
+        $this->assertSame([['winner' => 'A', 'loser' => 'C']], $r['bands'][0]['internal_constraints']);
+    }
+
+    // --- order-tie-surfaced ---------------------------------------------
+
+    /**
+     * A and B are tied 3-3 with each other but both decisively beat C: their
+     * membership among the seats=2 winners is fully settled (both elected),
+     * only their relative ORDER is a genuine tie -- so there is no cutoff
+     * decision at all, only a band. This is a pure order-tie among already-
+     * elected candidates, surfaced exactly like the cutoff case.
+     */
+    public function test_order_tie_among_already_elected_is_surfaced_without_a_cutoff_decision(): void
+    {
+        $c = $this->makeComponent(['A', 'B', 'C'], ['seats' => 2]);
+        $votes = $this->votes($c, [
+            ...array_fill(0, 3, ['A', 'B']),
+            ...array_fill(0, 3, ['B', 'A']),
+            ['C'],
+        ]);
+
+        $r = $this->calc($votes, $c);
+
+        $this->assertNull($r['cutoff_decision']);
+        $this->assertEqualsCanonicalizing(['A', 'B'], $r['elected']);
+        $this->assertCount(1, $r['bands']);
+        $this->assertEqualsCanonicalizing(['A', 'B'], $r['bands'][0]['candidates']);
+        $this->assertSame([1, 2], $r['bands'][0]['span']);
+        $this->assertSame([], $r['bands'][0]['internal_constraints']);
     }
 
     public function test_binding_min_quota_promotes_and_marks_official_corrected(): void
@@ -153,156 +200,65 @@ class OrderedListTest extends TestCase
         $this->assertSame(['A', 'C'], $r['corrected']['order']);
     }
 
-    /**
-     * Spec §6.7: a binding quota + a genuinely contested cutoff (all four
-     * roster members solo-approved -> every pairwise comparison ties, one
-     * band spans the whole roster) + a runner resolution that fully
-     * determines the order. When the runner's chosen order does NOT satisfy
-     * the quota, the quota must be re-applied over that resolved order (not
-     * left deferred/provisional, and not left applied to the stale natural
-     * ranking) so `corrected`/`official` reflect the promotion.
-     */
-    public function test_runner_resolution_violating_the_quota_is_corrected_after_the_reapply(): void
-    {
-        $c = $this->makeComponentWithResolutions(
-            ['A', 'B', 'C', 'D'],
-            [
-                'seats' => 2,
-                'categories' => ['A' => 'Eng', 'B' => 'Eng', 'C' => 'Sales', 'D' => 'Sales'],
-                'quota' => ['category' => 'Sales', 'type' => 'min', 'count' => 1, 'binding' => true],
-            ],
-            [[
-                'cluster' => ['A', 'B', 'C', 'D'],
-                // The runner's chosen order elects only Eng (A, B) -- it
-                // violates the Sales >= 1 quota.
-                'order' => ['A', 'B', 'C', 'D'],
-                'comment' => 'Runner draw.',
-                'resolved_by' => 'chair@org',
-                'resolved_at' => '2026-09-26T20:00:00Z',
-            ]],
-        );
-        $votes = $this->votes($c, [['A'], ['B'], ['C'], ['D']]);
-
-        $r = $this->calc($votes, $c);
-
-        $this->assertNotNull($r['cutoff_decision']);
-        $this->assertNotNull($r['final']);
-        $this->assertTrue($r['final']['complete']);
-
-        $this->assertNotNull($r['corrected']);
-        $this->assertFalse($r['corrected']['provisional']);
-        $this->assertFalse($r['corrected']['infeasible']);
-        $this->assertSame(['A', 'C'], $r['corrected']['order']);
-        $this->assertSame(
-            [['candidate' => 'C', 'from' => 'below_cut', 'reason' => 'min_quota:Sales']],
-            $r['corrected']['diff']
-        );
-        $this->assertSame('corrected', $r['official']);
-    }
+    // --- quota-interacts-with-surfaced-tie: provisional/surfaced FOREVER,
+    //     never auto-applied (no resolution mechanism exists) --------------
 
     /**
-     * Mirror case: the runner's chosen order already satisfies the quota
-     * (one Sales candidate lands in the top-2), so the re-applied correction
-     * is a no-op diff, still official (binding + satisfied, not provisional).
+     * A binding quota whose only eligible promotion/demotion candidates fall
+     * inside a genuinely tied (surfaced) band must stay PROVISIONAL: there
+     * is no runner and no resolution mechanism that could ever pick one
+     * member of a tied group over the other. `official` stays 'natural'
+     * permanently -- this is not a transient/pending state, it is the
+     * engine's final word absent the organization resolving the tie itself
+     * (outside this engine, per its own rules).
      */
-    public function test_runner_resolution_satisfying_the_quota_needs_no_correction(): void
+    public function test_binding_quota_touching_a_surfaced_tie_stays_provisional_forever(): void
     {
-        $c = $this->makeComponentWithResolutions(
-            ['A', 'B', 'C', 'D'],
-            [
-                'seats' => 2,
-                'categories' => ['A' => 'Eng', 'B' => 'Eng', 'C' => 'Sales', 'D' => 'Sales'],
-                'quota' => ['category' => 'Sales', 'type' => 'min', 'count' => 1, 'binding' => true],
-            ],
-            [[
-                'cluster' => ['A', 'B', 'C', 'D'],
-                // C (Sales) lands in the top-2 already: the quota is satisfied.
-                'order' => ['C', 'A', 'B', 'D'],
-                'comment' => 'Runner draw.',
-                'resolved_by' => 'chair@org',
-                'resolved_at' => '2026-09-26T20:00:00Z',
-            ]],
-        );
-        $votes = $this->votes($c, [['A'], ['B'], ['C'], ['D']]);
-
-        $r = $this->calc($votes, $c);
-
-        $this->assertTrue($r['final']['complete']);
-        $this->assertNotNull($r['corrected']);
-        $this->assertFalse($r['corrected']['provisional']);
-        $this->assertFalse($r['corrected']['infeasible']);
-        $this->assertSame(['C', 'A'], $r['corrected']['order']);
-        $this->assertSame([], $r['corrected']['diff']);
-        $this->assertSame('corrected', $r['official']);
-    }
-
-    /**
-     * Regression for the vote-decisive quota re-run bug: a fully-"complete"
-     * top-K (the runner resolved the ONLY blocking band, {A,B}) coexists
-     * with an unresolved band entirely BELOW the cutoff ({D,E}, non-blocking
-     * for completeness by design). A binding min-quota on D/E's category
-     * must not promote either one by arbitrary roster/array order -- it has
-     * to defer until the runner also settles that tie.
-     */
-    public function test_binding_quota_defers_rather_than_seating_a_tied_candidate(): void
-    {
-        $c = $this->makeComponentWithResolutions(
+        $c = $this->makeComponent(
             ['A', 'B', 'C', 'D', 'E'],
             [
                 'seats' => 3,
                 'categories' => ['A' => 'Eng', 'B' => 'Eng', 'C' => 'Eng', 'D' => 'Sales', 'E' => 'Sales'],
                 'quota' => ['category' => 'Sales', 'type' => 'min', 'count' => 1, 'binding' => true],
-            ],
-            [[
-                'cluster' => ['A', 'B'],
-                'order' => ['B', 'A'],
-                'comment' => 'Coin toss.',
-                'resolved_by' => 'returning-officer',
-                'resolved_at' => '2026-09-26T10:00:00Z',
-            ]],
+            ]
         );
         $votes = $this->votes($c, [['A', 'B', 'C', 'D'], ['B', 'A', 'C', 'E']]);
 
         $r = $this->calc($votes, $c);
 
-        $this->assertNotNull($r['final']);
-        $this->assertTrue($r['final']['complete']);
+        // Membership of the top-3 is fully settled (A, B tied only in
+        // ORDER; C alone; D/E tied below the cutoff) -- no cutoff decision.
+        $this->assertNull($r['cutoff_decision']);
+        $this->assertEqualsCanonicalizing(['A', 'B', 'C'], $r['elected']);
 
         $this->assertSame('natural', $r['official']);
         $this->assertNotNull($r['corrected']);
         $this->assertTrue($r['corrected']['provisional']);
         $this->assertFalse($r['corrected']['infeasible']);
-        $this->assertSame(['B', 'A', 'C'], $r['corrected']['order']);
+        $this->assertSame(['A', 'B', 'C'], $r['corrected']['order']);
         $this->assertNotContains('D', $r['corrected']['order']);
         $this->assertNotContains('E', $r['corrected']['order']);
         $this->assertNotEmpty(array_filter(
             $r['warnings'],
-            static fn (string $w): bool => str_contains($w, 'needs the runner')
+            static fn (string $w): bool => str_contains($w, 'surfaced')
         ));
     }
 
     /**
-     * Same scenario with the tied pair's roster order flipped (E before D
-     * instead of D before E). If the fix truly removes the roster-order
-     * dependency, the deferred result must be byte-identical -- proving
-     * there is no coin flip hiding behind array order.
+     * Regression for the roster-order-dependency bug: swapping the tied
+     * pair's roster position (E before D instead of D before E) must yield
+     * a byte-identical provisional result -- proving there is no coin flip
+     * hiding behind array order.
      */
-    public function test_swapping_the_tied_pair_in_the_roster_yields_the_identical_deferred_result(): void
+    public function test_swapping_the_tied_pair_in_the_roster_yields_the_identical_surfaced_result(): void
     {
-        $c = $this->makeComponentWithResolutions(
+        $c = $this->makeComponent(
             ['A', 'B', 'C', 'E', 'D'],
             [
                 'seats' => 3,
                 'categories' => ['A' => 'Eng', 'B' => 'Eng', 'C' => 'Eng', 'D' => 'Sales', 'E' => 'Sales'],
                 'quota' => ['category' => 'Sales', 'type' => 'min', 'count' => 1, 'binding' => true],
-            ],
-            [[
-                'cluster' => ['A', 'B'],
-                'order' => ['B', 'A'],
-                'comment' => 'Coin toss.',
-                'resolved_by' => 'returning-officer',
-                'resolved_at' => '2026-09-26T10:00:00Z',
-            ]],
+            ]
         );
         $votes = $this->votes($c, [['A', 'B', 'C', 'D'], ['B', 'A', 'C', 'E']]);
 
@@ -310,93 +266,7 @@ class OrderedListTest extends TestCase
 
         $this->assertSame('natural', $r['official']);
         $this->assertTrue($r['corrected']['provisional']);
-        $this->assertSame(['B', 'A', 'C'], $r['corrected']['order']);
-    }
-
-    /**
-     * Once the runner ALSO settles the below-cutoff {D, E} tie, the binding
-     * quota can safely promote D over the (now-resolved) natural order,
-     * moving from deferred to officially corrected.
-     */
-    public function test_resolving_the_below_cutoff_tie_lets_the_binding_quota_apply(): void
-    {
-        $c = $this->makeComponentWithResolutions(
-            ['A', 'B', 'C', 'D', 'E'],
-            [
-                'seats' => 3,
-                'categories' => ['A' => 'Eng', 'B' => 'Eng', 'C' => 'Eng', 'D' => 'Sales', 'E' => 'Sales'],
-                'quota' => ['category' => 'Sales', 'type' => 'min', 'count' => 1, 'binding' => true],
-            ],
-            [
-                [
-                    'cluster' => ['A', 'B'],
-                    'order' => ['B', 'A'],
-                    'comment' => 'Coin toss.',
-                    'resolved_by' => 'returning-officer',
-                    'resolved_at' => '2026-09-26T10:00:00Z',
-                ],
-                [
-                    'cluster' => ['D', 'E'],
-                    'order' => ['D', 'E'],
-                    'comment' => 'Runner draw.',
-                    'resolved_by' => 'returning-officer',
-                    'resolved_at' => '2026-09-26T10:05:00Z',
-                ],
-            ],
-        );
-        $votes = $this->votes($c, [['A', 'B', 'C', 'D'], ['B', 'A', 'C', 'E']]);
-
-        $r = $this->calc($votes, $c);
-
-        $this->assertSame('corrected', $r['official']);
-        $this->assertSame(['B', 'A', 'D'], $r['corrected']['order']);
-        $this->assertFalse($r['corrected']['provisional']);
-        $this->assertSame(
-            [['candidate' => 'D', 'from' => 'below_cut', 'reason' => 'min_quota:Sales']],
-            $r['corrected']['diff']
-        );
-    }
-
-    /**
-     * FIX 2: the first run's quota-deferral warning is superseded once the
-     * re-run resolves the quota; it must not survive alongside the final
-     * "corrected" result and contradict it.
-     */
-    public function test_the_first_run_quota_deferral_warning_does_not_survive_the_reapply(): void
-    {
-        $c = $this->makeComponentWithResolutions(
-            ['A', 'B', 'C', 'D', 'E'],
-            [
-                'seats' => 3,
-                'categories' => ['A' => 'Eng', 'B' => 'Eng', 'C' => 'Eng', 'D' => 'Sales', 'E' => 'Sales'],
-                'quota' => ['category' => 'Sales', 'type' => 'min', 'count' => 1, 'binding' => true],
-            ],
-            [
-                [
-                    'cluster' => ['A', 'B'],
-                    'order' => ['B', 'A'],
-                    'comment' => 'Coin toss.',
-                    'resolved_by' => 'returning-officer',
-                    'resolved_at' => '2026-09-26T10:00:00Z',
-                ],
-                [
-                    'cluster' => ['D', 'E'],
-                    'order' => ['D', 'E'],
-                    'comment' => 'Runner draw.',
-                    'resolved_by' => 'returning-officer',
-                    'resolved_at' => '2026-09-26T10:05:00Z',
-                ],
-            ],
-        );
-        $votes = $this->votes($c, [['A', 'B', 'C', 'D'], ['B', 'A', 'C', 'E']]);
-
-        $r = $this->calc($votes, $c);
-
-        $this->assertSame('corrected', $r['official']);
-        $this->assertEmpty(array_filter(
-            $r['warnings'],
-            static fn (string $w): bool => str_contains($w, 'quota deferred') || str_contains($w, 'needs the runner')
-        ));
+        $this->assertSame(['A', 'B', 'C'], $r['corrected']['order']);
     }
 
     public function test_seats_clamp_and_malformed_quota_warnings_appear_in_the_dto(): void
@@ -443,11 +313,9 @@ class OrderedListTest extends TestCase
         $this->assertSame([], $r['elected']);
         $this->assertSame([], $r['bands']);
         $this->assertNull($r['cutoff_decision']);
-        $this->assertSame([], $r['resolutions']);
-        $this->assertNull($r['final']);
         $this->assertNull($r['corrected']);
         $this->assertSame('natural', $r['official']);
-        $this->assertSame([], $r['lock_in_log']);
+        $this->assertSame(['strength' => [], 'winners' => []], $r['beatpath']);
         $this->assertSame(['A', 'B', 'C'], $r['pairwise']['candidates']);
         $this->assertSame([], $r['pairwise']['matrix']);
     }
@@ -599,86 +467,9 @@ class OrderedListTest extends TestCase
         $this->assertSame(['Solo'], $r['elected']);
         $this->assertSame([], $r['bands']);
         $this->assertNull($r['cutoff_decision']);
-        $this->assertNull($r['final']);
         $this->assertSame('natural', $r['official']);
         $this->assertSame(['Solo'], $r['pairwise']['candidates']);
         $this->assertSame([], $r['pairwise']['matrix']);
-    }
-
-    // --- Edge case: a genuine 3-member tie band + a full 3-permutation -----
-
-    /**
-     * 2x['A','C'] + 2x['B'] end-to-end reproduces the exact position-interval
-     * shape of PositionResolverTest::test_contested_cutoff_seats_one
-     * (A[1,2] contested, B[1,3] contested, C[2,3] excluded, one band {A,B,C}
-     * with the locked fact A>C) but built from REAL ballots through
-     * PairwiseMatrix -> RankedPairsLock -> PositionResolver, not synthetic
-     * band data. A full 3-permutation resolution that respects the locked
-     * A>C fact is accepted and completes the result.
-     */
-    public function test_three_way_tie_band_accepts_a_full_three_permutation_resolution(): void
-    {
-        $c = $this->makeComponentWithResolutions(
-            ['A', 'B', 'C'],
-            ['seats' => 1],
-            [[
-                'cluster' => ['A', 'B', 'C'],
-                'order' => ['B', 'A', 'C'],
-                'comment' => 'Runner draw, all three tied.',
-                'resolved_by' => 'chair@org',
-                'resolved_at' => '2026-09-26T20:00:00Z',
-            ]],
-        );
-        $votes = $this->votes($c, [['A', 'C'], ['A', 'C'], ['B'], ['B']]);
-
-        $r = $this->calc($votes, $c);
-
-        $this->assertNotNull($r['cutoff_decision']);
-        $this->assertCount(1, $r['bands']);
-        $this->assertEqualsCanonicalizing(['A', 'B', 'C'], $r['bands'][0]['candidates']);
-        $this->assertSame([['winner' => 'A', 'loser' => 'C']], $r['bands'][0]['internal_constraints']);
-
-        $this->assertNotNull($r['final']);
-        $this->assertTrue($r['final']['complete']);
-        $this->assertSame(
-            [
-                ['position' => 1, 'candidate' => 'B', 'tied' => false],
-                ['position' => 2, 'candidate' => 'A', 'tied' => false],
-                ['position' => 3, 'candidate' => 'C', 'tied' => false],
-            ],
-            $r['final']['order']
-        );
-    }
-
-    /**
-     * Same 3-way band; a full 3-permutation that DOES respect the "is a
-     * permutation of the tied set" rule but contradicts the locked A>C
-     * pairwise fact (placing C ahead of A) must be rejected outright, not
-     * partially applied.
-     */
-    public function test_three_permutation_contradicting_a_locked_pair_is_rejected(): void
-    {
-        $c = $this->makeComponentWithResolutions(
-            ['A', 'B', 'C'],
-            ['seats' => 1],
-            [[
-                'cluster' => ['A', 'B', 'C'],
-                'order' => ['C', 'B', 'A'],
-                'comment' => 'Bad draw.',
-                'resolved_by' => 'chair@org',
-                'resolved_at' => '2026-09-26T20:00:00Z',
-            ]],
-        );
-        $votes = $this->votes($c, [['A', 'C'], ['A', 'C'], ['B'], ['B']]);
-
-        $r = $this->calc($votes, $c);
-
-        $this->assertNull($r['final']);
-        $this->assertSame([], $r['elected']);
-        $this->assertNotEmpty(array_filter(
-            $r['warnings'],
-            static fn (string $w): bool => str_contains($w, 'contradicts a locked head-to-head result')
-        ));
     }
 
     // --- Edge case: quota count vs. seats bounds (end-to-end) ---------------

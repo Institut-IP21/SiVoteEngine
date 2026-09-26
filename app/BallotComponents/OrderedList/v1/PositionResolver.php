@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace App\BallotComponents\OrderedList\v1;
 
 /**
- * Turns a locked partial order (the Ranked-Pairs reachable closure) into
+ * Turns a strict partial order (the Schulze beatpath reachable closure) into
  * position intervals per candidate, seat-status classification, overlap
- * bands (unresolved ties), and -- when exactly one band straddles the seat
- * cutoff -- the contested-cutoff decision the runner needs to resolve.
+ * bands (unresolved/surfaced ties), and -- when exactly one band straddles
+ * the seat cutoff -- the contested-cutoff decision the organization needs to
+ * resolve per its own rules.
  */
 final class PositionResolver
 {
@@ -198,10 +199,10 @@ final class PositionResolver
      * always exactly the members of the single band whose position span
      * straddles the seat boundary (see the class docblock). A band may also
      * chain in already-elected or already-excluded neighbors (display-only
-     * ordering entanglement, not membership doubt), so the resolvable band
-     * used by RunnerResolutionApplier can be wider than the contested set
-     * reported here -- this decision is a display/summary + quota-defer
-     * signal, not a separate resolvable cluster.
+     * ordering entanglement, not membership doubt), so the band it is
+     * derived from can be wider than the contested set reported here -- this
+     * decision is a display/summary + quota-surfacing signal, not a
+     * separate resolvable cluster.
      *
      * @param array<string,array<string,int>> $prefers
      * @param array<string,array<string,bool>> $reachable

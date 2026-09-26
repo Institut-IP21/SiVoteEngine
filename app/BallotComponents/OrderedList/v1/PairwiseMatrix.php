@@ -6,7 +6,9 @@ namespace App\BallotComponents\OrderedList\v1;
 
 /**
  * Builds the pairwise "prefers" matrix from counted ballots and derives the
- * decisive winner->loser edges with their margin (Tideman margins strength).
+ * decisive winner->loser edges with their margin strength (voters preferring
+ * the winner minus voters preferring the loser) -- the input the Schulze
+ * beatpath resolver seeds its widest-path matrix from.
  *
  * A ballot is a `list<string>` of approved labels, most-preferred first
  * (distinct, in-roster, by contract of the caller). For an ordered pair

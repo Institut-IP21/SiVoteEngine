@@ -1,7 +1,7 @@
 @php
     // Result-first display, consistent with the other question types: the
     // ordered list up front (plus the optional quota comparison), the
-    // Ranked-Pairs auditor detail tucked behind a "How the order was
+    // Schulze beatpath auditor detail tucked behind a "How the order was
     // decided" toggle, collapsed by default.
     $quorumMet = $quorumMet ?? true;
     $res = $results[$component->id]['results'];
@@ -10,35 +10,26 @@
     $hasResult = $ranking !== [];
     $bands = $res['bands'];
     $cutoffDecision = $res['cutoff_decision'];
-    $final = $res['final'];
-    $lockInLog = $res['lock_in_log'];
+    $beatpath = $res['beatpath'];
     $pairwise = $res['pairwise'];
     $accounting = $res['accounting'];
     $corrected = $res['corrected'];
 
-    // A binding quota that is still provisional (needs the runner to settle
-    // a tie before it can promote) must keep the headline from claiming a
-    // final result -- even when the top-K membership/order is otherwise
-    // fully settled. An INFEASIBLE binding quota is terminal, not pending:
-    // the natural list is genuinely final, so it must not block success.
+    // A binding quota that is still provisional (surfaced -- a tie needs
+    // resolving per the organization's own rules before it can promote)
+    // must keep the headline from claiming a final result -- even when the
+    // top-K membership/order is otherwise fully settled. An INFEASIBLE
+    // binding quota is terminal, not pending: the natural list is genuinely
+    // final, so it must not block success.
     $quotaPending = $corrected !== null && ($corrected['binding'] ?? false) && ($corrected['provisional'] ?? false);
 
-    // A band is "resolved" once every one of its members appears in $final
-    // with tied === false (guarded: a member missing from $final['order']
-    // altogether -- can't happen once $final exists, but never trust an
-    // unguarded array access here -- counts as still tied).
-    $bandIsResolved = fn (array $band) => $final !== null && collect($band['candidates'])->every(
-        fn ($m) => (collect($final['order'])->firstWhere('candidate', $m)['tied'] ?? true) === false
-    );
-
-    // The only bands that can still affect the K reported seats are the ones
-    // whose span starts at or before the cutoff; a band entirely below K
-    // (span[0] > K) is display-only ordering entanglement among
-    // already-excluded candidates. Success = a fully-determined election:
-    // no such band exists, or every one of them has been resolved by the
-    // runner (mirrors RunnerResolutionApplier's own "complete" rule).
+    // The engine never resolves a surfaced tie itself, so ANY band that can
+    // still affect the K reported seats (span[0] <= K) keeps the result from
+    // being final; a band entirely below K (span[0] > K) is display-only
+    // ordering entanglement among already-excluded candidates and never
+    // blocks success.
     $topKBands = array_values(array_filter($bands, fn ($b) => ($b['span'][0] ?? 1) <= $seats));
-    $success = $hasResult && ($topKBands === [] || ($final !== null && ($final['complete'] ?? false))) && ! $quotaPending;
+    $success = $hasResult && $topKBands === [] && ! $quotaPending;
 
     // When not final, report two INDEPENDENT figures rather than one
     // conflated count: membership (does this seat have a settled occupant at
@@ -55,9 +46,7 @@
             if (($band['span'][1] ?? 0) > $seats) {
                 continue;
             }
-            if (! $bandIsResolved($band)) {
-                $orderTiesCount++;
-            }
+            $orderTiesCount++;
         }
     }
 @endphp
@@ -96,7 +85,7 @@
         @endif
     @endif
 
-    {{-- Progressive disclosure: the Ranked-Pairs auditor detail, collapsed by default. --}}
+    {{-- Progressive disclosure: the Schulze beatpath auditor detail, collapsed by default. --}}
     <div class="mt-4 border-t border-line pt-3">
         <button type="button"
             class="flex w-full items-center justify-between gap-2 text-left text-sm font-semibold text-brand-dark hover:brightness-95"
@@ -114,12 +103,11 @@
                     @include($component->component_path . '/_pairwise', ['pairwise' => $pairwise])
                 </div>
 
-                @if ($lockInLog !== [])
-                    <div class="min-w-0">
-                        <p class="mb-2 text-[11px] uppercase tracking-[0.07em] font-bold text-muted">{{ __('components.orderedlist.log_heading') }}</p>
-                        @include($component->component_path . '/_lock_in_log', ['log' => $lockInLog])
-                    </div>
-                @endif
+                <div class="min-w-0">
+                    <p class="mb-2 text-[11px] uppercase tracking-[0.07em] font-bold text-muted">{{ __('components.orderedlist.beatpath_heading') }}</p>
+                    <p class="mb-2 text-[12px] text-muted leading-relaxed">{{ __('components.orderedlist.beatpath_hint') }}</p>
+                    @include($component->component_path . '/_beatpath', ['beatpath' => $beatpath, 'candidates' => $pairwise['candidates']])
+                </div>
             @endif
 
             {{-- Ballot accounting — reconciles even when nothing has been counted yet. --}}
