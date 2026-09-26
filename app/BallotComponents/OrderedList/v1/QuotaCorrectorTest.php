@@ -44,6 +44,39 @@ class QuotaCorrectorTest extends TestCase
         $this->assertSame([], $qc->warnings());
     }
 
+    public function test_min_quota_needs_two_promotions_preserves_order(): void
+    {
+        $ranking = [
+            $this->entry('A', 1, 1, 'elected'),
+            $this->entry('B', 2, 2, 'elected'),
+            $this->entry('C', 3, 3, 'elected'),
+            $this->entry('D', 4, 4, 'excluded'),
+            $this->entry('E', 5, 5, 'excluded'),
+            $this->entry('F', 6, 6, 'excluded'),
+        ];
+        $categories = ['E' => 'Sales', 'F' => 'Sales'];
+        $quota = ['category' => 'Sales', 'type' => 'min', 'count' => 2, 'binding' => true];
+
+        $qc = new QuotaCorrector($ranking, null, [], $categories, $quota, 3);
+        $result = $qc->result();
+
+        // Neither promotee (E, F) nor demotee (B, C) is in a band, so the
+        // swap goes through: the two worst-ranked non-category members of
+        // the cut (C, then B) are displaced by the two Sales candidates
+        // below the cut, in their own natural relative order (E before F),
+        // leaving A -- the sole non-swapped member -- in place.
+        $this->assertSame(['A', 'E', 'F'], $result['order']);
+        $this->assertSame(
+            [
+                ['candidate' => 'E', 'from' => 'below_cut', 'reason' => 'min_quota:Sales'],
+                ['candidate' => 'F', 'from' => 'below_cut', 'reason' => 'min_quota:Sales'],
+            ],
+            $result['diff']
+        );
+        $this->assertFalse($result['infeasible']);
+        $this->assertFalse($result['provisional']);
+    }
+
     public function test_min_quota_already_satisfied(): void
     {
         $ranking = [
@@ -109,6 +142,27 @@ class QuotaCorrectorTest extends TestCase
         $this->assertSame(['A', 'B'], $result['order']);
         $this->assertTrue($result['infeasible']);
         $this->assertFalse($result['provisional']);
+        $this->assertNotSame([], $qc->warnings());
+    }
+
+    public function test_max_quota_infeasible_not_enough_non_category_candidates(): void
+    {
+        // 3 seats, 2 of them Sales; no non-Sales candidate exists anywhere in
+        // the roster -- need=1 promotion, but 0 are available below cut.
+        $ranking = [
+            $this->entry('A', 1, 1, 'elected'),
+            $this->entry('B', 2, 2, 'elected'),
+            $this->entry('C', 3, 3, 'elected'),
+            $this->entry('D', 4, 4, 'excluded'),
+        ];
+        $categories = ['A' => 'Sales', 'B' => 'Sales', 'D' => 'Sales'];
+        $quota = ['category' => 'Sales', 'type' => 'max', 'count' => 1, 'binding' => true];
+
+        $qc = new QuotaCorrector($ranking, null, [], $categories, $quota, 3);
+        $result = $qc->result();
+
+        $this->assertSame(['A', 'B', 'C'], $result['order']);
+        $this->assertTrue($result['infeasible']);
         $this->assertNotSame([], $qc->warnings());
     }
 
@@ -205,6 +259,54 @@ class QuotaCorrectorTest extends TestCase
         $this->assertSame([], $result['diff']);
         $this->assertFalse($result['infeasible']);
         $this->assertFalse($result['provisional']);
+    }
+
+    public function test_max_quota_count_zero_excludes_all_in_category(): void
+    {
+        $ranking = [
+            $this->entry('A', 1, 1, 'elected'),
+            $this->entry('B', 2, 2, 'elected'),
+            $this->entry('C', 3, 3, 'excluded'),
+            $this->entry('D', 4, 4, 'excluded'),
+        ];
+        $categories = ['A' => 'Sales', 'B' => 'Sales', 'C' => 'Eng', 'D' => 'Eng'];
+        $quota = ['category' => 'Sales', 'type' => 'max', 'count' => 0, 'binding' => true];
+
+        $qc = new QuotaCorrector($ranking, null, [], $categories, $quota, 2);
+        $result = $qc->result();
+
+        $this->assertSame(['C', 'D'], $result['order']);
+        $this->assertSame(
+            [
+                ['candidate' => 'C', 'from' => 'below_cut', 'reason' => 'max_quota:Sales'],
+                ['candidate' => 'D', 'from' => 'below_cut', 'reason' => 'max_quota:Sales'],
+            ],
+            $result['diff']
+        );
+        $this->assertFalse($result['infeasible']);
+        $this->assertFalse($result['provisional']);
+    }
+
+    public function test_max_quota_count_zero_infeasible_when_not_enough_replacements(): void
+    {
+        // 3 seats, all Sales in the cut; only 2 non-Sales candidates exist in
+        // the whole roster -- excluding Sales entirely is impossible.
+        $ranking = [
+            $this->entry('A', 1, 1, 'elected'),
+            $this->entry('B', 2, 2, 'elected'),
+            $this->entry('C', 3, 3, 'elected'),
+            $this->entry('D', 4, 4, 'excluded'),
+            $this->entry('E', 5, 5, 'excluded'),
+        ];
+        $categories = ['A' => 'Sales', 'B' => 'Sales', 'C' => 'Sales', 'D' => 'Eng', 'E' => 'Eng'];
+        $quota = ['category' => 'Sales', 'type' => 'max', 'count' => 0, 'binding' => true];
+
+        $qc = new QuotaCorrector($ranking, null, [], $categories, $quota, 3);
+        $result = $qc->result();
+
+        $this->assertSame(['A', 'B', 'C'], $result['order']);
+        $this->assertTrue($result['infeasible']);
+        $this->assertNotSame([], $qc->warnings());
     }
 
     public function test_advisory_quota_is_not_binding(): void

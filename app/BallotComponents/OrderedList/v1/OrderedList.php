@@ -138,6 +138,31 @@ final class OrderedList extends AbstractBallotComponent
         $final = $applier->applied() ? $applier->result() : null;
         $warnings = [...$warnings, ...$applier->warnings()];
 
+        // Spec §6.7: once the runner's resolution fully determines the
+        // order, the quota (if any) must be re-applied over THAT resolved
+        // ranking. The correction computed above ran against the natural,
+        // pre-resolution ranking and -- while the cutoff was still contested
+        // -- was necessarily deferred/provisional; it is never allowed to
+        // stand as "official" once a complete final order exists.
+        if ($quota !== null && $final !== null && $final['complete']) {
+            /** @var list<array{candidate:string,best_pos:int,worst_pos:int,determined:bool,status:string}> $resolvedRanking */
+            $resolvedRanking = [];
+            foreach ($final['order'] as $row) {
+                $position = $row['position'];
+                $resolvedRanking[] = [
+                    'candidate' => $row['candidate'],
+                    'best_pos' => $position,
+                    'worst_pos' => $position,
+                    'determined' => true,
+                    'status' => $position <= $seats ? 'elected' : 'excluded',
+                ];
+            }
+
+            $resolvedQuotaCorrector = new QuotaCorrector($resolvedRanking, null, [], $categories, $quota, $seats);
+            $corrected = $resolvedQuotaCorrector->result();
+            $warnings = [...$warnings, ...$resolvedQuotaCorrector->warnings()];
+        }
+
         $official = ($corrected !== null && $quotaBinding && !$corrected['infeasible'] && !$corrected['provisional'])
             ? 'corrected'
             : 'natural';
@@ -185,9 +210,10 @@ final class OrderedList extends AbstractBallotComponent
 
     /**
      * Parse settings.quota defensively: a well-formed quota needs a string
-     * category, a min/max type, and an integer count >= 1; binding defaults
-     * to true when absent or not a bool. Anything else is dropped with a
-     * warning rather than guessed at.
+     * category, a min/max type, and an integer count (>= 1 for "min"; "max"
+     * additionally allows 0, meaning "exclude this category entirely");
+     * binding defaults to true when absent or not a bool. Anything else is
+     * dropped with a warning rather than guessed at.
      *
      * @param array<string, mixed> $settings
      * @return array{quota: array{category:string,type:string,count:int,binding:bool}|null, warning: string|null}
@@ -208,7 +234,7 @@ final class OrderedList extends AbstractBallotComponent
         $count = $raw['count'] ?? null;
         $binding = $raw['binding'] ?? null;
 
-        if (!is_string($category) || !is_string($type) || !in_array($type, ['min', 'max'], true) || !is_int($count) || $count < 1) {
+        if (!is_string($category) || !is_string($type) || !in_array($type, ['min', 'max'], true) || !is_int($count) || ($type === 'max' ? $count < 0 : $count < 1)) {
             return ['quota' => null, 'warning' => 'quota settings malformed — ignored'];
         }
 

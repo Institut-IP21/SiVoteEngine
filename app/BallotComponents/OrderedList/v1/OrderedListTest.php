@@ -42,6 +42,22 @@ class OrderedListTest extends TestCase
     }
 
     /**
+     * @param list<string> $options
+     * @param array<string, mixed> $settings
+     * @param list<array<string, mixed>> $resolutions
+     */
+    private function makeComponentWithResolutions(array $options, array $settings, array $resolutions): BallotComponent
+    {
+        return BallotComponent::factory()->make([
+            'type' => 'OrderedList',
+            'options' => $options,
+            'settings' => $settings,
+            'runner_resolutions' => $resolutions,
+            'ballot_id' => (string) Str::uuid(),
+        ]);
+    }
+
+    /**
      * @param list<list<string>> $rankings
      * @return array<int, Vote>
      */
@@ -137,6 +153,119 @@ class OrderedListTest extends TestCase
         $this->assertSame(['A', 'C'], $r['corrected']['order']);
     }
 
+    /**
+     * Spec §6.7: a binding quota + a genuinely contested cutoff (all four
+     * roster members solo-approved -> every pairwise comparison ties, one
+     * band spans the whole roster) + a runner resolution that fully
+     * determines the order. When the runner's chosen order does NOT satisfy
+     * the quota, the quota must be re-applied over that resolved order (not
+     * left deferred/provisional, and not left applied to the stale natural
+     * ranking) so `corrected`/`official` reflect the promotion.
+     */
+    public function test_runner_resolution_violating_the_quota_is_corrected_after_the_reapply(): void
+    {
+        $c = $this->makeComponentWithResolutions(
+            ['A', 'B', 'C', 'D'],
+            [
+                'seats' => 2,
+                'categories' => ['A' => 'Eng', 'B' => 'Eng', 'C' => 'Sales', 'D' => 'Sales'],
+                'quota' => ['category' => 'Sales', 'type' => 'min', 'count' => 1, 'binding' => true],
+            ],
+            [[
+                'cluster' => ['A', 'B', 'C', 'D'],
+                // The runner's chosen order elects only Eng (A, B) -- it
+                // violates the Sales >= 1 quota.
+                'order' => ['A', 'B', 'C', 'D'],
+                'comment' => 'Runner draw.',
+                'resolved_by' => 'chair@org',
+                'resolved_at' => '2026-09-26T20:00:00Z',
+            ]],
+        );
+        $votes = $this->votes($c, [['A'], ['B'], ['C'], ['D']]);
+
+        $r = $this->calc($votes, $c);
+
+        $this->assertNotNull($r['cutoff_decision']);
+        $this->assertNotNull($r['final']);
+        $this->assertTrue($r['final']['complete']);
+
+        $this->assertNotNull($r['corrected']);
+        $this->assertFalse($r['corrected']['provisional']);
+        $this->assertFalse($r['corrected']['infeasible']);
+        $this->assertSame(['A', 'C'], $r['corrected']['order']);
+        $this->assertSame(
+            [['candidate' => 'C', 'from' => 'below_cut', 'reason' => 'min_quota:Sales']],
+            $r['corrected']['diff']
+        );
+        $this->assertSame('corrected', $r['official']);
+    }
+
+    /**
+     * Mirror case: the runner's chosen order already satisfies the quota
+     * (one Sales candidate lands in the top-2), so the re-applied correction
+     * is a no-op diff, still official (binding + satisfied, not provisional).
+     */
+    public function test_runner_resolution_satisfying_the_quota_needs_no_correction(): void
+    {
+        $c = $this->makeComponentWithResolutions(
+            ['A', 'B', 'C', 'D'],
+            [
+                'seats' => 2,
+                'categories' => ['A' => 'Eng', 'B' => 'Eng', 'C' => 'Sales', 'D' => 'Sales'],
+                'quota' => ['category' => 'Sales', 'type' => 'min', 'count' => 1, 'binding' => true],
+            ],
+            [[
+                'cluster' => ['A', 'B', 'C', 'D'],
+                // C (Sales) lands in the top-2 already: the quota is satisfied.
+                'order' => ['C', 'A', 'B', 'D'],
+                'comment' => 'Runner draw.',
+                'resolved_by' => 'chair@org',
+                'resolved_at' => '2026-09-26T20:00:00Z',
+            ]],
+        );
+        $votes = $this->votes($c, [['A'], ['B'], ['C'], ['D']]);
+
+        $r = $this->calc($votes, $c);
+
+        $this->assertTrue($r['final']['complete']);
+        $this->assertNotNull($r['corrected']);
+        $this->assertFalse($r['corrected']['provisional']);
+        $this->assertFalse($r['corrected']['infeasible']);
+        $this->assertSame(['C', 'A'], $r['corrected']['order']);
+        $this->assertSame([], $r['corrected']['diff']);
+        $this->assertSame('corrected', $r['official']);
+    }
+
+    public function test_seats_clamp_and_malformed_quota_warnings_appear_in_the_dto(): void
+    {
+        $c = $this->makeComponent(['A', 'B'], [
+            'seats' => 5,
+            'quota' => ['category' => 'Sales', 'type' => 'min'],
+        ]);
+        $votes = $this->votes($c, [['A', 'B']]);
+
+        $r = $this->calc($votes, $c);
+
+        $this->assertNotEmpty(array_filter($r['warnings'], static fn (string $w): bool => str_contains($w, 'seats clamped')));
+        $this->assertNotEmpty(array_filter($r['warnings'], static fn (string $w): bool => str_contains($w, 'quota settings malformed')));
+    }
+
+    public function test_max_quota_count_zero_is_accepted(): void
+    {
+        $c = $this->makeComponent(['A', 'B', 'C', 'D'], [
+            'seats' => 2,
+            'categories' => ['A' => 'Sales', 'B' => 'Sales', 'C' => 'Eng', 'D' => 'Eng'],
+            'quota' => ['category' => 'Sales', 'type' => 'max', 'count' => 0, 'binding' => true],
+        ]);
+        $votes = $this->votes($c, array_fill(0, 5, ['A', 'B', 'C', 'D']));
+
+        $r = $this->calc($votes, $c);
+
+        $this->assertNotNull($r['corrected']);
+        $this->assertSame(['C', 'D'], $r['corrected']['order']);
+        $this->assertSame('corrected', $r['official']);
+    }
+
     public function test_empty_votes_returns_fully_formed_empty_shape(): void
     {
         $c = $this->makeComponent(['A', 'B', 'C']);
@@ -195,5 +324,11 @@ class OrderedListTest extends TestCase
     {
         $this->assertSame('B, A', $this->component->valuesToCsv(['cid' => ['B', 'A']], 'cid'));
         $this->assertSame('', $this->component->valuesToCsv([], 'cid'));
+    }
+
+    public function test_values_to_csv_scalar_branch_casts_to_string(): void
+    {
+        $this->assertSame('A', $this->component->valuesToCsv(['cid' => 'A'], 'cid'));
+        $this->assertSame('1', $this->component->valuesToCsv(['cid' => 1], 'cid'));
     }
 }

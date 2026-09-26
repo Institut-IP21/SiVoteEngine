@@ -103,6 +103,51 @@ class RankedPairsLockTest extends TestCase
         }
     }
 
+    /**
+     * Regression: a strong-locked edge (A>B, margin 5) at the top level must
+     * not be perturbed by an equal-margin cycle among OTHER nodes at a
+     * weaker level (B>C and C>A, both margin 3). Only A>B locks; the margin-3
+     * level is itself a 3-cycle (A->B is already locked from a higher level,
+     * so the margin-3 level's own edges B->C and C->A, together with the
+     * already-locked A->B, form a cycle A->B->C->A) and both of ITS edges are
+     * skipped as one strongly-connected component -- distinct margins do not
+     * imply a clean order once a stronger edge has already closed part of
+     * the loop.
+     */
+    public function test_strong_locked_edge_survives_an_equal_margin_cycle_at_a_later_level(): void
+    {
+        $decisive = $this->pairs([
+            ['winner' => 'A', 'loser' => 'B', 'margin' => 5],
+            ['winner' => 'B', 'loser' => 'C', 'margin' => 3],
+            ['winner' => 'C', 'loser' => 'A', 'margin' => 3],
+        ]);
+        $lock = new RankedPairsLock($decisive, ['A', 'B', 'C']);
+
+        $log = $lock->log();
+        $this->assertSame('locked', $log[0]['type']);
+        $this->assertSame('A', $log[0]['winner']);
+        $this->assertSame('B', $log[0]['loser']);
+        $this->assertSame(5, $log[0]['margin']);
+
+        // The margin-3 level: B->C and C->A, unioned with the already-locked
+        // A->B, forms the cycle A->B->C->A -- both of that level's edges are
+        // skipped as one SCC; only the margin-5 edge is ever locked.
+        $skipped = array_values(array_filter($log, static fn (array $e): bool => $e['type'] === 'skipped_cycle'));
+        $this->assertCount(2, $skipped);
+        foreach ($skipped as $entry) {
+            $this->assertEqualsCanonicalizing(['A', 'B', 'C'], $entry['members'] ?? []);
+        }
+
+        $locked = array_values(array_filter($log, static fn (array $e): bool => $e['type'] === 'locked'));
+        $this->assertCount(1, $locked);
+
+        $reachable = $lock->reachable();
+        $this->assertTrue($reachable['A']['B']);
+        $this->assertFalse($reachable['B']['C']);
+        $this->assertFalse($reachable['C']['A']);
+        $this->assertFalse($reachable['A']['C']);
+    }
+
     public function test_margins_ordering_processes_strongest_first(): void
     {
         $decisive = $this->pairs([
