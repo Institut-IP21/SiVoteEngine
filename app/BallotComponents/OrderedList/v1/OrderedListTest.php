@@ -494,4 +494,286 @@ class OrderedListTest extends TestCase
         $this->assertSame('A', $this->component->valuesToCsv(['cid' => 'A'], 'cid'));
         $this->assertSame('1', $this->component->valuesToCsv(['cid' => 1], 'cid'));
     }
+
+    /**
+     * KNOWN v1 LIMITATION (do not fix — out of scope): a candidate label
+     * containing a comma is indistinguishable, once CSV-joined with ', ',
+     * from two separate ranked labels. This pins the CURRENT (naive-join)
+     * behavior so a future change to valuesToCsv is caught as a deliberate
+     * decision, not a silent regression.
+     */
+    public function test_comma_in_label_csv_ambiguity_is_a_known_v1_limitation(): void
+    {
+        $csv = $this->component->valuesToCsv(['cid' => ['Smith, John', 'Doe, Jane']], 'cid');
+
+        // Indistinguishable from ranking four plain labels
+        // ['Smith', ' John', 'Doe', ' Jane'] — a known v1 limitation.
+        $this->assertSame('Smith, John, Doe, Jane', $csv);
+    }
+
+    // --- Edge case: seats <= 0 (lower-bound clamp direction) ---------------
+    // The existing test_seats_clamp_and_malformed_quota_warnings_appear_in_the_dto
+    // only exercises the UPPER clamp (min($n, seats)); these pin the LOWER
+    // clamp (max(1, seats)), which already guards seats<=0 correctly.
+
+    public function test_seats_zero_clamps_to_one_with_warning(): void
+    {
+        $c = $this->makeComponent(['A', 'B', 'C'], ['seats' => 0]);
+        $votes = $this->votes($c, [['A', 'B', 'C']]);
+
+        $r = $this->calc($votes, $c);
+
+        $this->assertSame(1, $r['seats']);
+        $this->assertSame(['A'], $r['elected']);
+        $this->assertSame([], $r['bands']);
+        $this->assertNotEmpty(array_filter(
+            $r['warnings'],
+            static fn (string $w): bool => str_contains($w, 'seats clamped to 1 (requested 0, roster has 3)')
+        ));
+    }
+
+    public function test_seats_negative_clamps_to_one_with_warning(): void
+    {
+        $c = $this->makeComponent(['A', 'B', 'C'], ['seats' => -5]);
+        $votes = $this->votes($c, [['A', 'B', 'C']]);
+
+        $r = $this->calc($votes, $c);
+
+        $this->assertSame(1, $r['seats']);
+        $this->assertSame(['A'], $r['elected']);
+        $this->assertNotEmpty(array_filter(
+            $r['warnings'],
+            static fn (string $w): bool => str_contains($w, 'seats clamped to 1 (requested -5, roster has 3)')
+        ));
+    }
+
+    // --- Edge case: a foreign (non-roster) candidate id on a ballot --------
+
+    /**
+     * Vote-integrity edge: a ballot ranks a stale/foreign candidate id mixed
+     * in among real preferences. It must be silently ignored -- not seated,
+     * not counted as a real preference, and unable to leak into the
+     * pairwise matrix or perturb the tally over the real roster.
+     */
+    public function test_foreign_candidate_in_a_ballot_is_ignored_and_cannot_influence_the_tally(): void
+    {
+        $c = $this->makeComponent(['A', 'B', 'C'], ['seats' => 2]);
+        $withForeign = $this->votes($c, [
+            ['A', 'Ghost', 'B'],
+            ['A', 'Ghost', 'B'],
+            ['C'],
+        ]);
+        $withoutForeign = $this->votes($c, [
+            ['A', 'B'],
+            ['A', 'B'],
+            ['C'],
+        ]);
+
+        $rWithForeign = $this->calc($withForeign, $c);
+        $rWithoutForeign = $this->calc($withoutForeign, $c);
+
+        $this->assertNotContains('Ghost', $rWithForeign['pairwise']['candidates']);
+        $this->assertArrayNotHasKey('Ghost', $rWithForeign['pairwise']['matrix']);
+        foreach ($rWithForeign['ranking'] as $entry) {
+            $this->assertNotSame('Ghost', $entry['candidate']);
+        }
+
+        // Stripping the foreign label from every ballot must yield an
+        // identical tally: the foreign id can neither help nor hurt any
+        // real candidate's result.
+        $this->assertSame($rWithoutForeign['pairwise']['matrix'], $rWithForeign['pairwise']['matrix']);
+        $this->assertSame($rWithoutForeign['elected'], $rWithForeign['elected']);
+        $this->assertSame($rWithoutForeign['ranking'], $rWithForeign['ranking']);
+    }
+
+    // --- Edge case: N = 1 (single-candidate roster) -------------------------
+
+    public function test_single_candidate_roster_is_elected_outright(): void
+    {
+        $c = $this->makeComponent(['Solo'], ['seats' => 1]);
+        $votes = $this->votes($c, [['Solo'], ['Solo']]);
+
+        $r = $this->calc($votes, $c);
+
+        $this->assertSame(1, $r['seats']);
+        $this->assertSame(['Solo'], $r['elected']);
+        $this->assertSame([], $r['bands']);
+        $this->assertNull($r['cutoff_decision']);
+        $this->assertNull($r['final']);
+        $this->assertSame('natural', $r['official']);
+        $this->assertSame(['Solo'], $r['pairwise']['candidates']);
+        $this->assertSame([], $r['pairwise']['matrix']);
+    }
+
+    // --- Edge case: a genuine 3-member tie band + a full 3-permutation -----
+
+    /**
+     * 2x['A','C'] + 2x['B'] end-to-end reproduces the exact position-interval
+     * shape of PositionResolverTest::test_contested_cutoff_seats_one
+     * (A[1,2] contested, B[1,3] contested, C[2,3] excluded, one band {A,B,C}
+     * with the locked fact A>C) but built from REAL ballots through
+     * PairwiseMatrix -> RankedPairsLock -> PositionResolver, not synthetic
+     * band data. A full 3-permutation resolution that respects the locked
+     * A>C fact is accepted and completes the result.
+     */
+    public function test_three_way_tie_band_accepts_a_full_three_permutation_resolution(): void
+    {
+        $c = $this->makeComponentWithResolutions(
+            ['A', 'B', 'C'],
+            ['seats' => 1],
+            [[
+                'cluster' => ['A', 'B', 'C'],
+                'order' => ['B', 'A', 'C'],
+                'comment' => 'Runner draw, all three tied.',
+                'resolved_by' => 'chair@org',
+                'resolved_at' => '2026-09-26T20:00:00Z',
+            ]],
+        );
+        $votes = $this->votes($c, [['A', 'C'], ['A', 'C'], ['B'], ['B']]);
+
+        $r = $this->calc($votes, $c);
+
+        $this->assertNotNull($r['cutoff_decision']);
+        $this->assertCount(1, $r['bands']);
+        $this->assertEqualsCanonicalizing(['A', 'B', 'C'], $r['bands'][0]['candidates']);
+        $this->assertSame([['winner' => 'A', 'loser' => 'C']], $r['bands'][0]['internal_constraints']);
+
+        $this->assertNotNull($r['final']);
+        $this->assertTrue($r['final']['complete']);
+        $this->assertSame(
+            [
+                ['position' => 1, 'candidate' => 'B', 'tied' => false],
+                ['position' => 2, 'candidate' => 'A', 'tied' => false],
+                ['position' => 3, 'candidate' => 'C', 'tied' => false],
+            ],
+            $r['final']['order']
+        );
+    }
+
+    /**
+     * Same 3-way band; a full 3-permutation that DOES respect the "is a
+     * permutation of the tied set" rule but contradicts the locked A>C
+     * pairwise fact (placing C ahead of A) must be rejected outright, not
+     * partially applied.
+     */
+    public function test_three_permutation_contradicting_a_locked_pair_is_rejected(): void
+    {
+        $c = $this->makeComponentWithResolutions(
+            ['A', 'B', 'C'],
+            ['seats' => 1],
+            [[
+                'cluster' => ['A', 'B', 'C'],
+                'order' => ['C', 'B', 'A'],
+                'comment' => 'Bad draw.',
+                'resolved_by' => 'chair@org',
+                'resolved_at' => '2026-09-26T20:00:00Z',
+            ]],
+        );
+        $votes = $this->votes($c, [['A', 'C'], ['A', 'C'], ['B'], ['B']]);
+
+        $r = $this->calc($votes, $c);
+
+        $this->assertNull($r['final']);
+        $this->assertSame([], $r['elected']);
+        $this->assertNotEmpty(array_filter(
+            $r['warnings'],
+            static fn (string $w): bool => str_contains($w, 'contradicts a locked head-to-head result')
+        ));
+    }
+
+    // --- Edge case: quota count vs. seats bounds (end-to-end) ---------------
+
+    /**
+     * min count(3) > seats(2), even though the category has 3 members
+     * SOMEWHERE in the roster (not a category-scarcity infeasibility) --
+     * structurally impossible since only 2 seats exist. Must report
+     * infeasible, not crash or guess.
+     */
+    public function test_min_quota_count_greater_than_seats_is_infeasible_end_to_end(): void
+    {
+        $c = $this->makeComponent(['A', 'B', 'C', 'D', 'E'], [
+            'seats' => 2,
+            'categories' => ['C' => 'Sales', 'D' => 'Sales', 'E' => 'Sales'],
+            'quota' => ['category' => 'Sales', 'type' => 'min', 'count' => 3, 'binding' => true],
+        ]);
+        $votes = $this->votes($c, array_fill(0, 5, ['A', 'B', 'C', 'D', 'E']));
+
+        $r = $this->calc($votes, $c);
+
+        $this->assertNotNull($r['corrected']);
+        $this->assertTrue($r['corrected']['infeasible']);
+        $this->assertSame(['A', 'B'], $r['corrected']['order']);
+        $this->assertSame('natural', $r['official']);
+    }
+
+    /**
+     * max count(2) == seats(2) can never bind (n can never exceed seats) --
+     * trivially satisfied, natural order unchanged, no diff.
+     */
+    public function test_max_quota_count_at_seats_end_to_end_is_trivially_satisfied(): void
+    {
+        $c = $this->makeComponent(['A', 'B', 'C', 'D'], [
+            'seats' => 2,
+            'categories' => ['A' => 'Sales', 'B' => 'Sales', 'C' => 'Eng', 'D' => 'Eng'],
+            'quota' => ['category' => 'Sales', 'type' => 'max', 'count' => 2, 'binding' => true],
+        ]);
+        $votes = $this->votes($c, array_fill(0, 5, ['A', 'B', 'C', 'D']));
+
+        $r = $this->calc($votes, $c);
+
+        $this->assertNotNull($r['corrected']);
+        $this->assertSame([], $r['corrected']['diff']);
+        $this->assertFalse($r['corrected']['infeasible']);
+        $this->assertSame(['A', 'B'], $r['corrected']['order']);
+    }
+
+    // --- Edge case: unicode candidate labels --------------------------------
+
+    public function test_unicode_candidate_labels_flow_through_pairwise_and_csv_intact(): void
+    {
+        $c = $this->makeComponent(['Ámbar', '候选人', 'Zoë'], ['seats' => 2]);
+        $votes = $this->votes($c, array_fill(0, 3, ['Ámbar', '候选人', 'Zoë']));
+
+        $r = $this->calc($votes, $c);
+
+        $this->assertSame(['Ámbar', '候选人'], $r['elected']);
+        $this->assertSame(['Ámbar', '候选人', 'Zoë'], $r['pairwise']['candidates']);
+        $this->assertArrayHasKey('Ámbar', $r['pairwise']['matrix']);
+        $this->assertArrayHasKey('候选人', $r['pairwise']['matrix']['Ámbar']);
+
+        $csv = $this->component->valuesToCsv(['cid' => ['Ámbar', '候选人']], 'cid');
+        $this->assertSame('Ámbar, 候选人', $csv);
+    }
+
+    // --- Edge case: duplicate candidate labels in the roster ----------------
+
+    /**
+     * VOTE-INTEGRITY DEFECT FOUND AND FIXED (see OrderedList::calculateResults):
+     * a roster containing a duplicate candidate label (bypassing the
+     * builder's `distinct` option validation -- e.g. options set via a
+     * different path) made PositionResolver emit the SAME candidate as two
+     * separate ranking rows, both independently eligible for 'elected'
+     * status -- silently squeezing a real, distinct candidate out of the
+     * seat count (with seats=2 here, `elected` would have come back
+     * ['A', 'A'] instead of ['A', 'B'], dropping B). The minimal fix dedupes
+     * the roster (first occurrence wins) with a warning before any
+     * tabulation runs.
+     */
+    public function test_duplicate_candidate_labels_in_the_roster_are_deduped_not_double_counted(): void
+    {
+        $c = $this->makeComponent(['A', 'A', 'B'], ['seats' => 2]);
+        $votes = $this->votes($c, [['A', 'B'], ['A', 'B'], ['B', 'A']]);
+
+        $r = $this->calc($votes, $c);
+
+        $this->assertSame(['A', 'B'], $r['pairwise']['candidates']);
+        $this->assertSame(2, $r['seats']);
+        $this->assertCount(2, $r['ranking']);
+        $this->assertEqualsCanonicalizing(['A', 'B'], $r['elected']);
+        $this->assertCount(2, $r['elected']);
+        $this->assertNotEmpty(array_filter(
+            $r['warnings'],
+            static fn (string $w): bool => str_contains($w, 'duplicate candidate labels')
+        ));
+    }
 }

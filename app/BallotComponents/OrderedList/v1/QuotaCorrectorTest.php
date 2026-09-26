@@ -324,4 +324,83 @@ class QuotaCorrectorTest extends TestCase
 
         $this->assertFalse($result['binding']);
     }
+
+    /**
+     * Edge case: min count(3) > seats(2), structurally impossible -- NOT
+     * because the category is scarce overall (there are 3 category members
+     * in the whole roster: C, D, E) but because only 2 seats exist to hold
+     * them. `count($demoteesEntries) < $need` catches this unconditionally:
+     * demoteesEntries can never exceed `seats` members, and need = count -
+     * n > seats - n = max possible demotees whenever count > seats. Must be
+     * reported infeasible, never a partial/guessed promotion.
+     */
+    public function test_min_quota_count_exceeding_seats_is_structurally_infeasible(): void
+    {
+        $ranking = [
+            $this->entry('A', 1, 1, 'elected'),
+            $this->entry('B', 2, 2, 'elected'),
+            $this->entry('C', 3, 3, 'excluded'),
+            $this->entry('D', 4, 4, 'excluded'),
+            $this->entry('E', 5, 5, 'excluded'),
+        ];
+        $categories = ['C' => 'Sales', 'D' => 'Sales', 'E' => 'Sales'];
+        $quota = ['category' => 'Sales', 'type' => 'min', 'count' => 3, 'binding' => true];
+
+        $qc = new QuotaCorrector($ranking, null, [], $categories, $quota, 2);
+        $result = $qc->result();
+
+        $this->assertSame(['A', 'B'], $result['order']);
+        $this->assertSame([], $result['diff']);
+        $this->assertTrue($result['infeasible']);
+        $this->assertFalse($result['provisional']);
+        $this->assertNotSame([], $qc->warnings());
+    }
+
+    /**
+     * Edge case: max count == seats can never bind, because `n` (in-cut,
+     * in-category members) can never exceed `seats`. Trivially satisfied
+     * even in the extreme where every seat-holder is in the target category.
+     */
+    public function test_max_quota_count_equal_to_seats_is_trivially_satisfied(): void
+    {
+        $ranking = [
+            $this->entry('A', 1, 1, 'elected'),
+            $this->entry('B', 2, 2, 'elected'),
+            $this->entry('C', 3, 3, 'excluded'),
+        ];
+        $categories = ['A' => 'Sales', 'B' => 'Sales'];
+        $quota = ['category' => 'Sales', 'type' => 'max', 'count' => 2, 'binding' => true];
+
+        $qc = new QuotaCorrector($ranking, null, [], $categories, $quota, 2);
+        $result = $qc->result();
+
+        $this->assertSame(['A', 'B'], $result['order']);
+        $this->assertSame([], $result['diff']);
+        $this->assertFalse($result['infeasible']);
+        $this->assertFalse($result['provisional']);
+        $this->assertSame([], $qc->warnings());
+    }
+
+    /**
+     * Edge case: max count > seats — same reasoning, a fortiori. Never binds.
+     */
+    public function test_max_quota_count_greater_than_seats_is_trivially_satisfied(): void
+    {
+        $ranking = [
+            $this->entry('A', 1, 1, 'elected'),
+            $this->entry('B', 2, 2, 'elected'),
+            $this->entry('C', 3, 3, 'excluded'),
+        ];
+        $categories = ['A' => 'Sales', 'B' => 'Sales'];
+        $quota = ['category' => 'Sales', 'type' => 'max', 'count' => 5, 'binding' => true];
+
+        $qc = new QuotaCorrector($ranking, null, [], $categories, $quota, 2);
+        $result = $qc->result();
+
+        $this->assertSame(['A', 'B'], $result['order']);
+        $this->assertSame([], $result['diff']);
+        $this->assertFalse($result['infeasible']);
+        $this->assertFalse($result['provisional']);
+        $this->assertSame([], $qc->warnings());
+    }
 }
