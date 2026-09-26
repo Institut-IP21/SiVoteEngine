@@ -125,7 +125,7 @@ class BallotServiceTest extends TestCase
         $types = $this->service->getBallotTypes();
 
         $this->assertEqualsCanonicalizing(
-            ['YesNo', 'FirstPastThePost', 'RankedChoice', 'ApprovalVote'],
+            ['YesNo', 'FirstPastThePost', 'RankedChoice', 'ApprovalVote', 'OrderedList'],
             $types
         );
     }
