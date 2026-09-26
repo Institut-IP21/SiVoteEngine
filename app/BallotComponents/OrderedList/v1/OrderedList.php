@@ -57,7 +57,16 @@ final class OrderedList extends AbstractBallotComponent
     #[\Override]
     public function calculateResults(Collection $votes, BallotComponent $component, bool $abstainable = false): ComponentResult
     {
-        $roster = array_values(array_map('strval', $component->options ?? []));
+        /** @var list<string> $rawRoster */
+        $rawRoster = array_values(array_map('strval', $component->options ?? []));
+        // Defensive: the builder enforces `distinct` on options, but this
+        // tabulator has no other path to guarantee it (e.g. options set
+        // outside the builder). Without this, a duplicate label makes
+        // PositionResolver emit the SAME candidate as two separate ranking
+        // rows -- both independently eligible for 'elected' status -- which
+        // can silently squeeze a real, distinct candidate out of the seat
+        // count. Dedupe (first occurrence wins) and warn rather than guess.
+        $roster = array_values(array_unique($rawRoster));
         $n = count($roster);
 
         /** @var array<string, mixed> $settings */
@@ -65,6 +74,9 @@ final class OrderedList extends AbstractBallotComponent
 
         /** @var list<string> $warnings */
         $warnings = [];
+        if (count($roster) !== count($rawRoster)) {
+            $warnings[] = 'roster had duplicate candidate labels — duplicates dropped, first occurrence kept';
+        }
 
         $rawSeatsValue = $settings['seats'] ?? $n;
         $rawSeats = is_scalar($rawSeatsValue) ? (int) $rawSeatsValue : $n;
