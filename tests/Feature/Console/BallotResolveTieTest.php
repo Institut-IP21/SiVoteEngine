@@ -56,6 +56,70 @@ class BallotResolveTieTest extends TestCase
         return [$ballot, $component];
     }
 
+    /**
+     * @param list<string> $options
+     * @return array{0: Ballot, 1: BallotComponent}
+     */
+    private function cyclicTieBallot(array $options): array
+    {
+        $election = Election::factory()->create(['locale' => 'en', 'abstainable' => false]);
+        $ballot = Ballot::factory()->create([
+            'election_id' => $election->id,
+            'active' => false,
+            'finished' => true,
+        ]);
+        $component = BallotComponent::factory()->create([
+            'ballot_id' => $ballot->id,
+            'type' => 'OrderedList',
+            'version' => 'v1',
+            'options' => $options,
+            'settings' => ['seats' => 1],
+        ]);
+
+        // A symmetric 3-voter Condorcet cycle (A>B>C, B>C>A, C>A>B): every
+        // pairwise margin -- A>B, B>C, C>A -- is decisive but tied at 1, so
+        // Ranked Pairs can lock none of them and the whole {A,B,C} band is
+        // left fully unresolved, needing a manual --order.
+        foreach ([['A', 'B', 'C'], ['B', 'C', 'A'], ['C', 'A', 'B']] as $ranking) {
+            Vote::factory()->forBallot($ballot)->withValues([$component->id => $ranking])->create();
+        }
+
+        return [$ballot, $component];
+    }
+
+    /**
+     * Pins the roster-dedupe drift fix: `reachableFromVotes()` must dedupe
+     * `$component->options` exactly like OrderedList::calculateResults does
+     * (first occurrence wins), or a duplicate-label roster double-counts the
+     * duplicated candidate's pairwise margins in PairwiseMatrix. On this
+     * cycle, that shifts A>B and C>A from a tied margin of 1 (unlockable,
+     * tied with B>C in the same cycle) to a margin of 2 -- letting Ranked
+     * Pairs lock them after all and wrongly reject an --order such as
+     * B,A,C that the correctly-deduped roster accepts. A component whose
+     * options carry a duplicate label (bypassing the builder's `distinct`)
+     * must validate --order identically to the same scenario with the
+     * duplicate removed.
+     */
+    public function test_duplicate_labelled_roster_validates_identically_to_the_deduped_equivalent(): void
+    {
+        [, $duplicated] = $this->cyclicTieBallot(['A', 'B', 'C', 'A']);
+        [, $clean] = $this->cyclicTieBallot(['A', 'B', 'C']);
+
+        foreach ([$duplicated, $clean] as $component) {
+            $this->artisan('ballot:resolve-tie', [
+                'component' => $component->id,
+                '--cluster' => 'A,B,C',
+                '--order' => 'B,A,C',
+                '--comment' => 'Coin toss witnessed by both agents.',
+                '--by' => 'returning-officer',
+            ])->assertExitCode(0);
+
+            $component->refresh();
+            $this->assertIsArray($component->runner_resolutions);
+            $this->assertSame(['B', 'A', 'C'], $component->runner_resolutions[0]['order']);
+        }
+    }
+
     public function test_valid_order_is_recorded_and_completes_the_result(): void
     {
         [, $component] = $this->contestedCutoffBallot();

@@ -211,17 +211,23 @@ class BallotResolveTie extends Command
 
     /**
      * Recomputes the Ranked-Pairs locked reachability relation straight from
-     * the ballot's cast votes. Mirrors OrderedList::accountAndParse's ballot
-     * cleaning (in-roster, distinct, scalar, order preserved) minus the
-     * accounting tallies this command has no use for; that method is private
-     * to the component, so this is the light duplication of a CLI-only
-     * concern rather than widening OrderedList's public surface for it.
+     * the ballot's cast votes. Mirrors OrderedList::calculateResults's tally
+     * roster (deduped, first occurrence wins, via `array_unique`) plus
+     * accountAndParse's ballot cleaning (in-roster, distinct, scalar, order
+     * preserved) minus the accounting tallies this command has no use for;
+     * that logic is private to the component, so this is the light
+     * duplication of a CLI-only concern rather than widening OrderedList's
+     * public surface for it. The roster MUST be deduped identically to
+     * calculateResults's, or a duplicate-label roster could feed
+     * PairwiseMatrix/RankedPairsLock a different candidate set than the one
+     * the published result was actually computed over, shifting which edge
+     * Ranked Pairs drops and changing `reachable` for the --order validation.
      *
      * @return array<string,array<string,bool>>
      */
     private function reachableFromVotes(\App\Models\Ballot $ballot, BallotComponent $component): array
     {
-        $roster = array_values(array_map('strval', $component->options ?? []));
+        $roster = array_values(array_unique(array_map('strval', $component->options ?? [])));
 
         /** @var list<list<string>> $counted */
         $counted = [];
