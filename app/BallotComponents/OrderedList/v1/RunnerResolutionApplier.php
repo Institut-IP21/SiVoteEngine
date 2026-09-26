@@ -28,10 +28,15 @@ final class RunnerResolutionApplier
      * @param list<array{cluster:list<string>,order:list<string>,comment:string,resolved_by:string,resolved_at:string}> $resolutions
      * @param array<string,array<string,bool>> $reachable
      */
-    // $seats is part of the class's public contract (it mirrors the other
-    // calc classes so callers can pass it through uniformly) but the
-    // assembly algorithm needs no seat-relative logic of its own: every
-    // cluster it resolves was already classified by PositionResolver.
+    // $cutoffDecision is part of the class's public contract (it mirrors the
+    // shape PositionResolver exposes, and keeps this constructor's signature
+    // stable for callers that pass all of PositionResolver's outputs
+    // uniformly) but it is no longer a separate resolvable cluster: the
+    // cutoff decision is a display/summary + quota-defer signal (derived
+    // from candidate status), and the contested candidates it names are
+    // always a subset of the single straddling band already resolved via
+    // $bands. $seats likewise needs no seat-relative logic of its own here:
+    // every cluster it resolves was already classified by PositionResolver.
     // @phpstan-ignore constructor.unusedParameter
     public function __construct(array $ranking, array $bands, ?array $cutoffDecision, array $resolutions, array $reachable, int $seats)
     {
@@ -39,19 +44,16 @@ final class RunnerResolutionApplier
         $clusters = [];
         /** @var array<string,int> $seenSignatures */
         $seenSignatures = [];
+        /** @var array<int,bool> $blocking true iff this cluster's band starts at or before the seat cutoff -- a band entirely below the cutoff is display-only and never blocks completeness. */
+        $blocking = [];
 
         foreach ($bands as $band) {
             $sig = $this->signature($band['candidates']);
             if (!isset($seenSignatures[$sig])) {
-                $seenSignatures[$sig] = count($clusters);
+                $idx = count($clusters);
+                $seenSignatures[$sig] = $idx;
                 $clusters[] = $band['candidates'];
-            }
-        }
-        if ($cutoffDecision !== null) {
-            $sig = $this->signature($cutoffDecision['candidates']);
-            if (!isset($seenSignatures[$sig])) {
-                $seenSignatures[$sig] = count($clusters);
-                $clusters[] = $cutoffDecision['candidates'];
+                $blocking[$idx] = $band['span'][0] <= $seats;
             }
         }
 
@@ -77,11 +79,9 @@ final class RunnerResolutionApplier
                 continue;
             }
 
-            if (!$this->isValidResolution($members, $resolution['order'], $reachable)) {
-                $this->warnings[] = sprintf(
-                    'resolution for %s rejected: not a permutation / contradicts a locked result',
-                    implode(', ', $members)
-                );
+            $rejection = $this->rejectionReason($members, $resolution['order'], $reachable);
+            if ($rejection !== null) {
+                $this->warnings[] = sprintf('resolution for %s rejected: %s', implode(', ', $members), $rejection);
                 $resolvedOrderOfCluster[$idx] = null;
 
                 continue;
@@ -100,7 +100,7 @@ final class RunnerResolutionApplier
             }
         }
 
-        $this->result = $this->assemble($ranking, $clusters, $clusterOfCandidate, $resolvedOrderOfCluster);
+        $this->result = $this->assemble($ranking, $clusters, $clusterOfCandidate, $resolvedOrderOfCluster, $blocking);
     }
 
     /** @return array{order:list<array{position:int,candidate:string,tied:bool}>,complete:bool} */
@@ -151,11 +151,17 @@ final class RunnerResolutionApplier
     }
 
     /**
+     * Validates a resolution against its cluster and, on failure, says
+     * exactly which of the two independent rules it broke: an order must
+     * (a) be a permutation of the tied set, and separately (b) never place a
+     * candidate above another the votes already locked below it. These are
+     * reported as two distinct messages rather than one conflated warning.
+     *
      * @param list<string> $cluster
      * @param list<string> $order
      * @param array<string,array<string,bool>> $reachable
      */
-    private function isValidResolution(array $cluster, array $order, array $reachable): bool
+    private function rejectionReason(array $cluster, array $order, array $reachable): ?string
     {
         $sortedCluster = $cluster;
         sort($sortedCluster);
@@ -163,19 +169,19 @@ final class RunnerResolutionApplier
         sort($sortedOrder);
 
         if ($sortedCluster !== $sortedOrder) {
-            return false;
+            return 'not a permutation of the tied set';
         }
 
         $count = count($order);
         for ($i = 0; $i < $count; $i++) {
             for ($j = $i + 1; $j < $count; $j++) {
                 if ($reachable[$order[$j]][$order[$i]] ?? false) {
-                    return false;
+                    return 'contradicts a locked head-to-head result';
                 }
             }
         }
 
-        return true;
+        return null;
     }
 
     /**
@@ -183,9 +189,10 @@ final class RunnerResolutionApplier
      * @param list<list<string>> $clusters
      * @param array<string,int> $clusterOfCandidate
      * @param array<int,list<string>|null> $resolvedOrderOfCluster
+     * @param array<int,bool> $blocking
      * @return array{order:list<array{position:int,candidate:string,tied:bool}>,complete:bool}
      */
-    private function assemble(array $ranking, array $clusters, array $clusterOfCandidate, array $resolvedOrderOfCluster): array
+    private function assemble(array $ranking, array $clusters, array $clusterOfCandidate, array $resolvedOrderOfCluster, array $blocking): array
     {
         $order = [];
         $emitted = [];
@@ -217,8 +224,16 @@ final class RunnerResolutionApplier
             }
         }
 
+        // A band entirely below the seat cutoff (span[0] > seats) is
+        // display-only ordering entanglement among already-excluded
+        // candidates: it never blocks the seats that matter from being
+        // reported final. Only a band that could still hold one of the K
+        // seats (span[0] <= seats) has to be resolved for completeness.
         $complete = true;
         foreach ($clusters as $idx => $members) {
+            if (!($blocking[$idx] ?? true)) {
+                continue;
+            }
             if (($resolvedOrderOfCluster[$idx] ?? null) === null) {
                 $complete = false;
 

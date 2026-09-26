@@ -80,7 +80,7 @@ final class PositionResolver
         }, $entries);
 
         $this->bands = $this->buildBands($prefers, $reachable);
-        $this->cutoffDecision = $this->buildCutoffDecision();
+        $this->cutoffDecision = $this->buildCutoffDecision($prefers, $reachable);
     }
 
     /** @return list<array{candidate:string,best_pos:int,worst_pos:int,determined:bool,status:string}> */
@@ -191,33 +191,58 @@ final class PositionResolver
         ];
     }
 
-    /** @return array{remaining_seats:int,candidates:list<string>,internal_constraints:list<array{winner:string,loser:string}>,head_to_head:array<string,array<string,int>>}|null */
-    private function buildCutoffDecision(): ?array
+    /**
+     * The cutoff decision is derived from candidate STATUS, not from band
+     * membership: every genuinely undecided seat belongs to exactly one of
+     * the K seats, and the contested candidates -- by construction -- are
+     * always exactly the members of the single band whose position span
+     * straddles the seat boundary (see the class docblock). A band may also
+     * chain in already-elected or already-excluded neighbors (display-only
+     * ordering entanglement, not membership doubt), so the resolvable band
+     * used by RunnerResolutionApplier can be wider than the contested set
+     * reported here -- this decision is a display/summary + quota-defer
+     * signal, not a separate resolvable cluster.
+     *
+     * @param array<string,array<string,int>> $prefers
+     * @param array<string,array<string,bool>> $reachable
+     * @return array{remaining_seats:int,candidates:list<string>,internal_constraints:list<array{winner:string,loser:string}>,head_to_head:array<string,array<string,int>>}|null
+     */
+    private function buildCutoffDecision(array $prefers, array $reachable): ?array
     {
-        foreach ($this->bands as $band) {
-            if (!$band['affects_cutoff']) {
-                continue;
+        $electedCount = 0;
+        /** @var list<string> $contested */
+        $contested = [];
+        foreach ($this->ranking as $entry) {
+            if ($entry['status'] === 'elected') {
+                $electedCount++;
+            } elseif ($entry['status'] === 'contested') {
+                $contested[] = $entry['candidate'];
             }
-
-            $firstMember = $band['candidates'][0] ?? null;
-            $i = 0;
-            if ($firstMember !== null) {
-                foreach ($this->ranking as $idx => $entry) {
-                    if ($entry['candidate'] === $firstMember) {
-                        $i = $idx;
-                        break;
-                    }
-                }
-            }
-
-            return [
-                'remaining_seats' => $this->seats - $i,
-                'candidates' => $band['candidates'],
-                'internal_constraints' => $band['internal_constraints'],
-                'head_to_head' => $band['head_to_head'],
-            ];
         }
 
-        return null;
+        if ($contested === []) {
+            return null;
+        }
+
+        $internalConstraints = [];
+        $headToHead = [];
+        foreach ($contested as $x) {
+            foreach ($contested as $y) {
+                if ($x === $y) {
+                    continue;
+                }
+                if ($reachable[$x][$y] ?? false) {
+                    $internalConstraints[] = ['winner' => $x, 'loser' => $y];
+                }
+                $headToHead[$x][$y] = $prefers[$x][$y] ?? 0;
+            }
+        }
+
+        return [
+            'remaining_seats' => $this->seats - $electedCount,
+            'candidates' => $contested,
+            'internal_constraints' => $internalConstraints,
+            'head_to_head' => $headToHead,
+        ];
     }
 }

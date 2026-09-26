@@ -140,12 +140,46 @@ class PositionResolverTest extends TestCase
         $this->assertTrue($bands[0]['affects_cutoff']);
         $this->assertContains(['winner' => 'A', 'loser' => 'C'], $bands[0]['internal_constraints']);
 
+        // C is definitely EXCLUDED here (best_pos 2 > seats 1): it chains into
+        // the band for ordering purposes (bands() is unchanged), but the
+        // cutoff decision itself -- derived from status -- only reports the
+        // genuinely CONTESTED candidates, {A, B}.
         $cutoff = $pr->cutoffDecision();
         $this->assertNotNull($cutoff);
         $this->assertSame(1, $cutoff['remaining_seats']);
-        $this->assertEqualsCanonicalizing(['A', 'B', 'C'], $cutoff['candidates']);
+        $this->assertEqualsCanonicalizing(['A', 'B'], $cutoff['candidates']);
 
         $this->assertSame([], $pr->elected());
+    }
+
+    public function test_cutoff_candidates_exclude_a_definitely_elected_and_a_definitely_excluded_neighbor(): void
+    {
+        // roster A,B,C,D seats 2, reachable A->C, A->D, B->D:
+        // A[1,2] elected, B[1,3]/C[2,4] contested, D[3,4] excluded -- all four
+        // chain into one band (bands() grouping is unchanged), but the
+        // cutoffDecision must report only the contested {B, C}.
+        $roster = ['A', 'B', 'C', 'D'];
+        $reachable = $this->reachableMap($roster, [['A', 'C'], ['A', 'D'], ['B', 'D']]);
+        $prefers = $this->prefersMap($roster, []);
+        $pr = new PositionResolver($roster, $reachable, $prefers, 2);
+
+        $byCandidate = [];
+        foreach ($pr->ranking() as $entry) {
+            $byCandidate[$entry['candidate']] = $entry;
+        }
+        $this->assertSame(['best_pos' => 1, 'worst_pos' => 2, 'status' => 'elected'], [
+            'best_pos' => $byCandidate['A']['best_pos'],
+            'worst_pos' => $byCandidate['A']['worst_pos'],
+            'status' => $byCandidate['A']['status'],
+        ]);
+        $this->assertSame('contested', $byCandidate['B']['status']);
+        $this->assertSame('contested', $byCandidate['C']['status']);
+        $this->assertSame('excluded', $byCandidate['D']['status']);
+
+        $cutoff = $pr->cutoffDecision();
+        $this->assertNotNull($cutoff);
+        $this->assertSame(1, $cutoff['remaining_seats']);
+        $this->assertEqualsCanonicalizing(['B', 'C'], $cutoff['candidates']);
     }
 
     public function test_all_tied_seats_two(): void
