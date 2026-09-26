@@ -166,7 +166,7 @@ class QuotaCorrectorTest extends TestCase
         $this->assertNotSame([], $qc->warnings());
     }
 
-    public function test_deferred_when_cutoff_contested(): void
+    public function test_surfaced_when_cutoff_contested(): void
     {
         $ranking = [
             $this->entry('A', 1, 2, 'contested'),
@@ -193,7 +193,7 @@ class QuotaCorrectorTest extends TestCase
         $this->assertNotSame([], $qc->warnings());
     }
 
-    public function test_ambiguity_guard_defers_when_promotee_is_in_a_band(): void
+    public function test_ambiguity_guard_surfaces_when_promotee_is_in_a_band(): void
     {
         $ranking = [
             $this->entry('A', 1, 1, 'elected'),

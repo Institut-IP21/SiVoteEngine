@@ -320,6 +320,59 @@ class OrderedListTest extends TestCase
         $this->assertSame([], $r['pairwise']['matrix']);
     }
 
+    /**
+     * Distinct from test_empty_votes_returns_fully_formed_empty_shape: here
+     * ballots WERE cast (cast > 0) but every one of them is blank or
+     * invalid, so `counted` is still empty and the same fully-formed empty
+     * shape is returned via the `counted === []` branch in
+     * calculateResults -- but the accounting must reflect the real
+     * cast/blank/invalid_only figures, not all zeroes.
+     */
+    public function test_votes_cast_but_all_blank_or_invalid_returns_empty_shape_with_nonzero_cast(): void
+    {
+        $c = $this->makeComponent(['A', 'B', 'C']);
+
+        $votes = [
+            // blank: unanswered
+            Vote::factory()->make(['ballot_id' => 'ballot-x', 'values' => null]),
+            // blank: empty ranking
+            Vote::factory()->make(['ballot_id' => 'ballot-x', 'values' => [$c->id => []]]),
+            // blank: a scalar rather than a list
+            Vote::factory()->make(['ballot_id' => 'ballot-x', 'values' => [$c->id => 'A']]),
+            // invalid_only: single out-of-roster label
+            Vote::factory()->make(['ballot_id' => 'ballot-x', 'values' => [$c->id => ['Z']]]),
+            // invalid_only: only out-of-roster labels
+            Vote::factory()->make(['ballot_id' => 'ballot-x', 'values' => [$c->id => ['Z', 'Q']]]),
+        ];
+
+        $r = $this->calc($votes, $c);
+
+        // Hand-derived: 5 cast; blank = 3 (unanswered, empty ranking, scalar
+        // value -- none of these is an array with entries); invalid_only = 2
+        // (every label in each ranking is out of roster, so both collapse to
+        // an empty "clean" list); counted = 5 - 3 - 2 = 0, so the
+        // counted === [] branch fires despite cast > 0.
+        $this->assertSame(5, $r['accounting']['cast']);
+        $this->assertSame(3, $r['accounting']['blank']);
+        $this->assertSame(2, $r['accounting']['invalid_only']);
+        $this->assertSame(0, $r['accounting']['counted']);
+        $this->assertSame(
+            $r['accounting']['cast'],
+            $r['accounting']['blank'] + $r['accounting']['invalid_only'] + $r['accounting']['counted']
+        );
+
+        // No winners/bands/order claimed -- the fully-formed empty shape.
+        $this->assertSame([], $r['ranking']);
+        $this->assertSame([], $r['elected']);
+        $this->assertSame([], $r['bands']);
+        $this->assertNull($r['cutoff_decision']);
+        $this->assertNull($r['corrected']);
+        $this->assertSame('natural', $r['official']);
+        $this->assertSame(['strength' => [], 'winners' => []], $r['beatpath']);
+        $this->assertSame(['A', 'B', 'C'], $r['pairwise']['candidates']);
+        $this->assertSame([], $r['pairwise']['matrix']);
+    }
+
     public function test_accounting_reconciles_blank_invalid_and_duplicate_ballots(): void
     {
         $c = $this->makeComponent(['A', 'B', 'C']);
