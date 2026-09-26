@@ -133,6 +133,7 @@ return [
         'cutoff_note' => 'Mejnik mest — preostala mesta niso izvoljena.',
         'how_decided' => 'Kako je bil določen vrstni red',
         'how_decided_hint' => 'Vsak par možnosti se primerja neposredno prek vseh glasovnic. Od največje razlike navzdol se vsak odločilni par zaklene, razen če bi z že zaklenjenim ustvaril krog — tak par se preskoči. Kjer zaklenjene primerjave vrstnega reda ne določijo, je to spodaj prikazano kot izenačen pas; vodja štetja po zaključku glasovanja zabeleži, kako je bilo razrešeno (npr. žreb ali dodatni krog) — sistem sam nikoli ne ugiba.',
+        'log_heading' => 'Kaj je bilo zaklenjeno, od največje razlike navzdol',
         'log_locked' => ':winner je premagal/a :loser :for–:against (razlika :margin) — zaklenjeno.',
         'log_skipped' => ':winner proti :loser (:for–:against, razlika :margin) — preskočeno, ker bi z že zaklenjenim ustvarilo krog z: :members.',
         'pairwise_heading' => 'Matrika neposrednih primerjav',

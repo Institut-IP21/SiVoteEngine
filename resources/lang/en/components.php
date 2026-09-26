@@ -133,6 +133,7 @@ return [
         'cutoff_note' => 'Seat cutoff — remaining positions are not elected.',
         'how_decided' => 'How the order was decided',
         'how_decided_hint' => 'Every pair of options is compared head-to-head across all ballots. Starting with the strongest margin, each decisive pair is locked in unless it would create a cycle with what is already locked, in which case it is skipped. Wherever the locked comparisons leave the order undetermined, it is shown below as a tied band; the election runner records how it was broken (e.g. a coin toss or a runoff) after the ballot closes — the engine itself never guesses.',
+        'log_heading' => 'What was locked in, strongest margin first',
         'log_locked' => ':winner beat :loser :for–:against (margin :margin) — locked in.',
         'log_skipped' => ':winner vs :loser (:for–:against, margin :margin) — skipped, would have created a cycle with :members.',
         'pairwise_heading' => 'Head-to-head matrix',
