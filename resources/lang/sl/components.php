@@ -110,6 +110,40 @@ return [
         'winner_is' => 'Največ podpore: :name',
         'tie' => 'Izid je neodločen. Isto število podpor so prejeli: '
     ],
+    'orderedlist' => [
+        'name' => 'Urejen seznam',
+        'description' => 'Glasovalci odobrijo poljubno število možnosti in razvrstijo tiste, ki jih odobrijo; glasovi vrstni red določijo z metodo Ranked Pairs (po razlikah).',
+        'hint' => 'Odobrite možnosti, ki jih želite na seznamu, nato jih razvrstite po vrsti — 1 = vaša prva izbira.',
+        // Prikaz, ki najprej pove izid (postopno razkrivanje), v slogu razvrščevalnega glasovanja.
+        'outcome_not_binding' => 'Kvorum ni bil dosežen, zato izid ni zavezujoč. Spodnji vrstni red odraža doslej prešteto glasovanje.',
+        'no_result_yet' => 'Za to vprašanje še ni preštetih glasov.',
+        'elected_headline' => 'Izvoljeno — :seats mest',
+        'contested_headline' => ':count mest je spornih — čaka se na vodjo štetja',
+        'position' => ':name, mesto :pos od :total',
+        'band_span' => 'Mesta :from–:to',
+        'tie_awaiting' => 'Izenačeno po glasovih — čaka se na vodjo štetja',
+        'runner_announced' => 'Vodja štetja je razglasil/a: :comment',
+        'by_votes_alone' => 'Samo po glasovih',
+        'with_quota' => 'Z upoštevano kvoto',
+        'official_badge' => 'Uradni izid',
+        'promoted' => 'Uvrščen/a s kvoto',
+        'quota_binding_note' => 'Ta kvota je posvetovalne narave — uradnega izida ne spreminja.',
+        'quota_infeasible' => 'Kvote z razpoložljivimi kandidati ni mogoče izpolniti. Obvelja vrstni red samo po glasovih.',
+        'quota_provisional' => 'Kvota je začasna — najprej mora vodja štetja razrešiti izenačenje.',
+        'cutoff_note' => 'Mejnik mest — preostala mesta niso izvoljena.',
+        'how_decided' => 'Kako je bil določen vrstni red',
+        'how_decided_hint' => 'Vsak par možnosti se primerja neposredno prek vseh glasovnic. Od največje razlike navzdol se vsak odločilni par zaklene, razen če bi z že zaklenjenim ustvaril krog — tak par se preskoči. Kjer zaklenjene primerjave vrstnega reda ne določijo, je to spodaj prikazano kot izenačen pas; vodja štetja po zaključku glasovanja zabeleži, kako je bilo razrešeno (npr. žreb ali dodatni krog) — sistem sam nikoli ne ugiba.',
+        'log_locked' => ':winner je premagal/a :loser :for–:against (razlika :margin) — zaklenjeno.',
+        'log_skipped' => ':winner proti :loser (:for–:against, razlika :margin) — preskočeno, ker bi z že zaklenjenim ustvarilo krog z: :members.',
+        'pairwise_heading' => 'Matrika neposrednih primerjav',
+        'pairwise_hint' => 'Vrstica proti stolpcu: koliko glasovnic je možnost v vrstici uvrstilo nad možnost v stolpcu.',
+        'candidate' => 'Možnost',
+        'accounting' => 'Obračun glasovnic',
+        'acc_cast' => 'Oddane glasovnice',
+        'acc_counted' => 'Štete (razvrščena veljavna možnost)',
+        'acc_blank' => 'Prazne (brez razvrstitve)',
+        'acc_invalid' => 'Neveljavne (le neupravičene možnosti)'
+    ],
     'created' => [
         'success' => 'Komponenta ustvarjena.'
     ]

@@ -110,6 +110,40 @@ return [
         'winner_is' => 'Most approved: :name',
         'tie' => 'The outcome is a tie. The following options received the same number of approvals: '
     ],
+    'orderedlist' => [
+        'name' => 'Ordered list question',
+        'description' => 'Voters approve any number of options and rank the ones they approve; the votes settle an ordered list by Ranked Pairs (margins).',
+        'hint' => 'Approve the options you want on the list, then put your approved options in order — 1 = your top choice.',
+        // Result-first display (progressive disclosure), mirroring ranked choice.
+        'outcome_not_binding' => 'Quorum was not met, so this result is not binding. The order below reflects the ballots counted so far.',
+        'no_result_yet' => 'No votes have been counted for this question yet.',
+        'elected_headline' => 'Elected — :seats seats',
+        'contested_headline' => ':count seats contested — awaiting the election runner',
+        'position' => ':name, position :pos of :total',
+        'band_span' => 'Positions :from–:to',
+        'tie_awaiting' => 'Tied by the votes — awaiting the election runner',
+        'runner_announced' => 'Runner announced: :comment',
+        'by_votes_alone' => 'By votes alone',
+        'with_quota' => 'With the quota applied',
+        'official_badge' => 'Official result',
+        'promoted' => 'Promoted by quota',
+        'quota_binding_note' => 'This quota is advisory — it does not change the official result.',
+        'quota_infeasible' => 'The quota cannot be satisfied with the candidates available. The votes-alone order stands.',
+        'quota_provisional' => 'The quota is provisional — it needs the election runner to settle a tie first.',
+        'cutoff_note' => 'Seat cutoff — remaining positions are not elected.',
+        'how_decided' => 'How the order was decided',
+        'how_decided_hint' => 'Every pair of options is compared head-to-head across all ballots. Starting with the strongest margin, each decisive pair is locked in unless it would create a cycle with what is already locked, in which case it is skipped. Wherever the locked comparisons leave the order undetermined, it is shown below as a tied band; the election runner records how it was broken (e.g. a coin toss or a runoff) after the ballot closes — the engine itself never guesses.',
+        'log_locked' => ':winner beat :loser :for–:against (margin :margin) — locked in.',
+        'log_skipped' => ':winner vs :loser (:for–:against, margin :margin) — skipped, would have created a cycle with :members.',
+        'pairwise_heading' => 'Head-to-head matrix',
+        'pairwise_hint' => 'Row vs column: how many ballots ranked the row option above the column option.',
+        'candidate' => 'Option',
+        'accounting' => 'Ballot accounting',
+        'acc_cast' => 'Ballots cast',
+        'acc_counted' => 'Counted (ranked a valid option)',
+        'acc_blank' => 'Blank (ranked nothing)',
+        'acc_invalid' => 'Invalid (only ineligible options)'
+    ],
     'created' => [
         'success' => 'Component created.'
     ]
