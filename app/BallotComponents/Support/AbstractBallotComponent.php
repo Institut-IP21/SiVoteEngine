@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\BallotComponents\Support;
 
 use App\BallotComponents\Contracts\BallotComponentInterface;
+use App\BallotComponents\DTOs\AcademicText;
 use App\BallotComponents\DTOs\ComponentMetadata;
 use App\BallotComponents\DTOs\StatuteText;
 use App\Models\BallotComponent;
@@ -35,6 +36,16 @@ abstract class AbstractBallotComponent implements BallotComponentInterface
      * @return array<string, string>
      */
     abstract protected function getStrings(): array;
+
+    /**
+     * Get this component's name/method in BOTH locales explicitly, mirroring
+     * the locale-safety rule of `getStatuteTextParagraphs()` — implementations
+     * point at the exact `components.<slug>.name`/`.method` keys their
+     * `getStrings()` uses, via the `bothLocales()` helper.
+     *
+     * @return array{name: array{en: string, sl: string}, method: array{en: string, sl: string}}
+     */
+    abstract protected function getI18nStrings(): array;
 
     /**
      * Get this component's statute/legal-reference clause paragraphs, in BOTH
@@ -75,6 +86,89 @@ abstract class AbstractBallotComponent implements BallotComponentInterface
     }
 
     /**
+     * Get this component's academic/educational explainer paragraphs (neutral
+     * explanation + pros/cons), in BOTH locales explicitly — same
+     * locale-safety rule as `getStatuteTextParagraphs()`.
+     *
+     * @return array{
+     *     en: array{explanation: string, pros: list<string>, cons: list<string>},
+     *     sl: array{explanation: string, pros: list<string>, cons: list<string>},
+     * }
+     */
+    abstract protected function getAcademicTextParagraphs(): array;
+
+    /**
+     * Fetch a scalar lang-file string in an explicit locale. Same narrowing
+     * idiom as `statuteParagraphs()`, for a single string rather than a list.
+     */
+    final protected function transString(string $key, string $locale): string
+    {
+        $value = trans($key, [], $locale);
+        return is_string($value) ? $value : '';
+    }
+
+    /**
+     * Fetch the same scalar lang-file key in BOTH locales explicitly — the
+     * helper `getI18nStrings()` overrides use for name/method.
+     *
+     * @return array{en: string, sl: string}
+     */
+    final protected function bothLocales(string $key): array
+    {
+        return [
+            'en' => $this->transString($key, 'en'),
+            'sl' => $this->transString($key, 'sl'),
+        ];
+    }
+
+    /**
+     * Fetch an academic-explainer entry (`explanation`/`pros`/`cons`) from an
+     * `academic.php` key, in an EXPLICIT locale (never the request locale —
+     * see `getAcademicTextParagraphs()`). Defensively narrows `trans()`'s
+     * `array|string` return back to the DTO's shape, dropping anything
+     * malformed rather than throwing, mirroring `statuteParagraphs()`.
+     *
+     * @return array{explanation: string, pros: list<string>, cons: list<string>}
+     */
+    final protected function academicText(string $key, string $locale): array
+    {
+        $value = trans($key, [], $locale);
+        if (!is_array($value)) {
+            return ['explanation' => '', 'pros' => [], 'cons' => []];
+        }
+
+        $explanation = $value['explanation'] ?? null;
+
+        return [
+            'explanation' => is_string($explanation) ? $explanation : '',
+            'pros' => $this->stringList($value['pros'] ?? null),
+            'cons' => $this->stringList($value['cons'] ?? null),
+        ];
+    }
+
+    /**
+     * Narrow an arbitrary value to a `list<string>`, dropping non-string
+     * entries defensively (same idiom as `statuteParagraphs()`).
+     *
+     * @return list<string>
+     */
+    private function stringList(mixed $value): array
+    {
+        if (!is_array($value)) {
+            return [];
+        }
+
+        $strings = [];
+        foreach ($value as $item) {
+            if (is_string($item)) {
+                $strings[] = $item;
+            }
+        }
+
+        return $strings;
+    }
+
+    /**
      * Get validation rules for component options.
      *
      * @return array<string, string>
@@ -111,6 +205,7 @@ abstract class AbstractBallotComponent implements BallotComponentInterface
             optionsValidator: $this->getOptionsValidatorRules(),
             presetOptions: $this->getPresetOptions(),
             cardinality: $this->cardinality(),
+            i18n: $this->getI18nStrings(),
         );
     }
 
@@ -130,6 +225,22 @@ abstract class AbstractBallotComponent implements BallotComponentInterface
             type: class_basename(static::class),
             en: $paragraphs['en'],
             sl: $paragraphs['sl'],
+        );
+    }
+
+    /**
+     * Package this component's bilingual academic-explainer content into the
+     * sealed `AcademicText` DTO, mirroring `getStatuteText()`.
+     */
+    #[\Override]
+    public function getAcademicText(): AcademicText
+    {
+        $content = $this->getAcademicTextParagraphs();
+
+        return new AcademicText(
+            type: class_basename(static::class),
+            en: $content['en'],
+            sl: $content['sl'],
         );
     }
 

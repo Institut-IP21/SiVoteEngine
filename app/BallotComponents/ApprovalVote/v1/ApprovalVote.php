@@ -34,6 +34,7 @@ final class ApprovalVote extends AbstractBallotComponent
             'method' => __('components.approval.method'),
             'description' => __('components.approval.description'),
             'hint' => __('components.approval.hint'),
+            'lay_explanation' => __('components.approval.lay_explanation'),
         ];
     }
 
@@ -53,11 +54,29 @@ final class ApprovalVote extends AbstractBallotComponent
     }
 
     #[\Override]
+    protected function getI18nStrings(): array
+    {
+        return [
+            'name' => $this->bothLocales('components.approval.name'),
+            'method' => $this->bothLocales('components.approval.method'),
+        ];
+    }
+
+    #[\Override]
     protected function getStatuteTextParagraphs(): array
     {
         return [
             'en' => $this->statuteParagraphs('statute.approval', 'en'),
             'sl' => $this->statuteParagraphs('statute.approval', 'sl'),
+        ];
+    }
+
+    #[\Override]
+    protected function getAcademicTextParagraphs(): array
+    {
+        return [
+            'en' => $this->academicText('academic.approval', 'en'),
+            'sl' => $this->academicText('academic.approval', 'sl'),
         ];
     }
 

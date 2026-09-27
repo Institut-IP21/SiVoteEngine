@@ -34,6 +34,7 @@ final class FirstPastThePost extends AbstractBallotComponent
             'method' => __('components.fptp.method'),
             'description' => __('components.fptp.description'),
             'hint' => __('components.fptp.hint'),
+            'lay_explanation' => __('components.fptp.lay_explanation'),
         ];
     }
 
@@ -47,11 +48,29 @@ final class FirstPastThePost extends AbstractBallotComponent
     }
 
     #[\Override]
+    protected function getI18nStrings(): array
+    {
+        return [
+            'name' => $this->bothLocales('components.fptp.name'),
+            'method' => $this->bothLocales('components.fptp.method'),
+        ];
+    }
+
+    #[\Override]
     protected function getStatuteTextParagraphs(): array
     {
         return [
             'en' => $this->statuteParagraphs('statute.fptp', 'en'),
             'sl' => $this->statuteParagraphs('statute.fptp', 'sl'),
+        ];
+    }
+
+    #[\Override]
+    protected function getAcademicTextParagraphs(): array
+    {
+        return [
+            'en' => $this->academicText('academic.fptp', 'en'),
+            'sl' => $this->academicText('academic.fptp', 'sl'),
         ];
     }
 

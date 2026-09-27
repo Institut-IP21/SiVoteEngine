@@ -31,6 +31,7 @@ use Illuminate\Support\Str;
  * @property-read string $component_path
  * @property-read string|null $type_name
  * @property-read string|null $type_hint
+ * @property-read string|null $lay_explanation
  * @property-read string $form_template
  * @property-read string $form_template_livewire
  * @property-read string $result_template
@@ -132,6 +133,26 @@ class BallotComponent extends Model
         }
 
         return $registry->resolve($this->type, $this->version)->getMetadata()->strings['hint'] ?? null;
+    }
+
+    /**
+     * The short, voter-facing "how it works" explanation of this component's
+     * type (e.g. "You may tick every option you find acceptable...") — the
+     * lay explanation shown in the ballot/results info modal, sourced from
+     * the component's own getStrings()['lay_explanation'] via the registry,
+     * same single-source pattern as getTypeNameAttribute()/getTypeHintAttribute().
+     * Resolved in the REQUEST locale (unlike the stored per-locale
+     * statute/academic text): this is rendered directly into a server-side
+     * Blade view, so request-locale resolution is correct HERE.
+     */
+    public function getLayExplanationAttribute(): ?string
+    {
+        $registry = app(ComponentRegistry::class);
+        if (! $registry->has($this->type, $this->version)) {
+            return null;
+        }
+
+        return $registry->resolve($this->type, $this->version)->getMetadata()->strings['lay_explanation'] ?? null;
     }
 
     public function getFormTemplateAttribute(): string

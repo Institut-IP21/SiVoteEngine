@@ -43,6 +43,7 @@ final class YesNo extends AbstractBallotComponent
             'method' => __('components.yesno.method'),
             'description' => __('components.yesno.description'),
             'hint' => __('components.yesno.hint'),
+            'lay_explanation' => __('components.yesno.lay_explanation'),
         ];
     }
 
@@ -53,11 +54,29 @@ final class YesNo extends AbstractBallotComponent
     }
 
     #[\Override]
+    protected function getI18nStrings(): array
+    {
+        return [
+            'name' => $this->bothLocales('components.yesno.name'),
+            'method' => $this->bothLocales('components.yesno.method'),
+        ];
+    }
+
+    #[\Override]
     protected function getStatuteTextParagraphs(): array
     {
         return [
             'en' => $this->statuteParagraphs('statute.yesno', 'en'),
             'sl' => $this->statuteParagraphs('statute.yesno', 'sl'),
+        ];
+    }
+
+    #[\Override]
+    protected function getAcademicTextParagraphs(): array
+    {
+        return [
+            'en' => $this->academicText('academic.yesno', 'en'),
+            'sl' => $this->academicText('academic.yesno', 'sl'),
         ];
     }
 

@@ -81,6 +81,55 @@ class StatuteTextApiControllerTest extends TestCase
         $this->assertNotEmpty($body['quorum']['sl']);
     }
 
+    /**
+     * The academic (neutral explanation + pros/cons, migrated from web_app's
+     * academic.php) and lay (short voter-facing "how it works") content are
+     * purely additive to this payload — web_app consumes both from here
+     * instead of carrying its own copy.
+     */
+    public function test_returns_academic_and_lay_content_for_every_type_in_both_locales(): void
+    {
+        $response = $this->withHeaders($this->authHeaders())->getJson('/api/component-types/statute');
+
+        $response->assertOk()->assertJsonStructure([
+            'YesNo' => [
+                'academic' => ['en' => ['explanation', 'pros', 'cons'], 'sl' => ['explanation', 'pros', 'cons']],
+                'lay' => ['en', 'sl'],
+            ],
+            'FirstPastThePost' => [
+                'academic' => ['en' => ['explanation', 'pros', 'cons'], 'sl' => ['explanation', 'pros', 'cons']],
+                'lay' => ['en', 'sl'],
+            ],
+            'RankedChoice' => [
+                'academic' => ['en' => ['explanation', 'pros', 'cons'], 'sl' => ['explanation', 'pros', 'cons']],
+                'lay' => ['en', 'sl'],
+            ],
+            'ApprovalVote' => [
+                'academic' => ['en' => ['explanation', 'pros', 'cons'], 'sl' => ['explanation', 'pros', 'cons']],
+                'lay' => ['en', 'sl'],
+            ],
+            'OrderedList' => [
+                'academic' => ['en' => ['explanation', 'pros', 'cons'], 'sl' => ['explanation', 'pros', 'cons']],
+                'lay' => ['en', 'sl'],
+            ],
+        ]);
+
+        $body = $response->json();
+        foreach (['YesNo', 'FirstPastThePost', 'RankedChoice', 'ApprovalVote', 'OrderedList'] as $type) {
+            foreach (['en', 'sl'] as $locale) {
+                $this->assertNotSame('', trim((string) $body[$type]['academic'][$locale]['explanation']));
+                $this->assertNotEmpty($body[$type]['academic'][$locale]['pros']);
+                $this->assertNotEmpty($body[$type]['academic'][$locale]['cons']);
+                $this->assertNotSame('', trim((string) $body[$type]['lay'][$locale]));
+            }
+            $this->assertNotSame(
+                $body[$type]['academic']['en']['explanation'],
+                $body[$type]['academic']['sl']['explanation']
+            );
+            $this->assertNotSame($body[$type]['lay']['en'], $body[$type]['lay']['sl']);
+        }
+    }
+
     public function test_names_and_methods_differ_between_locales(): void
     {
         // A basic sanity check that en/sl are genuinely distinct payloads, not

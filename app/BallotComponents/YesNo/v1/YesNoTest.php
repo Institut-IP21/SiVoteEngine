@@ -259,6 +259,19 @@ class YesNoTest extends TestCase
         $this->assertTieNeverAffirmsCastingVoteOrRandomDraw(implode(' ', $statute->en));
     }
 
+    public function test_get_academic_text_returns_populated_bilingual_content(): void
+    {
+        $academic = $this->component->getAcademicText();
+
+        $this->assertSame('YesNo', $academic->type);
+        foreach (['en', 'sl'] as $locale) {
+            $this->assertNotSame('', trim($academic->{$locale}['explanation']));
+            $this->assertNotEmpty($academic->{$locale}['pros']);
+            $this->assertNotEmpty($academic->{$locale}['cons']);
+        }
+        $this->assertNotSame($academic->en['explanation'], $academic->sl['explanation']);
+    }
+
     /**
      * Shared anchor-phrase guard (statute-feature-spec.md §7/§8): no component's
      * tie clause may claim a casting vote or a random draw actually resolves a

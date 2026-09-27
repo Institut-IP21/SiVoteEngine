@@ -40,6 +40,8 @@ return [
         'rank' => 'Rank/Seat',
     ],
     'code_info' => 'The code you received (also part of the link that brought you here) is how the system knows you are eligible to vote without knowing who you are. Keep it to yourself and do not share it. After voting, you can use it to check that your votes were recorded correctly.',
+    'type_info' => 'How :name works',
+    'close' => 'Close',
     'quorum' => [
         'met' => 'Quorum met',
         // The "result not binding" message (D11): suppresses the winner verdict.

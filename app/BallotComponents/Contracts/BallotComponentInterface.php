@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\BallotComponents\Contracts;
 
+use App\BallotComponents\DTOs\AcademicText;
 use App\BallotComponents\DTOs\ComponentMetadata;
 use App\BallotComponents\DTOs\ComponentResult;
 use App\BallotComponents\DTOs\StatuteText;
@@ -46,6 +47,14 @@ interface BallotComponentInterface
      * local_docs/voting-components/statute-feature-spec.md).
      */
     public function getStatuteText(): StatuteText;
+
+    /**
+     * Get the bilingual academic/educational explainer text (neutral
+     * explanation + pros/cons) for this component, migrated from web_app so
+     * this content lives in one place (see `local_docs` migration note in
+     * `AcademicText`).
+     */
+    public function getAcademicText(): AcademicText;
 
     /**
      * Convert vote values to CSV format for export.

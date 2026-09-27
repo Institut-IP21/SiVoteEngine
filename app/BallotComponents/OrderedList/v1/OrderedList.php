@@ -48,6 +48,7 @@ final class OrderedList extends AbstractBallotComponent
             'method' => __('components.orderedlist.method'),
             'description' => __('components.orderedlist.description'),
             'hint' => __('components.orderedlist.hint'),
+            'lay_explanation' => __('components.orderedlist.lay_explanation'),
         ];
     }
 
@@ -58,11 +59,29 @@ final class OrderedList extends AbstractBallotComponent
     }
 
     #[\Override]
+    protected function getI18nStrings(): array
+    {
+        return [
+            'name' => $this->bothLocales('components.orderedlist.name'),
+            'method' => $this->bothLocales('components.orderedlist.method'),
+        ];
+    }
+
+    #[\Override]
     protected function getStatuteTextParagraphs(): array
     {
         return [
             'en' => $this->statuteParagraphs('statute.orderedlist', 'en'),
             'sl' => $this->statuteParagraphs('statute.orderedlist', 'sl'),
+        ];
+    }
+
+    #[\Override]
+    protected function getAcademicTextParagraphs(): array
+    {
+        return [
+            'en' => $this->academicText('academic.orderedlist', 'en'),
+            'sl' => $this->academicText('academic.orderedlist', 'sl'),
         ];
     }
 

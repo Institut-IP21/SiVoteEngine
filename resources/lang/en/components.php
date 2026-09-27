@@ -21,6 +21,7 @@ return [
         'method' => 'majority vote',
         'tie' => 'The outcome is a tie.',
         'description' => 'Voters choose whether they support or oppose a single item.',
+        'lay_explanation' => 'You vote Yes or No on a single proposal. If your ballot allows it, you may also abstain. Whichever answer gets more votes decides the outcome — unless the organization requires a higher share to pass, such as two-thirds.',
         'invalid' => 'Invalid',
         'carried' => 'Motion carried',
         'not_carried' => 'Motion not carried',
@@ -34,12 +35,14 @@ return [
         'invalid' => 'Invalid',
         'tie' => 'The outcome is a tie. The following options received the same number of votes: ',
         'description' => 'Voters choose one item from a list of options.',
+        'lay_explanation' => 'You pick one option from the list. Whichever option gets the most votes wins — even without a majority.',
         'winner_is' => 'Winner: :name'
     ],
     'rankedchoice' => [
         'name' => 'Single winner by ranking',
         'method' => 'instant-runoff (IRV) · alternative vote',
         'description' => 'Elects a single winner. Voters rank the candidates; if no candidate has a majority, the lowest is eliminated and their votes transfer to the next choice, until one candidate has a majority.',
+        'lay_explanation' => "You rank the candidates in order of preference — 1 for your favourite, and so on; you don't have to rank them all. If no candidate has a majority of first choices, the candidate with the fewest votes is dropped and those ballots move to their next choice, repeating until one candidate has a majority.",
         'hint' => 'Tap in order — 1 = favourite. Rank as many or as few as you like; you need not rank all.',
         'abstain_note' => 'No options ranked — submitting this question blank counts as abstaining.',
         'counter' => 'Ranked: :selected of :total',
@@ -112,6 +115,7 @@ return [
         'name' => 'Approval vote question',
         'method' => 'approval voting',
         'description' => 'Voters approve any number of options; the options with the most approvals are elected, up to the configured number of seats.',
+        'lay_explanation' => 'You may tick every option you find acceptable. Each tick counts as one vote, and the option(s) with the most ticks win the available seat(s).',
         'hint' => 'Choose one or more options.',
         'rate' => 'Approval rate (%)',
         'winner_is' => 'Most approved: :name',
@@ -127,6 +131,7 @@ return [
         'name' => 'Ordered list of winners',
         'method' => 'Schulze method · Condorcet (beatpath)',
         'description' => 'Elects an ordered list of several winners — position matters. Voters approve and rank the candidates; the order is settled by the Schulze method (a Condorcet "strongest-path" method). Optional composition quota (e.g. gender balance) and a configurable number of seats.',
+        'lay_explanation' => 'You approve the options you support, then put them in your preferred order. The system compares every pair of options across all ballots to settle a full ordered list, not just a single winner — the top positions, in order, are elected.',
         'hint' => 'Approve the options you want on the list, then put your approved options in order — 1 = your top choice.',
         // Result-first display (progressive disclosure), mirroring ranked choice.
         'outcome_not_binding' => 'Quorum was not met, so this result is not binding. The order below reflects the ballots counted so far.',

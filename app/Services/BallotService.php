@@ -47,12 +47,18 @@ final readonly class BallotService
      * component type (D10/D11), parallel to `getComponentTree()` but served
      * through its own dedicated endpoint rather than folded into the
      * component tree (see statute-feature-spec.md §2.2/§2.4). Shape:
-     * `{ "<Type>": {name:{en,sl}, method:{en,sl}, statute:{en:[...],sl:[...]}},
+     * `{ "<Type>": {name:{en,sl}, method:{en,sl}, statute:{en:[...],sl:[...]},
+     * academic:{en:{explanation,pros,cons}, sl:{...}}, lay:{en,sl}},
      * ..., quorum: {en:[...], sl:[...]} }` — `name`/`method` are joined in
      * from `components.php` in BOTH locales (D10, so the settings page's
      * switcher pills relabel on the locale toggle with no extra call);
      * `quorum` is the shared preamble (D11, from `statute.quorum`), a
      * top-level sibling of the per-type entries, not duplicated into each.
+     * `academic` (the neutral explanation + pros/cons, from `getAcademicText()`)
+     * and `lay` (the short voter-facing "how it works" copy, from
+     * `components.<slug>.lay_explanation`) are purely additive — web_app
+     * consumes them from this same endpoint instead of carrying its own
+     * app-local academic.php.
      *
      * @return array<string, mixed>
      */
@@ -72,6 +78,7 @@ final readonly class BallotService
             $component = $this->registry->resolve($type, $version);
             $slug = $this->typeSlug($type);
             $statute = $component->getStatuteText();
+            $academic = $component->getAcademicText();
 
             $result[$type] = [
                 'name' => [
@@ -85,6 +92,14 @@ final readonly class BallotService
                 'statute' => [
                     'en' => $statute->en,
                     'sl' => $statute->sl,
+                ],
+                'academic' => [
+                    'en' => $academic->en,
+                    'sl' => $academic->sl,
+                ],
+                'lay' => [
+                    'en' => $this->transString("components.{$slug}.lay_explanation", 'en'),
+                    'sl' => $this->transString("components.{$slug}.lay_explanation", 'sl'),
                 ],
             ];
         }
