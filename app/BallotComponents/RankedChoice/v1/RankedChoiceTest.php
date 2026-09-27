@@ -534,4 +534,27 @@ class RankedChoiceTest extends TestCase
         }
         $this->assertNotSame($academic->en['explanation'], $academic->sl['explanation']);
     }
+
+    public function test_get_manual_steps_returns_populated_bilingual_ordered_steps(): void
+    {
+        $manual = $this->component->getManualSteps();
+
+        $this->assertSame('RankedChoice', $manual->type);
+        $this->assertNotEmpty($manual->en);
+        $this->assertNotEmpty($manual->sl);
+        foreach ([...$manual->en, ...$manual->sl] as $step) {
+            $this->assertNotSame('', trim($step));
+        }
+        $this->assertNotSame($manual->en, $manual->sl);
+    }
+
+    public function test_get_method_comparison_returns_the_approved_ratings_and_elected_descriptor(): void
+    {
+        $comparison = $this->component->getMethodComparison();
+
+        $this->assertSame('RankedChoice', $comparison->type);
+        $this->assertSame(['true_prefs' => 4, 'manipulation' => 3, 'simplicity' => 3], $comparison->ratings);
+        $this->assertSame('1', $comparison->elected['en']);
+        $this->assertSame('1', $comparison->elected['sl']);
+    }
 }

@@ -83,6 +83,27 @@ final class RankedChoice extends AbstractBallotComponent
     }
 
     #[\Override]
+    protected function getManualStepsParagraphs(): array
+    {
+        return [
+            'en' => $this->statuteParagraphs('manual.rankedchoice', 'en'),
+            'sl' => $this->statuteParagraphs('manual.rankedchoice', 'sl'),
+        ];
+    }
+
+    #[\Override]
+    protected function getComparisonRatings(): array
+    {
+        return ['true_prefs' => 4, 'manipulation' => 3, 'simplicity' => 3];
+    }
+
+    #[\Override]
+    protected function getComparisonElected(): array
+    {
+        return $this->bothLocales('comparison.rankedchoice.elected');
+    }
+
+    #[\Override]
     public function calculateResults(Collection $votes, BallotComponent $component, bool $abstainable = false): ComponentResult
     {
         if ($votes->isEmpty()) {

@@ -7,6 +7,8 @@ namespace App\BallotComponents\Support;
 use App\BallotComponents\Contracts\BallotComponentInterface;
 use App\BallotComponents\DTOs\AcademicText;
 use App\BallotComponents\DTOs\ComponentMetadata;
+use App\BallotComponents\DTOs\ManualSteps;
+use App\BallotComponents\DTOs\MethodComparison;
 use App\BallotComponents\DTOs\StatuteText;
 use App\Models\BallotComponent;
 use Illuminate\Support\Collection;
@@ -59,9 +61,11 @@ abstract class AbstractBallotComponent implements BallotComponentInterface
     abstract protected function getStatuteTextParagraphs(): array;
 
     /**
-     * Fetch an ordered list of clause paragraphs from a `statute.php` key, in
-     * an EXPLICIT locale (never the request locale — see
-     * `getStatuteTextParagraphs()`). `trans()`'s static return type is
+     * Fetch an ordered list of paragraphs/steps from a lang-file key (e.g.
+     * `statute.php`'s clause paragraphs or `manual.php`'s by-hand
+     * calculation steps — the extraction is generic), in an EXPLICIT locale
+     * (never the request locale — see `getStatuteTextParagraphs()` /
+     * `getManualStepsParagraphs()`). `trans()`'s static return type is
      * `array|string`; this narrows/validates it back to `list<string>` at
      * runtime (dropping anything that isn't a string, defensively) so the
      * abstract contract's `list<string>` promise holds for PHPStan too.
@@ -96,6 +100,40 @@ abstract class AbstractBallotComponent implements BallotComponentInterface
      * }
      */
     abstract protected function getAcademicTextParagraphs(): array;
+
+    /**
+     * Get this component's by-hand calculation steps — a short, ordered,
+     * lay-readable procedure describing what a scrutineer with paper would
+     * do to work out the result, grounded in THIS component's actual
+     * `calculateResults()` logic (its real tie-break/quorum/threshold
+     * rules, not a textbook description) — in BOTH locales explicitly,
+     * same locale-safety rule as `getStatuteTextParagraphs()`.
+     *
+     * @return array{en: list<string>, sl: list<string>}
+     */
+    abstract protected function getManualStepsParagraphs(): array;
+
+    /**
+     * Get this component's owner-approved comparison ratings (1-5 ints):
+     * how well the method captures voters' true preferences, how resistant
+     * it is to strategic manipulation, and how easy it is to understand.
+     * These are structural facts about the method, not translated text, so
+     * they are hardcoded per component rather than read from a lang file
+     * (see `MethodComparison`).
+     *
+     * @return array{true_prefs: int, manipulation: int, simplicity: int}
+     */
+    abstract protected function getComparisonRatings(): array;
+
+    /**
+     * Get this component's "number elected" descriptor (e.g. "1" for a
+     * single-winner method, "Multiple (top K)" for a seats-based one), in
+     * BOTH locales explicitly — same `bothLocales()` idiom as
+     * `getI18nStrings()`.
+     *
+     * @return array{en: string, sl: string}
+     */
+    abstract protected function getComparisonElected(): array;
 
     /**
      * Fetch a scalar lang-file string in an explicit locale. Same narrowing
@@ -241,6 +279,36 @@ abstract class AbstractBallotComponent implements BallotComponentInterface
             type: class_basename(static::class),
             en: $content['en'],
             sl: $content['sl'],
+        );
+    }
+
+    /**
+     * Package this component's bilingual by-hand calculation steps into the
+     * sealed `ManualSteps` DTO, mirroring `getStatuteText()`/`getAcademicText()`.
+     */
+    #[\Override]
+    public function getManualSteps(): ManualSteps
+    {
+        $steps = $this->getManualStepsParagraphs();
+
+        return new ManualSteps(
+            type: class_basename(static::class),
+            en: $steps['en'],
+            sl: $steps['sl'],
+        );
+    }
+
+    /**
+     * Package this component's owner-approved comparison entry into the
+     * sealed `MethodComparison` DTO, mirroring `getStatuteText()`.
+     */
+    #[\Override]
+    public function getMethodComparison(): MethodComparison
+    {
+        return new MethodComparison(
+            type: class_basename(static::class),
+            elected: $this->getComparisonElected(),
+            ratings: $this->getComparisonRatings(),
         );
     }
 

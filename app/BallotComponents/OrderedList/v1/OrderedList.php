@@ -86,6 +86,27 @@ final class OrderedList extends AbstractBallotComponent
     }
 
     #[\Override]
+    protected function getManualStepsParagraphs(): array
+    {
+        return [
+            'en' => $this->statuteParagraphs('manual.orderedlist', 'en'),
+            'sl' => $this->statuteParagraphs('manual.orderedlist', 'sl'),
+        ];
+    }
+
+    #[\Override]
+    protected function getComparisonRatings(): array
+    {
+        return ['true_prefs' => 5, 'manipulation' => 4, 'simplicity' => 2];
+    }
+
+    #[\Override]
+    protected function getComparisonElected(): array
+    {
+        return $this->bothLocales('comparison.orderedlist.elected');
+    }
+
+    #[\Override]
     protected function getOptionsValidatorRules(): array
     {
         return [

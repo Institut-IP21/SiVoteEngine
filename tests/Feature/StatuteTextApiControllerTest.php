@@ -141,4 +141,94 @@ class StatuteTextApiControllerTest extends TestCase
         $this->assertNotSame($body['YesNo']['name']['en'], $body['YesNo']['name']['sl']);
         $this->assertNotSame($body['YesNo']['statute']['en'], $body['YesNo']['statute']['sl']);
     }
+
+    /**
+     * `manual` (the by-hand calculation steps) and `comparison` (the
+     * owner-approved comparison entry) are purely additive to this payload,
+     * parallel to `academic`/`lay` — web_app's Voting methods guide (a
+     * later lane) consumes both from here.
+     */
+    public function test_returns_manual_steps_and_comparison_for_every_type_in_both_locales(): void
+    {
+        $response = $this->withHeaders($this->authHeaders())->getJson('/api/component-types/statute');
+
+        $response->assertOk()->assertJsonStructure([
+            'YesNo' => [
+                'manual' => ['en', 'sl'],
+                'comparison' => ['elected' => ['en', 'sl'], 'ratings' => ['true_prefs', 'manipulation', 'simplicity']],
+            ],
+            'FirstPastThePost' => [
+                'manual' => ['en', 'sl'],
+                'comparison' => ['elected' => ['en', 'sl'], 'ratings' => ['true_prefs', 'manipulation', 'simplicity']],
+            ],
+            'RankedChoice' => [
+                'manual' => ['en', 'sl'],
+                'comparison' => ['elected' => ['en', 'sl'], 'ratings' => ['true_prefs', 'manipulation', 'simplicity']],
+            ],
+            'ApprovalVote' => [
+                'manual' => ['en', 'sl'],
+                'comparison' => ['elected' => ['en', 'sl'], 'ratings' => ['true_prefs', 'manipulation', 'simplicity']],
+            ],
+            'OrderedList' => [
+                'manual' => ['en', 'sl'],
+                'comparison' => ['elected' => ['en', 'sl'], 'ratings' => ['true_prefs', 'manipulation', 'simplicity']],
+            ],
+            'comparison_meta' => [
+                'labels' => [
+                    'elected' => ['en', 'sl'],
+                    'true_prefs' => ['en', 'sl'],
+                    'manipulation' => ['en', 'sl'],
+                    'simplicity' => ['en', 'sl'],
+                ],
+                'disclaimer' => ['en', 'sl'],
+            ],
+        ]);
+
+        $body = $response->json();
+
+        $expectedRatings = [
+            'YesNo' => ['true_prefs' => 2, 'manipulation' => 5, 'simplicity' => 5],
+            'FirstPastThePost' => ['true_prefs' => 2, 'manipulation' => 2, 'simplicity' => 5],
+            'ApprovalVote' => ['true_prefs' => 3, 'manipulation' => 3, 'simplicity' => 4],
+            'RankedChoice' => ['true_prefs' => 4, 'manipulation' => 3, 'simplicity' => 3],
+            'OrderedList' => ['true_prefs' => 5, 'manipulation' => 4, 'simplicity' => 2],
+        ];
+
+        foreach ($expectedRatings as $type => $ratings) {
+            foreach (['en', 'sl'] as $locale) {
+                $this->assertNotEmpty($body[$type]['manual'][$locale]);
+                foreach ($body[$type]['manual'][$locale] as $step) {
+                    $this->assertNotSame('', trim((string) $step));
+                }
+                $this->assertNotSame('', trim((string) $body[$type]['comparison']['elected'][$locale]));
+            }
+            $this->assertNotSame($body[$type]['manual']['en'], $body[$type]['manual']['sl']);
+            $this->assertSame($ratings, $body[$type]['comparison']['ratings']);
+        }
+
+        // The owner-approved "number elected" descriptors, verbatim.
+        $this->assertSame('Decision (pass/fail)', $body['YesNo']['comparison']['elected']['en']);
+        $this->assertSame('Odločitev (sprejem/zavrnitev)', $body['YesNo']['comparison']['elected']['sl']);
+        $this->assertSame('1', $body['FirstPastThePost']['comparison']['elected']['en']);
+        $this->assertSame('1', $body['FirstPastThePost']['comparison']['elected']['sl']);
+        $this->assertSame('Multiple (top K)', $body['ApprovalVote']['comparison']['elected']['en']);
+        $this->assertSame('Več (najboljših K)', $body['ApprovalVote']['comparison']['elected']['sl']);
+        $this->assertSame('1', $body['RankedChoice']['comparison']['elected']['en']);
+        $this->assertSame('1', $body['RankedChoice']['comparison']['elected']['sl']);
+        $this->assertSame('Multiple, ranked (K)', $body['OrderedList']['comparison']['elected']['en']);
+        $this->assertSame('Več, razvrščeni (K)', $body['OrderedList']['comparison']['elected']['sl']);
+
+        // comparison_meta: the shared column labels + disclaimer, both locales, distinct from each other.
+        foreach (['elected', 'true_prefs', 'manipulation', 'simplicity'] as $label) {
+            $this->assertNotSame('', trim((string) $body['comparison_meta']['labels'][$label]['en']));
+            $this->assertNotSame('', trim((string) $body['comparison_meta']['labels'][$label]['sl']));
+            $this->assertNotSame(
+                $body['comparison_meta']['labels'][$label]['en'],
+                $body['comparison_meta']['labels'][$label]['sl']
+            );
+        }
+        $this->assertNotSame('', trim((string) $body['comparison_meta']['disclaimer']['en']));
+        $this->assertNotSame('', trim((string) $body['comparison_meta']['disclaimer']['sl']));
+        $this->assertNotSame($body['comparison_meta']['disclaimer']['en'], $body['comparison_meta']['disclaimer']['sl']);
+    }
 }

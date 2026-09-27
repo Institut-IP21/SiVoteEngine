@@ -7,6 +7,8 @@ namespace App\BallotComponents\Contracts;
 use App\BallotComponents\DTOs\AcademicText;
 use App\BallotComponents\DTOs\ComponentMetadata;
 use App\BallotComponents\DTOs\ComponentResult;
+use App\BallotComponents\DTOs\ManualSteps;
+use App\BallotComponents\DTOs\MethodComparison;
 use App\BallotComponents\DTOs\StatuteText;
 use App\BallotComponents\DTOs\ValidationRules;
 use App\Models\BallotComponent;
@@ -55,6 +57,22 @@ interface BallotComponentInterface
      * `AcademicText`).
      */
     public function getAcademicText(): AcademicText;
+
+    /**
+     * Get the bilingual by-hand calculation steps for this component: a
+     * short, ordered, lay-readable procedure describing what a scrutineer
+     * with paper would do to work out the result, grounded in this
+     * component's actual `calculateResults()` logic (see `ManualSteps`).
+     */
+    public function getManualSteps(): ManualSteps;
+
+    /**
+     * Get this component's owner-approved method-comparison entry (a
+     * "number elected" descriptor plus the true-preferences/manipulation-
+     * resistance/simplicity ratings), for the shared comparison matrix
+     * (see `MethodComparison`).
+     */
+    public function getMethodComparison(): MethodComparison;
 
     /**
      * Convert vote values to CSV format for export.

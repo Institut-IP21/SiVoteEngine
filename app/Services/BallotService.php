@@ -48,17 +48,24 @@ final readonly class BallotService
      * through its own dedicated endpoint rather than folded into the
      * component tree (see statute-feature-spec.md §2.2/§2.4). Shape:
      * `{ "<Type>": {name:{en,sl}, method:{en,sl}, statute:{en:[...],sl:[...]},
-     * academic:{en:{explanation,pros,cons}, sl:{...}}, lay:{en,sl}},
-     * ..., quorum: {en:[...], sl:[...]} }` — `name`/`method` are joined in
-     * from `components.php` in BOTH locales (D10, so the settings page's
+     * academic:{en:{explanation,pros,cons}, sl:{...}}, lay:{en,sl},
+     * manual:{en:[...],sl:[...]}, comparison:{elected:{en,sl},
+     * ratings:{true_prefs,manipulation,simplicity}}}, ..., quorum:
+     * {en:[...], sl:[...]}, comparison_meta: {labels:{elected:{en,sl},
+     * true_prefs:{en,sl}, manipulation:{en,sl}, simplicity:{en,sl}},
+     * disclaimer:{en,sl}} }` — `name`/`method` are joined in from
+     * `components.php` in BOTH locales (D10, so the settings page's
      * switcher pills relabel on the locale toggle with no extra call);
-     * `quorum` is the shared preamble (D11, from `statute.quorum`), a
-     * top-level sibling of the per-type entries, not duplicated into each.
-     * `academic` (the neutral explanation + pros/cons, from `getAcademicText()`)
-     * and `lay` (the short voter-facing "how it works" copy, from
-     * `components.<slug>.lay_explanation`) are purely additive — web_app
-     * consumes them from this same endpoint instead of carrying its own
-     * app-local academic.php.
+     * `quorum` and `comparison_meta` are shared preambles (D11, from
+     * `statute.quorum` / `comparison.labels`+`comparison.disclaimer`),
+     * top-level siblings of the per-type entries, not duplicated into each.
+     * `academic` (the neutral explanation + pros/cons, from `getAcademicText()`),
+     * `lay` (the short voter-facing "how it works" copy, from
+     * `components.<slug>.lay_explanation`), `manual` (the by-hand
+     * calculation steps, from `getManualSteps()`), and `comparison` (the
+     * owner-approved comparison entry, from `getMethodComparison()`) are all
+     * purely additive — web_app consumes them from this same endpoint
+     * instead of carrying its own app-local copies.
      *
      * @return array<string, mixed>
      */
@@ -79,6 +86,8 @@ final readonly class BallotService
             $slug = $this->typeSlug($type);
             $statute = $component->getStatuteText();
             $academic = $component->getAcademicText();
+            $manual = $component->getManualSteps();
+            $comparison = $component->getMethodComparison();
 
             $result[$type] = [
                 'name' => [
@@ -101,12 +110,45 @@ final readonly class BallotService
                     'en' => $this->transString("components.{$slug}.lay_explanation", 'en'),
                     'sl' => $this->transString("components.{$slug}.lay_explanation", 'sl'),
                 ],
+                'manual' => [
+                    'en' => $manual->en,
+                    'sl' => $manual->sl,
+                ],
+                'comparison' => [
+                    'elected' => $comparison->elected,
+                    'ratings' => $comparison->ratings,
+                ],
             ];
         }
 
         $result['quorum'] = [
             'en' => $this->transParagraphs('statute.quorum', 'en'),
             'sl' => $this->transParagraphs('statute.quorum', 'sl'),
+        ];
+
+        $result['comparison_meta'] = [
+            'labels' => [
+                'elected' => [
+                    'en' => $this->transString('comparison.labels.elected', 'en'),
+                    'sl' => $this->transString('comparison.labels.elected', 'sl'),
+                ],
+                'true_prefs' => [
+                    'en' => $this->transString('comparison.labels.true_prefs', 'en'),
+                    'sl' => $this->transString('comparison.labels.true_prefs', 'sl'),
+                ],
+                'manipulation' => [
+                    'en' => $this->transString('comparison.labels.manipulation', 'en'),
+                    'sl' => $this->transString('comparison.labels.manipulation', 'sl'),
+                ],
+                'simplicity' => [
+                    'en' => $this->transString('comparison.labels.simplicity', 'en'),
+                    'sl' => $this->transString('comparison.labels.simplicity', 'sl'),
+                ],
+            ],
+            'disclaimer' => [
+                'en' => $this->transString('comparison.disclaimer', 'en'),
+                'sl' => $this->transString('comparison.disclaimer', 'sl'),
+            ],
         ];
 
         return $result;

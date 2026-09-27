@@ -80,6 +80,27 @@ final class ApprovalVote extends AbstractBallotComponent
         ];
     }
 
+    #[\Override]
+    protected function getManualStepsParagraphs(): array
+    {
+        return [
+            'en' => $this->statuteParagraphs('manual.approval', 'en'),
+            'sl' => $this->statuteParagraphs('manual.approval', 'sl'),
+        ];
+    }
+
+    #[\Override]
+    protected function getComparisonRatings(): array
+    {
+        return ['true_prefs' => 3, 'manipulation' => 3, 'simplicity' => 4];
+    }
+
+    #[\Override]
+    protected function getComparisonElected(): array
+    {
+        return $this->bothLocales('comparison.approval.elected');
+    }
+
     /**
      * Approval voting (D1/D2/D9/D10). Per ballot: an absent key or null value is
      * an abstention when abstainable, else an invalid/blank ballot — neither is a

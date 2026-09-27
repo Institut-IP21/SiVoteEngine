@@ -74,6 +74,27 @@ final class FirstPastThePost extends AbstractBallotComponent
         ];
     }
 
+    #[\Override]
+    protected function getManualStepsParagraphs(): array
+    {
+        return [
+            'en' => $this->statuteParagraphs('manual.fptp', 'en'),
+            'sl' => $this->statuteParagraphs('manual.fptp', 'sl'),
+        ];
+    }
+
+    #[\Override]
+    protected function getComparisonRatings(): array
+    {
+        return ['true_prefs' => 2, 'manipulation' => 2, 'simplicity' => 5];
+    }
+
+    #[\Override]
+    protected function getComparisonElected(): array
+    {
+        return $this->bothLocales('comparison.fptp.elected');
+    }
+
     /** The literal token a voter's stored answer carries for a deliberate abstention. */
     private const ABSTAIN = 'abstain';
 

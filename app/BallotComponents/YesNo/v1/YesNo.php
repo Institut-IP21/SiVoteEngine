@@ -81,6 +81,27 @@ final class YesNo extends AbstractBallotComponent
     }
 
     #[\Override]
+    protected function getManualStepsParagraphs(): array
+    {
+        return [
+            'en' => $this->statuteParagraphs('manual.yesno', 'en'),
+            'sl' => $this->statuteParagraphs('manual.yesno', 'sl'),
+        ];
+    }
+
+    #[\Override]
+    protected function getComparisonRatings(): array
+    {
+        return ['true_prefs' => 2, 'manipulation' => 5, 'simplicity' => 5];
+    }
+
+    #[\Override]
+    protected function getComparisonElected(): array
+    {
+        return $this->bothLocales('comparison.yesno.elected');
+    }
+
+    #[\Override]
     protected function getOptionsValidatorRules(): array
     {
         return ['options' => 'in:yes,no'];
