@@ -309,6 +309,12 @@ class QuotaCorrectorTest extends TestCase
         $this->assertNotSame([], $qc->warnings());
     }
 
+    /**
+     * Same fixture as test_min_quota_needs_one_promotion, only `binding` is
+     * false. The REAL advisory effect -- the corrected order is still
+     * computed and reported exactly as if binding -- is asserted here, not
+     * just the `binding` passthrough flag.
+     */
     public function test_advisory_quota_is_not_binding(): void
     {
         $ranking = [
@@ -323,6 +329,10 @@ class QuotaCorrectorTest extends TestCase
         $result = $qc->result();
 
         $this->assertFalse($result['binding']);
+        $this->assertSame(['A', 'C'], $result['order']);
+        $this->assertSame([['candidate' => 'C', 'from' => 'below_cut', 'reason' => 'min_quota:Sales']], $result['diff']);
+        $this->assertFalse($result['infeasible']);
+        $this->assertFalse($result['provisional']);
     }
 
     /**
@@ -642,6 +652,13 @@ class QuotaCorrectorTest extends TestCase
         $this->assertNotSame([], $qc->warnings());
     }
 
+    /**
+     * The REAL advisory effect: the natural top-3 is M,M,F (not already
+     * alternating); with `binding:false` the zipper still computes and
+     * reports the actual M,F,M reorder (A,C,B) -- not the trivial
+     * already-alternating case -- proving the correction runs identically
+     * whether or not it will become official.
+     */
     public function test_alternate_advisory_is_not_binding(): void
     {
         $ranking = [
@@ -649,7 +666,7 @@ class QuotaCorrectorTest extends TestCase
             $this->entry('B', 2, 2, 'elected'),
             $this->entry('C', 3, 3, 'elected'),
         ];
-        $categories = ['A' => 'M', 'B' => 'F', 'C' => 'F'];
+        $categories = ['A' => 'M', 'B' => 'M', 'C' => 'F'];
         $quota = $this->alternateQuota($categories, binding: false);
 
         $qc = new QuotaCorrector($ranking, null, [], $categories, $quota, 3);
@@ -657,6 +674,15 @@ class QuotaCorrectorTest extends TestCase
 
         $this->assertFalse($result['binding']);
         $this->assertFalse($result['infeasible']);
+        $this->assertFalse($result['provisional']);
+        $this->assertSame(['A', 'C', 'B'], $result['order']);
+        $this->assertSame(
+            [
+                ['candidate' => 'C', 'from' => 'natural:3', 'reason' => 'alternate'],
+                ['candidate' => 'B', 'from' => 'natural:2', 'reason' => 'alternate'],
+            ],
+            $result['diff']
+        );
     }
 
     /**
@@ -850,36 +876,6 @@ class QuotaCorrectorTest extends TestCase
         $this->assertSame(['A', 'B', 'C', 'D'], $result['order']);
         $this->assertFalse($result['provisional']);
         $this->assertNotSame([], $qc->warnings());
-    }
-
-    /**
-     * D13 finding #2 regression: a pure within-top-K reorder (nobody
-     * promoted from below the cut) still names the moved candidates in
-     * `diff`, so a downstream consumer reading `diff` alone does not
-     * wrongly conclude "nothing changed".
-     */
-    public function test_alternate_within_top_k_reorder_names_moved_candidates_in_diff(): void
-    {
-        $ranking = [
-            $this->entry('A', 1, 1, 'elected'),
-            $this->entry('B', 2, 2, 'elected'),
-            $this->entry('C', 3, 3, 'elected'),
-            $this->entry('D', 4, 4, 'elected'),
-        ];
-        $categories = ['A' => 'M', 'B' => 'M', 'C' => 'F', 'D' => 'F'];
-        $quota = $this->alternateQuota($categories);
-
-        $qc = new QuotaCorrector($ranking, null, [], $categories, $quota, 4);
-        $result = $qc->result();
-
-        $this->assertSame(['A', 'C', 'B', 'D'], $result['order']);
-        $this->assertNotSame([], $result['diff']);
-        $movedCandidates = array_column($result['diff'], 'candidate');
-        $this->assertContains('B', $movedCandidates);
-        $this->assertContains('C', $movedCandidates);
-        foreach ($result['diff'] as $row) {
-            $this->assertSame('alternate', $row['reason']);
-        }
     }
 
     /**

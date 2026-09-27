@@ -280,4 +280,76 @@ class SchulzeBeatpathTest extends TestCase
         }
         $this->assertSame([], $s->winners());
     }
+
+    // --- (f) reachable() invariants: property-based, deterministic seed ---
+
+    /**
+     * The class docblock claims `reachable()` needs no further transitive-
+     * closure step because Schulze's method is PROVEN to always yield a
+     * transitive (and, by construction of `beats()`, asymmetric) ranking.
+     * This property test exercises that claim against the implementation
+     * directly, rather than trusting the docblock: over >=500 random
+     * decisive-pair edge sets (4-6 candidates, random positive margins, a
+     * fixed PRNG seed for reproducibility), `reachable()` must always be
+     * BOTH asymmetric (never both `reachable(a,b)` and `reachable(b,a)`)
+     * AND transitive (`reachable(a,b) && reachable(b,c)` implies
+     * `reachable(a,c)`) -- the invariant PositionResolver depends on.
+     */
+    public function test_reachable_is_asymmetric_and_transitive_over_many_random_edge_sets(): void
+    {
+        mt_srand(20260927);
+
+        $allCandidates = ['A', 'B', 'C', 'D', 'E', 'F'];
+
+        for ($trial = 0; $trial < 500; $trial++) {
+            $n = mt_rand(4, 6);
+            /** @var list<string> $roster */
+            $roster = array_slice($allCandidates, 0, $n);
+
+            /** @var list<array{winner:string,loser:string,margin:int,for:int,against:int}> $decisive */
+            $decisive = [];
+            for ($i = 0; $i < $n; $i++) {
+                for ($j = $i + 1; $j < $n; $j++) {
+                    // ~70% chance this unordered pair gets a decisive edge at all.
+                    if (mt_rand(1, 100) > 70) {
+                        continue;
+                    }
+                    $margin = mt_rand(1, 100);
+                    if (mt_rand(0, 1) === 0) {
+                        $decisive[] = ['winner' => $roster[$i], 'loser' => $roster[$j], 'margin' => $margin, 'for' => $margin, 'against' => 0];
+                    } else {
+                        $decisive[] = ['winner' => $roster[$j], 'loser' => $roster[$i], 'margin' => $margin, 'for' => $margin, 'against' => 0];
+                    }
+                }
+            }
+
+            $s = new SchulzeBeatpath($decisive, $roster);
+            $reachable = $s->reachable();
+
+            foreach ($roster as $a) {
+                foreach ($roster as $b) {
+                    if ($a === $b) {
+                        continue;
+                    }
+
+                    $this->assertFalse(
+                        $reachable[$a][$b] && $reachable[$b][$a],
+                        "trial {$trial}: reachable({$a},{$b}) and reachable({$b},{$a}) both true"
+                    );
+
+                    foreach ($roster as $cc) {
+                        if ($cc === $a || $cc === $b) {
+                            continue;
+                        }
+                        if ($reachable[$a][$b] && $reachable[$b][$cc]) {
+                            $this->assertTrue(
+                                $reachable[$a][$cc],
+                                "trial {$trial}: reachable({$a},{$b}) && reachable({$b},{$cc}) but not reachable({$a},{$cc})"
+                            );
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

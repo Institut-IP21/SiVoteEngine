@@ -755,4 +755,214 @@ class OrderedListTest extends TestCase
         $this->assertSame('Multiple, ranked (K)', $comparison->elected['en']);
         $this->assertSame('Več, razvrščeni (K)', $comparison->elected['sl']);
     }
+
+    // --- Gap-closing coverage (test-quality review, 2026-09-27) -------------
+
+    /**
+     * [MOST IMPORTANT GAP] A genuine 4-candidate Condorcet CYCLE built from
+     * REAL ballots (not injected decisive-pairs), run through the full
+     * PairwiseMatrix -> SchulzeBeatpath -> PositionResolver pipeline via the
+     * component's calculate path. Exercises the one property that justifies
+     * choosing Schulze over Copeland/plain-pairwise: an INDIRECT beatpath
+     * overturning a DIRECT pairwise defeat. Every expected value below was
+     * HAND-DERIVED (never read off a test run) -- see the derivation.
+     *
+     * -- Ballot profile (4 blocs of full rankings; every voter approves and
+     *    ranks all 4 candidates) -----------------------------------------
+     *   bloc 1 (3 voters): A, B, C, D
+     *   bloc 2 (4 voters): B, C, D, A
+     *   bloc 3 (5 voters): C, D, A, B
+     *   bloc 4 (6 voters): D, A, B, C
+     *   total = 18 ballots, all fully ranked (counted = 18, blank = 0,
+     *   invalid_only = 0).
+     *
+     * -- prefers[x][y]: for every bloc and every ordered pair, does x
+     *    precede y in that bloc's ranking? (Every ballot is a total order,
+     *    so every one of the 18 ballots decides every pair; the two totals
+     *    for any pair must always sum to 18.) --------------------------
+     *   A,B: A-before-B in blocs 1,3,4 (3+5+6=14); B-before-A in bloc 2 (4).
+     *     prefers[A][B]=14, prefers[B][A]=4   -> A beats B, margin 10
+     *   A,C: A-before-C in blocs 1,4 (3+6=9);  C-before-A in blocs 2,3 (4+5=9).
+     *     prefers[A][C]=9,  prefers[C][A]=9   -> TIE, no decisive edge
+     *   A,D: A-before-D in bloc 1 (3); D-before-A in blocs 2,3,4 (4+5+6=15).
+     *     prefers[A][D]=3,  prefers[D][A]=15  -> D beats A, margin 12
+     *   B,C: B-before-C in blocs 1,2,4 (3+4+6=13); C-before-B in bloc 3 (5).
+     *     prefers[B][C]=13, prefers[C][B]=5   -> B beats C, margin 8
+     *   B,D: B-before-D in blocs 1,2 (3+4=7); D-before-B in blocs 3,4 (5+6=11).
+     *     prefers[B][D]=7,  prefers[D][B]=11  -> D beats B, margin 4
+     *   C,D: C-before-D in blocs 1,2,3 (3+4+5=12); D-before-C in bloc 4 (6).
+     *     prefers[C][D]=12, prefers[D][C]=6   -> C beats D, margin 6 (DIRECT)
+     *
+     *   Decisive edges (winner -> loser, margin): A->B(10), D->A(12),
+     *   B->C(8), D->B(4), C->D(6). This is a genuine 4-cycle in the direct
+     *   pairwise graph -- A beats B, B beats C, C beats D, D beats A -- no
+     *   total order is consistent with all four relations at once, and every
+     *   margin is distinct (not a symmetric tie).
+     *
+     * -- Strongest-path (widest-path) matrix, HAND-COMPUTED. Each node's
+     *    outgoing decisive edge(s) fix every path leaving it, so every
+     *    p[i][j] can be read off by enumerating the (few) simple paths --
+     *    A's only out-edge is ->B, B's only out-edge is ->C, C's only
+     *    out-edge is ->D, D has two out-edges (->A and ->B): ---------------
+     *   From A (A->B=10): p[A][B]=10; p[A][C]=min(10,8)=8 (via B);
+     *     p[A][D]=min(10,8,6)=6 (via B,C).
+     *   From B (B->C=8): p[B][C]=8; p[B][D]=min(8,6)=6 (via C);
+     *     p[B][A]=min(8,6,12)=6 (via C,D).
+     *   From C (C->D=6): p[C][D]=6; p[C][A]=min(6,12)=6 (via D);
+     *     p[C][B]=max(min(6,4), min(6,12,10))=max(4,6)=6 -- two routes via D
+     *     (C->D->B=4, or the longer C->D->A->B=6); widest path takes the max.
+     *   From D (D->A=12, D->B=4): p[D][A]=12 (direct, nothing stronger
+     *     reaches A); p[D][B]=max(4, min(12,10))=max(4,10)=10 (the indirect
+     *     D->A->B route, strength 10, beats the direct D->B edge, strength
+     *     4); p[D][C]=max(min(4,8), min(12,10,8))=max(4,8)=8 (the indirect
+     *     D->A->B->C route, strength 8, beats the indirect D->B->C route,
+     *     strength 4).
+     *
+     *   Full matrix: A={B:10,C:8,D:6}   B={A:6,C:8,D:6}
+     *                C={A:6,B:6,D:6}    D={A:12,B:10,C:8}
+     *
+     * -- THE OVERTURN (the property this test exists to prove): direct
+     *    pairwise has C beat D head-to-head, 12 votes to 6 (margin 6). But
+     *    the strongest-path matrix has p[D][C]=8 > p[C][D]=6 -- D's
+     *    INDIRECT beatpath to C (D->A->B->C, whose weakest link is B->C=8)
+     *    is strictly stronger than C's DIRECT edge to D (6). The Schulze
+     *    relation therefore FLIPS this pair: D outranks C even though C beat
+     *    D head-to-head.
+     *
+     * -- reachable() (i outranks j iff p[i][j] > p[j][i]) -------------------
+     *   A>B (10>6), A>C (8>6), D>A (12>6), B>C (8>6), D>B (10>6), D>C (8>6).
+     *   D beats everyone; A beats B,C; B beats C; C beats nobody.
+     *   -> strict total order: D > A > B > C (fully determined, no bands,
+     *      no cutoff decision).
+     *
+     * -- Copeland comparison (win-count over the DIRECT pairwise relations
+     *    only: A>B, D>A, B>C, D>B, C>D; A-C tied, no win either way) --------
+     *   Copeland(A)=1 (beats B only)      Copeland(B)=1 (beats C only)
+     *   Copeland(C)=1 (beats D only)      Copeland(D)=2 (beats A and B)
+     *   Copeland ranks D first, then leaves A, B and C in a THREE-WAY TIE
+     *   (all score 1) -- it cannot see that A indirectly dominates B and C,
+     *   or that B indirectly dominates C, or that D indirectly dominates C
+     *   via a stronger beatpath than C's own direct win. Schulze alone
+     *   resolves the full strict order D > A > B > C; Copeland genuinely
+     *   fails to (this is NOT the strict order Schulze produces).
+     *
+     * -- seats=2: elected = top 2 of D > A > B > C = {D, A}. ----------------
+     */
+    public function test_genuine_cyclic_ballot_profile_resolves_via_beatpath_overturning_a_direct_defeat(): void
+    {
+        $c = $this->makeComponent(['A', 'B', 'C', 'D'], ['seats' => 2]);
+        $rankings = [
+            ...array_fill(0, 3, ['A', 'B', 'C', 'D']),
+            ...array_fill(0, 4, ['B', 'C', 'D', 'A']),
+            ...array_fill(0, 5, ['C', 'D', 'A', 'B']),
+            ...array_fill(0, 6, ['D', 'A', 'B', 'C']),
+        ];
+        $votes = $this->votes($c, $rankings);
+
+        $r = $this->calc($votes, $c);
+
+        $this->assertSame(18, $r['accounting']['cast']);
+        $this->assertSame(0, $r['accounting']['blank']);
+        $this->assertSame(0, $r['accounting']['invalid_only']);
+        $this->assertSame(18, $r['accounting']['counted']);
+
+        $this->assertSame(['A', 'B', 'C', 'D'], $r['pairwise']['candidates']);
+        $this->assertEquals([
+            'A' => ['B' => 14, 'C' => 9, 'D' => 3],
+            'B' => ['A' => 4, 'C' => 13, 'D' => 7],
+            'C' => ['A' => 9, 'B' => 5, 'D' => 12],
+            'D' => ['A' => 15, 'B' => 11, 'C' => 6],
+        ], $r['pairwise']['matrix']);
+
+        $this->assertEquals([
+            'A' => ['B' => 10, 'C' => 8, 'D' => 6],
+            'B' => ['A' => 6, 'C' => 8, 'D' => 6],
+            'C' => ['A' => 6, 'B' => 6, 'D' => 6],
+            'D' => ['A' => 12, 'B' => 10, 'C' => 8],
+        ], $r['beatpath']['strength']);
+
+        // The overturn, asserted directly: DIRECT pairwise has C beat D
+        // (12 vs 6) but the beatpath STRENGTH has D's indirect path to C (8)
+        // beat C's direct path to D (6) -- the Schulze relation flips this
+        // pair relative to the raw pairwise result.
+        $this->assertGreaterThan($r['pairwise']['matrix']['D']['C'], $r['pairwise']['matrix']['C']['D']);
+        $this->assertGreaterThan($r['beatpath']['strength']['C']['D'], $r['beatpath']['strength']['D']['C']);
+
+        $this->assertSame([
+            ['candidate' => 'D', 'best_pos' => 1, 'worst_pos' => 1, 'determined' => true, 'status' => 'elected'],
+            ['candidate' => 'A', 'best_pos' => 2, 'worst_pos' => 2, 'determined' => true, 'status' => 'elected'],
+            ['candidate' => 'B', 'best_pos' => 3, 'worst_pos' => 3, 'determined' => true, 'status' => 'excluded'],
+            ['candidate' => 'C', 'best_pos' => 4, 'worst_pos' => 4, 'determined' => true, 'status' => 'excluded'],
+        ], $r['ranking']);
+        $this->assertSame(['D', 'A'], $r['elected']);
+        $this->assertSame([], $r['bands']);
+        $this->assertNull($r['cutoff_decision']);
+        $this->assertSame('natural', $r['official']);
+    }
+
+    /**
+     * D12: `OrderedList::calculateResults` defaults `seats` to
+     * `count($roster)` when the setting is absent (`$settings['seats'] ?? $n`)
+     * -- locks this against a regression to `?? 1`. A clean, acyclic,
+     * unanimous chain with NO `seats` setting at all must elect every option
+     * on the roster.
+     */
+    public function test_seats_default_with_no_setting_is_all_options(): void
+    {
+        $c = $this->makeComponent(['A', 'B', 'C']);
+        $votes = $this->votes($c, array_fill(0, 5, ['A', 'B', 'C']));
+
+        $r = $this->calc($votes, $c);
+
+        $this->assertSame(3, $r['seats']);
+        $this->assertSame(count($c->options), $r['seats']);
+        $this->assertEqualsCanonicalizing(['A', 'B', 'C'], $r['elected']);
+        $this->assertCount(3, $r['elected']);
+    }
+
+    /**
+     * Blank-ballot immunity, asserted directly on the pairwise MATRIX (and
+     * on ranking/elected/bands) -- not merely inferred from the accounting
+     * reconciliation, as the existing accounting-only tests do. A set of
+     * valid ballots must produce a byte-identical matrix and result whether
+     * or not it is interleaved with blank/empty/scalar/out-of-roster-only
+     * ballots.
+     */
+    public function test_blank_and_invalid_ballots_leave_the_pairwise_matrix_and_result_byte_identical(): void
+    {
+        $c = $this->makeComponent(['A', 'B', 'C'], ['seats' => 2]);
+        $validRankings = [['A', 'B'], ['A', 'B'], ['B', 'A'], ['C']];
+
+        $clean = $this->votes($c, $validRankings);
+
+        $withNoise = [
+            Vote::factory()->make(['ballot_id' => 'ballot-x', 'values' => null]),
+            $clean[0],
+            Vote::factory()->make(['ballot_id' => 'ballot-x', 'values' => [$c->id => []]]),
+            $clean[1],
+            Vote::factory()->make(['ballot_id' => 'ballot-x', 'values' => [$c->id => 'A']]),
+            $clean[2],
+            Vote::factory()->make(['ballot_id' => 'ballot-x', 'values' => [$c->id => ['Z']]]),
+            $clean[3],
+        ];
+
+        $rClean = $this->calc($clean, $c);
+        $rNoisy = $this->calc($withNoise, $c);
+
+        $this->assertSame($rClean['pairwise']['matrix'], $rNoisy['pairwise']['matrix']);
+        $this->assertSame($rClean['ranking'], $rNoisy['ranking']);
+        $this->assertSame($rClean['elected'], $rNoisy['elected']);
+        $this->assertSame($rClean['bands'], $rNoisy['bands']);
+
+        // Hand-derived: 8 cast; blank = 3 (unanswered `null`, empty `[]`,
+        // and the scalar `'A'` -- accountAndParse treats a non-array or an
+        // empty array as blank, never invalid); invalid_only = 1 (`['Z']`,
+        // out-of-roster-only); counted = 8 - 3 - 1 = 4, matching the 4 clean
+        // ballots -- the noisy run's accounting must show these real
+        // figures, not silently match the clean run's (cast=4, blank=0).
+        $this->assertSame(8, $rNoisy['accounting']['cast']);
+        $this->assertSame(3, $rNoisy['accounting']['blank']);
+        $this->assertSame(1, $rNoisy['accounting']['invalid_only']);
+        $this->assertSame(4, $rNoisy['accounting']['counted']);
+    }
 }
