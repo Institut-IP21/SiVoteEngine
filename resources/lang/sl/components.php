@@ -12,6 +12,15 @@ return [
     'result' => [
         'notes_label' => 'Opombe',
     ],
+    // TODO(sl-review): machine-drafted Slovenian, needs native review.
+    // Shared headings for the info modal's labeled lay-explanation segments
+    // (see each type's `lay` key below): fixed presentation order is
+    // how_vote -> how_decided -> good_to_know (optional third segment).
+    'lay_labels' => [
+        'how_vote' => 'Kako glasujete',
+        'how_decided' => 'Kako se določi izid',
+        'good_to_know' => 'Dobro je vedeti',
+    ],
     'yesno' => [
         'yes' => 'Da',
         'no' => 'Ne',
@@ -22,7 +31,11 @@ return [
         'tie' => 'Izid je neodločen.',
         'description' => 'Glasovalci izbirajo med Da, Ne, in glede na nastavitve, Vzdržano.',
         // TODO(sl-review): machine-drafted Slovenian, needs native review
-        'lay_explanation' => 'Glasujete Da ali Ne o enem predlogu. Če glasovnica to dopušča, se lahko tudi vzdržite. Izid odloči tista možnost, ki prejme več glasov — razen če organizacija zahteva višji delež za sprejetje, na primer dve tretjini.',
+        'lay' => [
+            'how_vote' => 'Glasujte Da ali Ne o predlogu. Če je omogočeno, se lahko tudi vzdržite.',
+            'how_decided' => 'Odloči stran z več glasovi.',
+            'good_to_know' => 'Nekatere organizacije za sprejetje zahtevajo višji delež, na primer dve tretjini glasov.',
+        ],
         'invalid' => 'Neveljavno',
         'carried' => 'Predlog sprejet',
         'not_carried' => 'Predlog ni sprejet',
@@ -36,14 +49,22 @@ return [
         'invalid' => 'Neveljavno',
         'tie' => 'Izid je neodločen. Isto število glasov so prejeli: ',
         'description' => 'Glasovalci izberejo natančno eno izmed izbir.',
-        'lay_explanation' => 'Izberete eno možnost s seznama. Zmaga tista možnost, ki prejme največ glasov — tudi brez absolutne večine.',
+        // TODO(sl-review): machine-drafted Slovenian, needs native review
+        'lay' => [
+            'how_vote' => 'Izberite eno možnost s seznama.',
+            'how_decided' => 'Zmaga možnost z največ glasovi. Ni ji treba dobiti več kot polovice — dovolj je, da jih ima največ.',
+        ],
         'winner_is' => 'Zmagovalec: :name'
     ],
     'rankedchoice' => [
         'name' => 'Zmagovalec po razvrstitvi',
         'method' => 'alternativno glasovanje · IRV',
         'description' => 'Izvoli enega zmagovalca. Glasovalci kandidate razvrstijo; če nihče nima večine, se kandidat z najmanj glasovi izloči, njegovi glasovi pa se prenesejo na naslednjo izbiro, dokler eden ne doseže večine.',
-        'lay_explanation' => 'Kandidate razvrstite po prednosti — 1 za najljubšega, in tako naprej; ni treba razvrstiti vseh. Če nihče od kandidatov nima večine prvih izbir, se kandidat z najmanj glasovi izloči, njegovi glasovi pa se prenesejo na naslednjo izbiro na teh glasovnicah; to se ponavlja, dokler en kandidat ne doseže večine.',
+        // TODO(sl-review): machine-drafted Slovenian, needs native review
+        'lay' => [
+            'how_vote' => 'Kandidate razvrstite po vrstnem redu — 1 za najljubšega. Ni vam treba razvrstiti vseh.',
+            'how_decided' => 'Najprej štejejo vaše prve izbire. Če nihče nima več kot polovice, izpade kandidat z najmanj glasovi. Njegovi glasovi gredo naprej — vsak na naslednjo izbiro na tisti glasovnici. To se ponavlja, dokler nekdo ne preseže polovice.',
+        ],
         'hint' => 'Pritisnite po vrsti — 1 = najljubši. Razvrstite poljubno število; ni treba razvrstiti vseh.',
         'abstain_note' => 'Nobena možnost ni razvrščena — oddaja praznega vprašanja pomeni vzdržanost.',
         'counter' => 'Razvrščeni: :selected od :total',
@@ -116,7 +137,12 @@ return [
         'name' => 'Odobritveni glas',
         'method' => 'odobritveno glasovanje',
         'description' => 'Glasovalci odobrijo poljubno število možnosti; izvoljene so možnosti z največ odobritvami, do nastavljenega števila mest.',
-        'lay_explanation' => 'Označite lahko vse možnosti, ki se vam zdijo sprejemljive — brez omejitve števila. Vsaka označba šteje kot en glas za to možnost, izvoljene pa so možnosti z največ označbami, do razpoložljivega števila mest.',
+        // TODO(sl-review): machine-drafted Slovenian, needs native review
+        'lay' => [
+            'how_vote' => 'Označite vse možnosti, ki so za vas sprejemljive — kolikor jih želite.',
+            'how_decided' => 'Vsaka označba šteje kot en glas. Izvoljene so možnosti z največ označbami.',
+            'good_to_know' => 'Izvoli se toliko možnosti, kolikor je prostih mest.',
+        ],
         'hint' => 'Izberite eno ali več možnosti.',
         'rate' => 'Stopnja podpore (%)',
         'winner_is' => 'Največ podpore: :name',
@@ -132,7 +158,12 @@ return [
         'name' => 'Urejen seznam izvoljenih',
         'method' => 'Schulzejeva metoda · Condorcet',
         'description' => 'Izvoli urejen seznam več izvoljenih — vrstni red šteje. Glasovalci kandidate odobrijo in razvrstijo; vrstni red se določi s Schulzejevo metodo (Condorcetova metoda najmočnejše poti). Neobvezno: kvota sestave (npr. uravnotežena zastopanost spolov) in nastavljivo število mest.',
-        'lay_explanation' => 'Odobrite možnosti, ki jih podpirate, nato jih razvrstite po vrstnem redu. Sistem primerja vsak par možnosti med seboj na vseh glasovnicah in tako določi celoten urejen seznam, ne le enega zmagovalca — najvišja mesta, po vrstnem redu, so izvoljena.',
+        // TODO(sl-review): machine-drafted Slovenian, needs native review
+        'lay' => [
+            'how_vote' => 'Označite kandidate, ki jih podpirate, in jih razvrstite — 1 za najljubšega.',
+            'how_decided' => 'Vsak kandidat se primerja z vsakim. Pri vsakem paru šteje, koga je več ljudi postavilo višje. Iz vseh teh primerjav nastane skupni vrstni red.',
+            'good_to_know' => 'Izvoli se več kandidatov, po vrsti — ne le eden. Izvoljeni so tisti na najvišjih mestih, do števila prostih mest.',
+        ],
         'hint' => 'Odobrite možnosti, ki jih želite na seznamu, nato jih razvrstite po vrsti — 1 = vaša prva izbira.',
         // Prikaz, ki najprej pove izid (postopno razkrivanje), v slogu razvrščevalnega glasovanja.
         'outcome_not_binding' => 'Kvorum ni bil dosežen, zato izid ni zavezujoč. Spodnji vrstni red odraža doslej prešteto glasovanje.',

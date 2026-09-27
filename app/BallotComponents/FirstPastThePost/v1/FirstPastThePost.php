@@ -29,12 +29,15 @@ final class FirstPastThePost extends AbstractBallotComponent
     #[\Override]
     protected function getStrings(): array
     {
+        $laySegments = $this->laySegments('fptp');
+
         return [
             'name' => __('components.fptp.name'),
             'method' => __('components.fptp.method'),
             'description' => __('components.fptp.description'),
             'hint' => __('components.fptp.hint'),
-            'lay_explanation' => __('components.fptp.lay_explanation'),
+            'lay_explanation' => $this->joinLaySegments($laySegments),
+            'lay_segments' => $laySegments,
         ];
     }
 

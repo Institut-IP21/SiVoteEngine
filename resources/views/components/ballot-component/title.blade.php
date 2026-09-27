@@ -3,12 +3,15 @@
 {{-- The type label (top-right of every ballot element) is the component's localized
      name, resolved from the registry via $component->type_name — the single source of
      truth (each component's getStrings()['name']). It doubles as the trigger for an info
-     modal giving the plain-language "how it works" explanation of that method
-     ($component->lay_explanation, same registry-sourced single-source pattern), shown on
-     both the live ballot and the public results page (both render this component).
-     Self-contained Alpine component: Alpine is self-hosted and started in app.js (see
-     resources/js/app.js), loaded unconditionally on every page through layouts.main — not
-     dependent on Livewire being present, so this works on the plain-Blade results page too. --}}
+     modal giving the plain-language "how it works" explanation of that method, shown as
+     labeled segments ($component->lay_segments — "How you vote" / "How the result is
+     decided" / optional "Good to know", same registry-sourced single-source pattern),
+     falling back to the single-paragraph $component->lay_explanation when there are no
+     segments. Shown on both the live ballot and the public results page (both render
+     this component). Self-contained Alpine component: Alpine is self-hosted and started
+     in app.js (see resources/js/app.js), loaded unconditionally on every page through
+     layouts.main — not dependent on Livewire being present, so this works on the plain-
+     Blade results page too. --}}
 <div class="flex items-baseline justify-between gap-3"
     @if ($component->type_name) x-data="{ infoOpen: false }" @endif>
     <h2 class="font-bold text-base sm:text-lg text-ink leading-snug" style="min-width:0">{{ $component->title }}</h2>
@@ -45,7 +48,14 @@
                             </svg>
                         </button>
                     </div>
-                    <p class="text-sm text-muted leading-relaxed">{{ $component->lay_explanation }}</p>
+                    @if ($component->lay_segments)
+                        @foreach ($component->lay_segments as $index => $segment)
+                            <p class="text-xs font-semibold text-ink {{ $index === 0 ? '' : 'mt-3' }}">{{ $segment['heading'] }}</p>
+                            <p class="text-sm text-muted leading-relaxed">{{ $segment['body'] }}</p>
+                        @endforeach
+                    @else
+                        <p class="text-sm text-muted leading-relaxed">{{ $component->lay_explanation }}</p>
+                    @endif
                 </div>
             </div>
         </template>

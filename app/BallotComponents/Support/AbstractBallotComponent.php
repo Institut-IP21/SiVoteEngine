@@ -33,11 +33,85 @@ abstract class AbstractBallotComponent implements BallotComponentInterface
     }
 
     /**
-     * Get localized strings for this component.
+     * Get localized strings for this component. Every value is a plain
+     * string EXCEPT `lay_segments` (the modal's labeled lay-explanation
+     * blocks), which is a list of heading/body pairs — callers narrow the
+     * value they read per key (see `BallotComponent`'s accessors) rather
+     * than relying on a single scalar type for the whole map.
      *
-     * @return array<string, string>
+     * @return array<string, string|list<array{heading: string, body: string}>>
      */
     abstract protected function getStrings(): array;
+
+    /**
+     * Fixed presentation order for the info modal's labeled lay-explanation
+     * segments (see `laySegments()`): how the voter marks their ballot, then
+     * how the result is decided, then an optional third "good to know"
+     * caveat. A type whose `components.<slug>.lay` key has no
+     * `good_to_know` entry simply ends up with two segments, not three.
+     *
+     * @var list<string>
+     */
+    private const LAY_SEGMENT_ORDER = ['how_vote', 'how_decided', 'good_to_know'];
+
+    /**
+     * Build this component's labeled lay-explanation segments — the info
+     * modal's "How you vote" / "How the result is decided" / optional
+     * "Good to know" blocks — for the CURRENT (request) locale. Same
+     * request-locale rule `getStrings()` itself already follows (see
+     * `BallotComponent::getLayExplanationAttribute()`'s docblock): this is
+     * rendered directly into a server-side Blade view, so request-locale
+     * resolution is correct HERE (unlike the bilingual statute/academic/
+     * manual DTOs, which must resolve both locales explicitly).
+     *
+     * $slug is the `components.php` key (e.g. `yesno`, `fptp`). Reads the
+     * type's `components.<slug>.lay` keyed array and pairs each key present
+     * there with its shared `components.lay_labels.<key>` heading, in the
+     * fixed order above; a key the type omits (e.g. `good_to_know`) simply
+     * produces no segment.
+     *
+     * @return list<array{heading: string, body: string}>
+     */
+    final protected function laySegments(string $slug): array
+    {
+        $bodies = __("components.{$slug}.lay");
+        if (!is_array($bodies)) {
+            return [];
+        }
+
+        $labels = __('components.lay_labels');
+        if (!is_array($labels)) {
+            $labels = [];
+        }
+
+        $segments = [];
+        foreach (self::LAY_SEGMENT_ORDER as $key) {
+            $body = $bodies[$key] ?? null;
+            if (!is_string($body)) {
+                continue;
+            }
+            $heading = $labels[$key] ?? '';
+            $segments[] = [
+                'heading' => is_string($heading) ? $heading : '',
+                'body' => $body,
+            ];
+        }
+
+        return $segments;
+    }
+
+    /**
+     * Join lay-explanation segment bodies into one coherent paragraph, for
+     * back-compat consumers that expect a single string: the model's legacy
+     * `lay_explanation` accessor here, and (built separately, in explicit
+     * locales) the statute API's `lay:{en,sl}` field in `BallotService`.
+     *
+     * @param list<array{heading: string, body: string}> $segments
+     */
+    final protected function joinLaySegments(array $segments): string
+    {
+        return implode(' ', array_column($segments, 'body'));
+    }
 
     /**
      * Get this component's name/method in BOTH locales explicitly, mirroring

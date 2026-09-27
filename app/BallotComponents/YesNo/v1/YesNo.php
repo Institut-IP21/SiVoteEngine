@@ -38,12 +38,15 @@ final class YesNo extends AbstractBallotComponent
     #[\Override]
     protected function getStrings(): array
     {
+        $laySegments = $this->laySegments('yesno');
+
         return [
             'name' => __('components.yesno.name'),
             'method' => __('components.yesno.method'),
             'description' => __('components.yesno.description'),
             'hint' => __('components.yesno.hint'),
-            'lay_explanation' => __('components.yesno.lay_explanation'),
+            'lay_explanation' => $this->joinLaySegments($laySegments),
+            'lay_segments' => $laySegments,
         ];
     }
 

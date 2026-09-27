@@ -37,12 +37,15 @@ final class RankedChoice extends AbstractBallotComponent
     #[\Override]
     protected function getStrings(): array
     {
+        $laySegments = $this->laySegments('rankedchoice');
+
         return [
             'name' => __('components.rankedchoice.name'),
             'method' => __('components.rankedchoice.method'),
             'description' => __('components.rankedchoice.description'),
             'hint' => __('components.rankedchoice.hint'),
-            'lay_explanation' => __('components.rankedchoice.lay_explanation'),
+            'lay_explanation' => $this->joinLaySegments($laySegments),
+            'lay_segments' => $laySegments,
         ];
     }
 

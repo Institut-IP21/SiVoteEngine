@@ -15,8 +15,8 @@ namespace App\BallotComponents\DTOs;
  *
  * Background/educational reading — NOT the organization's actual rules (see
  * `StatuteText` for the legal-reference clause text) and NOT the short
- * voter-facing "how it works" copy (see `components.<slug>.lay_explanation`,
- * exposed as `BallotComponent::$lay_explanation`).
+ * voter-facing "how it works" copy (see `components.<slug>.lay`, exposed as
+ * `BallotComponent::$lay_explanation`/`$lay_segments`).
  */
 final readonly class AcademicText
 {

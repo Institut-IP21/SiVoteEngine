@@ -29,12 +29,15 @@ final class ApprovalVote extends AbstractBallotComponent
     #[\Override]
     protected function getStrings(): array
     {
+        $laySegments = $this->laySegments('approval');
+
         return [
             'name' => __('components.approval.name'),
             'method' => __('components.approval.method'),
             'description' => __('components.approval.description'),
             'hint' => __('components.approval.hint'),
-            'lay_explanation' => __('components.approval.lay_explanation'),
+            'lay_explanation' => $this->joinLaySegments($laySegments),
+            'lay_segments' => $laySegments,
         ];
     }
 

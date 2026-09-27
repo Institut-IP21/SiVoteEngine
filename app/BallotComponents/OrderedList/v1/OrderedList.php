@@ -43,12 +43,15 @@ final class OrderedList extends AbstractBallotComponent
     #[\Override]
     protected function getStrings(): array
     {
+        $laySegments = $this->laySegments('orderedlist');
+
         return [
             'name' => __('components.orderedlist.name'),
             'method' => __('components.orderedlist.method'),
             'description' => __('components.orderedlist.description'),
             'hint' => __('components.orderedlist.hint'),
-            'lay_explanation' => __('components.orderedlist.lay_explanation'),
+            'lay_explanation' => $this->joinLaySegments($laySegments),
+            'lay_segments' => $laySegments,
         ];
     }
 

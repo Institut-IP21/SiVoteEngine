@@ -60,8 +60,10 @@ final readonly class BallotService
      * `statute.quorum` / `comparison.labels`+`comparison.disclaimer`),
      * top-level siblings of the per-type entries, not duplicated into each.
      * `academic` (the neutral explanation + pros/cons, from `getAcademicText()`),
-     * `lay` (the short voter-facing "how it works" copy, from
-     * `components.<slug>.lay_explanation`), `manual` (the by-hand
+     * `lay` (the short voter-facing "how it works" copy — still a plain
+     * string here, joined from the labeled `components.<slug>.lay` segments
+     * that back the ballot/results info modal's own `lay_segments`, see
+     * `layExplanationString()`), `manual` (the by-hand
      * calculation steps, from `getManualSteps()`), and `comparison` (the
      * owner-approved comparison entry, from `getMethodComparison()`) are all
      * purely additive — web_app consumes them from this same endpoint
@@ -107,8 +109,8 @@ final readonly class BallotService
                     'sl' => $academic->sl,
                 ],
                 'lay' => [
-                    'en' => $this->transString("components.{$slug}.lay_explanation", 'en'),
-                    'sl' => $this->transString("components.{$slug}.lay_explanation", 'sl'),
+                    'en' => $this->layExplanationString($slug, 'en'),
+                    'sl' => $this->layExplanationString($slug, 'sl'),
                 ],
                 'manual' => [
                     'en' => $manual->en,
@@ -180,6 +182,42 @@ final readonly class BallotService
     {
         $value = trans($key, [], $locale);
         return is_string($value) ? $value : '';
+    }
+
+    /**
+     * Fixed presentation order for the lay-explanation segments — mirrors
+     * `AbstractBallotComponent::LAY_SEGMENT_ORDER`, duplicated here because
+     * this method resolves BOTH locales explicitly regardless of the
+     * request locale, unlike `AbstractBallotComponent::laySegments()` (see
+     * `layExplanationString()`).
+     *
+     * @var list<string>
+     */
+    private const LAY_SEGMENT_ORDER = ['how_vote', 'how_decided', 'good_to_know'];
+
+    /**
+     * Build the joined lay-explanation string (segment bodies, fixed order,
+     * space-joined — same join `AbstractBallotComponent::joinLaySegments()`
+     * performs) for ONE explicit locale, from `components.<slug>.lay`.
+     * Explicit-locale (never request-locale `__()`), since `getStatuteText()`
+     * must return both `en` and `sl` regardless of the request locale.
+     */
+    private function layExplanationString(string $slug, string $locale): string
+    {
+        $bodies = trans("components.{$slug}.lay", [], $locale);
+        if (!is_array($bodies)) {
+            return '';
+        }
+
+        $parts = [];
+        foreach (self::LAY_SEGMENT_ORDER as $key) {
+            $body = $bodies[$key] ?? null;
+            if (is_string($body)) {
+                $parts[] = $body;
+            }
+        }
+
+        return implode(' ', $parts);
     }
 
     /**

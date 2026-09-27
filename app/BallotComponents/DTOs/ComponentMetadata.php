@@ -7,7 +7,7 @@ namespace App\BallotComponents\DTOs;
 final readonly class ComponentMetadata
 {
     /**
-     * @param array<string, string> $strings Localized strings (name, description, hint), in the REQUEST locale — kept for back-compat
+     * @param array<string, string|list<array{heading: string, body: string}>> $strings Localized strings (name, description, hint, lay_explanation are strings; lay_segments is a list), in the REQUEST locale — kept for back-compat
      * @param array<string, string> $optionsValidator Validation rules for options
      * @param array<string>|null $presetOptions Preset options for components that don't need custom options
      * @param string $cardinality How many results this component elects: 'single', 'multiple', or 'decision'
