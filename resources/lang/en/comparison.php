@@ -27,7 +27,7 @@ return [
         'simplicity' => 'Easy to understand',
     ],
 
-    'disclaimer' => 'A simplified educational comparison — each mark is a general characterization, not an absolute measure. No voting method is completely immune to strategic voting.',
+    'disclaimer' => 'A simplified educational comparison — each mark is a general characterization, not an absolute measure. No voting method with three or more options is completely immune to strategic voting.',
 
     'yesno' => [
         'elected' => 'Decision (pass/fail)',

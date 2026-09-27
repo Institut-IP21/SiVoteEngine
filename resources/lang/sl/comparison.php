@@ -14,7 +14,7 @@ return [
         'simplicity' => 'Razumljivost',
     ],
 
-    'disclaimer' => 'Poenostavljena izobraževalna primerjava — vsaka oznaka je splošna oznaka, ne absolutna mera. Nobena volilna metoda ni popolnoma odporna na strateško glasovanje.',
+    'disclaimer' => 'Poenostavljena izobraževalna primerjava — vsaka oznaka je splošna oznaka, ne absolutna mera. Nobena volilna metoda s tremi ali več možnostmi ni popolnoma odporna na strateško glasovanje.',
 
     'yesno' => [
         'elected' => 'Odločitev (sprejem/zavrnitev)',

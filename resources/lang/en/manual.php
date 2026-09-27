@@ -33,7 +33,7 @@ return [
     ],
 
     'approval' => [
-        "Sort each ballot's approvals: every option the voter marked receives one approval; a ballot that approves nothing is an abstention (where allowed) or invalid.",
+        "Sort each ballot's approvals: every option the voter marked receives one approval; a ballot that leaves the question blank counts as an abstention (where allowed) or is set aside as invalid.",
         'Add up the approvals each option received — every listed option starts at zero.',
         'Rank the options from most approvals to fewest.',
         'Read off the top K options in that ranking, where K is the number of seats set for the vote (one, by default) — those options are elected.',
@@ -44,7 +44,7 @@ return [
         'Set aside blank ballots (nothing ranked) and invalid ballots (only options not on this ballot were ranked); every other ballot keeps counting, round after round, until it becomes exhausted.',
         'In each round, count every still-counted ballot for whichever surviving option is its highest-ranked continuing preference.',
         'If one option now has more than half of the continuing (still-counted) ballots, it wins outright.',
-        'If exactly two options remain and neither has that majority, whichever has more votes in the round wins; an equal split between the final two is reported as a tie.',
+        'If exactly two options remain and neither has that majority, whichever has more votes in the round wins; if the two are tied with votes on both sides the result is a tie, and if every remaining ballot has been exhausted so both sit at zero the count ends with no winner.',
         "Otherwise, eliminate the option(s) with the fewest votes in the round — every option tied at zero votes is eliminated together in one go — and move each of their ballots to its next preference still in the running. A ballot with no further ranked, continuing preference becomes exhausted and drops out of later rounds.",
         'When two or more options (not at zero) are tied for last place instead, look back to the most recent earlier round where their vote counts actually differed and eliminate whichever was lower there; if they were tied in every earlier round too, the tie is reported rather than resolved by the engine.',
         'Repeat from the second step until a winner is declared. The audit trail records, for every round, why it ended the way it did (majority reached, last-place elimination, look-back tie-break, and so on) plus how many ballots were cast, blank, invalid, or exhausted along the way.',
@@ -56,6 +56,6 @@ return [
         'For every pair of candidates, find the strongest chain of decisive preferences linking them — possibly running through other candidates as stepping stones (a "beatpath"). A candidate outranks another if its strongest chain toward them is stronger than the chain running the other way.',
         'Order every candidate from most- to least-outranking. A candidate who outranks every other candidate head-to-head — the Condorcet winner — always ends up first when one exists.',
         'The candidates in the top seats (the number of seats set for the vote — by default, all of them) are elected, in that order. Where the ranking cannot strictly place two or more candidates relative to each other, they share a tied band; if that band straddles the last seat, the cutoff is reported as contested rather than decided by the engine.',
-        'If the organization set a category quota (a minimum or maximum for a labelled group, or an alternating "zipper" requirement) and marked it binding, it is applied afterwards by swapping in the fewest already-seated candidates needed to satisfy it. A quota marked advisory-only is still computed and reported alongside the result, but it never changes who is actually elected.',
+        'If the organization set a category quota for a labelled group and marked it binding, the elected order is adjusted afterwards to satisfy it — but only when doing so is feasible and no unresolved tie blocks it; otherwise the natural order stands and the shortfall is flagged for the organization to resolve. A minimum or maximum quota is met with the fewest swaps across the seat cutoff — promoting the highest-ranked group candidates from just below the cut and demoting the lowest-ranked seated candidates. An alternating "zipper" quota instead rebuilds the elected order to alternate between the two groups, starting from the group of the naturally top-ranked candidate. A quota marked advisory-only is still computed and reported alongside the result, but it never changes who is actually elected.',
     ],
 ];
