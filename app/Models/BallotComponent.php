@@ -32,6 +32,8 @@ use Illuminate\Support\Str;
  * @property-read string $component_path
  * @property-read string|null $type_name
  * @property-read string|null $type_hint
+ * @property-read string|null $lay_explanation
+ * @property-read list<array{heading: string, body: string}> $lay_segments
  * @property-read string $form_template
  * @property-read string $form_template_livewire
  * @property-read string $result_template
@@ -118,7 +120,8 @@ class BallotComponent extends Model
             return null;
         }
 
-        return $registry->resolve($this->type, $this->version)->getMetadata()->strings['name'] ?? null;
+        $value = $registry->resolve($this->type, $this->version)->getMetadata()->strings['name'] ?? null;
+        return is_string($value) ? $value : null;
     }
 
     /**
@@ -133,7 +136,81 @@ class BallotComponent extends Model
             return null;
         }
 
-        return $registry->resolve($this->type, $this->version)->getMetadata()->strings['hint'] ?? null;
+        $value = $registry->resolve($this->type, $this->version)->getMetadata()->strings['hint'] ?? null;
+        return is_string($value) ? $value : null;
+    }
+
+    /**
+     * The short, voter-facing "how it works" explanation of this component's
+     * type (e.g. "You may tick every option you find acceptable...") — the
+     * lay explanation shown in the ballot/results info modal, sourced from
+     * the component's own getStrings()['lay_explanation'] via the registry,
+     * same single-source pattern as getTypeNameAttribute()/getTypeHintAttribute().
+     * Resolved in the REQUEST locale (unlike the stored per-locale
+     * statute/academic text): this is rendered directly into a server-side
+     * Blade view, so request-locale resolution is correct HERE.
+     */
+    public function getLayExplanationAttribute(): ?string
+    {
+        $registry = app(ComponentRegistry::class);
+        if (! $registry->has($this->type, $this->version)) {
+            return null;
+        }
+
+        $value = $registry->resolve($this->type, $this->version)->getMetadata()->strings['lay_explanation'] ?? null;
+        return is_string($value) ? $value : null;
+    }
+
+    /**
+     * The info modal's labeled lay-explanation segments — "How you vote" /
+     * "How the result is decided" / optional "Good to know" — sourced from
+     * the component's own getStrings()['lay_segments'] via the registry,
+     * same single-source + request-locale pattern as
+     * getLayExplanationAttribute(). Empty when the type isn't registered or
+     * the type carries no segments.
+     *
+     * @return list<array{heading: string, body: string}>
+     */
+    public function getLaySegmentsAttribute(): array
+    {
+        $registry = app(ComponentRegistry::class);
+        if (! $registry->has($this->type, $this->version)) {
+            return [];
+        }
+
+        $value = $registry->resolve($this->type, $this->version)->getMetadata()->strings['lay_segments'] ?? null;
+
+        return $this->normalizeLaySegments($value);
+    }
+
+    /**
+     * Narrow an arbitrary value back to `list<array{heading: string, body:
+     * string}>` at runtime, dropping anything malformed rather than
+     * throwing — same defensive-narrowing idiom
+     * `AbstractBallotComponent::statuteParagraphs()` uses for lang-file
+     * content.
+     *
+     * @return list<array{heading: string, body: string}>
+     */
+    private function normalizeLaySegments(mixed $value): array
+    {
+        if (!is_array($value)) {
+            return [];
+        }
+
+        $segments = [];
+        foreach ($value as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $heading = $item['heading'] ?? null;
+            $body = $item['body'] ?? null;
+            if (is_string($heading) && is_string($body)) {
+                $segments[] = ['heading' => $heading, 'body' => $body];
+            }
+        }
+
+        return $segments;
     }
 
     public function getFormTemplateAttribute(): string

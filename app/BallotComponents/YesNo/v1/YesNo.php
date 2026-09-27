@@ -38,11 +38,70 @@ final class YesNo extends AbstractBallotComponent
     #[\Override]
     protected function getStrings(): array
     {
+        $laySegments = $this->laySegments('yesno');
+
         return [
             'name' => __('components.yesno.name'),
+            'method' => __('components.yesno.method'),
             'description' => __('components.yesno.description'),
             'hint' => __('components.yesno.hint'),
+            'lay_explanation' => $this->joinLaySegments($laySegments),
+            'lay_segments' => $laySegments,
         ];
+    }
+
+    #[\Override]
+    protected function cardinality(): string
+    {
+        return 'decision';
+    }
+
+    #[\Override]
+    protected function getI18nStrings(): array
+    {
+        return [
+            'name' => $this->bothLocales('components.yesno.name'),
+            'method' => $this->bothLocales('components.yesno.method'),
+        ];
+    }
+
+    #[\Override]
+    protected function getStatuteTextParagraphs(): array
+    {
+        return [
+            'en' => $this->statuteParagraphs('statute.yesno', 'en'),
+            'sl' => $this->statuteParagraphs('statute.yesno', 'sl'),
+        ];
+    }
+
+    #[\Override]
+    protected function getAcademicTextParagraphs(): array
+    {
+        return [
+            'en' => $this->academicText('academic.yesno', 'en'),
+            'sl' => $this->academicText('academic.yesno', 'sl'),
+        ];
+    }
+
+    #[\Override]
+    protected function getManualStepsParagraphs(): array
+    {
+        return [
+            'en' => $this->statuteParagraphs('manual.yesno', 'en'),
+            'sl' => $this->statuteParagraphs('manual.yesno', 'sl'),
+        ];
+    }
+
+    #[\Override]
+    protected function getComparisonRatings(): array
+    {
+        return ['true_prefs' => 2, 'manipulation' => 5, 'simplicity' => 5];
+    }
+
+    #[\Override]
+    protected function getComparisonElected(): array
+    {
+        return $this->bothLocales('comparison.yesno.elected');
     }
 
     #[\Override]

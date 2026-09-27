@@ -158,4 +158,66 @@ class FirstPastThePostTest extends TestCase
             $c->id => ['required', Rule::in(['Ana', 'Betty', 'abstain'])],
         ], $this->component->getSubmissionValidator($c, $election)->toArray());
     }
+
+    public function test_get_statute_text_returns_nonempty_bilingual_paragraphs(): void
+    {
+        $statute = $this->component->getStatuteText();
+
+        $this->assertSame('FirstPastThePost', $statute->type);
+        $this->assertNotEmpty($statute->en);
+        $this->assertNotEmpty($statute->sl);
+        foreach ([...$statute->en, ...$statute->sl] as $paragraph) {
+            $this->assertNotSame('', trim($paragraph));
+        }
+    }
+
+    public function test_get_statute_text_tie_clause_never_affirms_casting_vote_or_random_draw(): void
+    {
+        // Grounding fact: a plurality tie is surfaced, never broken by a casting
+        // vote or a random draw performed by the voting system.
+        $statute = $this->component->getStatuteText();
+        $lower = strtolower(implode(' ', $statute->en));
+        foreach ([
+            'resolved by a casting vote', 'decided by a casting vote', 'broken by a casting vote',
+            'resolved by a random draw', 'decided by a random draw', 'broken by a random draw',
+        ] as $affirmation) {
+            $this->assertStringNotContainsString($affirmation, $lower);
+        }
+    }
+
+    public function test_get_academic_text_returns_populated_bilingual_content(): void
+    {
+        $academic = $this->component->getAcademicText();
+
+        $this->assertSame('FirstPastThePost', $academic->type);
+        foreach (['en', 'sl'] as $locale) {
+            $this->assertNotSame('', trim($academic->{$locale}['explanation']));
+            $this->assertNotEmpty($academic->{$locale}['pros']);
+            $this->assertNotEmpty($academic->{$locale}['cons']);
+        }
+        $this->assertNotSame($academic->en['explanation'], $academic->sl['explanation']);
+    }
+
+    public function test_get_manual_steps_returns_populated_bilingual_ordered_steps(): void
+    {
+        $manual = $this->component->getManualSteps();
+
+        $this->assertSame('FirstPastThePost', $manual->type);
+        $this->assertNotEmpty($manual->en);
+        $this->assertNotEmpty($manual->sl);
+        foreach ([...$manual->en, ...$manual->sl] as $step) {
+            $this->assertNotSame('', trim($step));
+        }
+        $this->assertNotSame($manual->en, $manual->sl);
+    }
+
+    public function test_get_method_comparison_returns_the_approved_ratings_and_elected_descriptor(): void
+    {
+        $comparison = $this->component->getMethodComparison();
+
+        $this->assertSame('FirstPastThePost', $comparison->type);
+        $this->assertSame(['true_prefs' => 2, 'manipulation' => 2, 'simplicity' => 5], $comparison->ratings);
+        $this->assertSame('1', $comparison->elected['en']);
+        $this->assertSame('1', $comparison->elected['sl']);
+    }
 }

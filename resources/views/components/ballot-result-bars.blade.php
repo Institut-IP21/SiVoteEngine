@@ -23,7 +23,7 @@
     ])>
         <div class="flex items-baseline justify-between gap-3 text-sm">
             <span class="text-ink {{ $isWinner ? 'font-bold' : 'font-medium' }}" style="overflow-wrap:anywhere">
-                {{ $row['label'] }}@if ($isWinner) <span style="color:var(--color-secure)" aria-hidden="true">✓</span>@endif
+                {{ $row['label'] }}@if ($isWinner) <span style="color:var(--color-secure)" aria-hidden="true">✓</span>@elseif ($isTied) <span style="color:var(--color-warn)" aria-hidden="true">=</span>@endif
             </span>
             <span class="flex-shrink-0 text-muted"><span class="font-bold text-ink">{{ $pctLabel }}%</span> · {{ $row['votes'] }}</span>
         </div>

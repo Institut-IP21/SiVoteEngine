@@ -236,4 +236,78 @@ class YesNoTest extends TestCase
         $this->assertEquals('tie', $r['winner']);
         $this->assertFalse($r['passed']);
     }
+
+    public function test_get_statute_text_returns_nonempty_bilingual_paragraphs(): void
+    {
+        $statute = $this->component->getStatuteText();
+
+        $this->assertSame('YesNo', $statute->type);
+        $this->assertNotEmpty($statute->en);
+        $this->assertNotEmpty($statute->sl);
+        foreach ([...$statute->en, ...$statute->sl] as $paragraph) {
+            $this->assertNotSame('', trim($paragraph));
+        }
+    }
+
+    public function test_get_statute_text_tie_clause_never_affirms_casting_vote_or_random_draw(): void
+    {
+        // Grounding fact (D5/D9): a tie fails outright — never resolved by any
+        // casting vote or random draw. The clause states this explicitly (so it
+        // necessarily mentions both phrases, negated); the guard instead checks
+        // neither is ever framed as actually resolving/deciding the tie.
+        $statute = $this->component->getStatuteText();
+        $this->assertTieNeverAffirmsCastingVoteOrRandomDraw(implode(' ', $statute->en));
+    }
+
+    public function test_get_academic_text_returns_populated_bilingual_content(): void
+    {
+        $academic = $this->component->getAcademicText();
+
+        $this->assertSame('YesNo', $academic->type);
+        foreach (['en', 'sl'] as $locale) {
+            $this->assertNotSame('', trim($academic->{$locale}['explanation']));
+            $this->assertNotEmpty($academic->{$locale}['pros']);
+            $this->assertNotEmpty($academic->{$locale}['cons']);
+        }
+        $this->assertNotSame($academic->en['explanation'], $academic->sl['explanation']);
+    }
+
+    public function test_get_manual_steps_returns_populated_bilingual_ordered_steps(): void
+    {
+        $manual = $this->component->getManualSteps();
+
+        $this->assertSame('YesNo', $manual->type);
+        $this->assertNotEmpty($manual->en);
+        $this->assertNotEmpty($manual->sl);
+        foreach ([...$manual->en, ...$manual->sl] as $step) {
+            $this->assertNotSame('', trim($step));
+        }
+        $this->assertNotSame($manual->en, $manual->sl);
+    }
+
+    public function test_get_method_comparison_returns_the_approved_ratings_and_elected_descriptor(): void
+    {
+        $comparison = $this->component->getMethodComparison();
+
+        $this->assertSame('YesNo', $comparison->type);
+        $this->assertSame(['true_prefs' => 2, 'manipulation' => 5, 'simplicity' => 5], $comparison->ratings);
+        $this->assertSame('Decision (pass/fail)', $comparison->elected['en']);
+        $this->assertSame('Odločitev (sprejem/zavrnitev)', $comparison->elected['sl']);
+    }
+
+    /**
+     * Shared anchor-phrase guard (statute-feature-spec.md §7/§8): no component's
+     * tie clause may claim a casting vote or a random draw actually resolves a
+     * tie — the engine surfaces every tie for the organization's own rules.
+     */
+    private function assertTieNeverAffirmsCastingVoteOrRandomDraw(string $text): void
+    {
+        $lower = strtolower($text);
+        foreach ([
+            'resolved by a casting vote', 'decided by a casting vote', 'broken by a casting vote',
+            'resolved by a random draw', 'decided by a random draw', 'broken by a random draw',
+        ] as $affirmation) {
+            $this->assertStringNotContainsString($affirmation, $lower);
+        }
+    }
 }

@@ -9,14 +9,33 @@ return [
     'oftotal' => 'Delež (%)',
     'share_valid' => 'Delež veljavnih glasov (%)',
     'not_binding' => 'Ni zavezujoče — kvorum ni bil dosežen, zato je ta izid zgolj informativen.',
+    'result' => [
+        'notes_label' => 'Opombe',
+    ],
+    // TODO(sl-review): machine-drafted Slovenian, needs native review.
+    // Shared headings for the info modal's labeled lay-explanation segments
+    // (see each type's `lay` key below): fixed presentation order is
+    // how_vote -> how_decided -> good_to_know (optional third segment).
+    'lay_labels' => [
+        'how_vote' => 'Kako glasujete',
+        'how_decided' => 'Kako se določi izid',
+        'good_to_know' => 'Dobro je vedeti',
+    ],
     'yesno' => [
         'yes' => 'Da',
         'no' => 'Ne',
         'abstain' => 'Vzdržan',
         'hint' => 'Izberite eno možnost.',
         'name' => 'Da/Ne vprašanje',
+        'method' => 'večinsko glasovanje',
         'tie' => 'Izid je neodločen.',
         'description' => 'Glasovalci izbirajo med Da, Ne, in glede na nastavitve, Vzdržano.',
+        // TODO(sl-review): machine-drafted Slovenian, needs native review
+        'lay' => [
+            'how_vote' => 'Glasujte Da ali Ne o predlogu. Če je omogočeno, se lahko tudi vzdržite.',
+            'how_decided' => 'Odloči stran z več glasovi.',
+            'good_to_know' => 'Nekatere organizacije za sprejetje zahtevajo višji delež, na primer dve tretjini glasov.',
+        ],
         'invalid' => 'Neveljavno',
         'carried' => 'Predlog sprejet',
         'not_carried' => 'Predlog ni sprejet',
@@ -24,16 +43,28 @@ return [
     ],
     'fptp' => [
         'name' => 'Izbira ene vrednosti izmed večih',
+        'method' => 'relativna večina',
         'abstain' => 'Vzdržan',
         'hint' => 'Izberite enega kandidata.',
         'invalid' => 'Neveljavno',
         'tie' => 'Izid je neodločen. Isto število glasov so prejeli: ',
         'description' => 'Glasovalci izberejo natančno eno izmed izbir.',
+        // TODO(sl-review): machine-drafted Slovenian, needs native review
+        'lay' => [
+            'how_vote' => 'Izberite eno možnost s seznama.',
+            'how_decided' => 'Zmaga možnost z največ glasovi. Ni ji treba dobiti več kot polovice — dovolj je, da jih ima največ.',
+        ],
         'winner_is' => 'Zmagovalec: :name'
     ],
     'rankedchoice' => [
-        'name' => 'Razvrščanje vrednosti',
-        'description' => 'Glasovalci seznam možnosti uredijo po vrsti glede na preferenco.',
+        'name' => 'Zmagovalec po razvrstitvi',
+        'method' => 'alternativno glasovanje · IRV',
+        'description' => 'Izvoli enega zmagovalca. Glasovalci kandidate razvrstijo; če nihče nima večine, se kandidat z najmanj glasovi izloči, njegovi glasovi pa se prenesejo na naslednjo izbiro, dokler eden ne doseže večine.',
+        // TODO(sl-review): machine-drafted Slovenian, needs native review
+        'lay' => [
+            'how_vote' => 'Kandidate razvrstite po vrstnem redu — 1 za najljubšega. Ni vam treba razvrstiti vseh.',
+            'how_decided' => 'Najprej štejejo vaše prve izbire. Če nihče nima več kot polovice, izpade kandidat z najmanj glasovi. Njegovi glasovi gredo naprej — vsak na naslednjo izbiro na tisti glasovnici. To se ponavlja, dokler nekdo ne preseže polovice.',
+        ],
         'hint' => 'Pritisnite po vrsti — 1 = najljubši. Razvrstite poljubno število; ni treba razvrstiti vseh.',
         'abstain_note' => 'Nobena možnost ni razvrščena — oddaja praznega vprašanja pomeni vzdržanost.',
         'counter' => 'Razvrščeni: :selected od :total',
@@ -104,11 +135,76 @@ return [
     ],
     'approval' => [
         'name' => 'Odobritveni glas',
-        'description' => 'Glasovalci označijo, katere izmed možnosti na seznamu podpirajo.',
+        'method' => 'odobritveno glasovanje',
+        'description' => 'Glasovalci odobrijo poljubno število možnosti; izvoljene so možnosti z največ odobritvami, do nastavljenega števila mest.',
+        // TODO(sl-review): machine-drafted Slovenian, needs native review
+        'lay' => [
+            'how_vote' => 'Označite vse možnosti, ki so za vas sprejemljive — kolikor jih želite.',
+            'how_decided' => 'Vsaka označba šteje kot en glas. Izvoljene so možnosti z največ označbami.',
+            'good_to_know' => 'Izvoli se toliko možnosti, kolikor je prostih mest.',
+        ],
         'hint' => 'Izberite eno ali več možnosti.',
         'rate' => 'Stopnja podpore (%)',
         'winner_is' => 'Največ podpore: :name',
-        'tie' => 'Izid je neodločen. Isto število podpor so prejeli: '
+        'tie' => 'Izid je neodločen. Isto število podpor so prejeli: ',
+        // Prikaz izida, ki upošteva število mest (top-K, D1/D3) — uporabljeno,
+        // kadar je število mest > 1; pri enem mestu ostane besedilo winner_is/tie.
+        'no_result_yet' => 'Za to vprašanje še ni preštetih glasov.',
+        'elected_headline' => 'Izvoljeno — :seats mest',
+        'contested_headline' => ':count mest je spornih — glasovi so resnično izenačeni; razrešitev je stvar pravil vaše organizacije',
+        'seats_label' => 'Voli se :seats mest',
+    ],
+    'orderedlist' => [
+        'name' => 'Urejen seznam izvoljenih',
+        'method' => 'Schulzejeva metoda · Condorcet',
+        'description' => 'Izvoli urejen seznam več izvoljenih — vrstni red šteje. Glasovalci kandidate odobrijo in razvrstijo; vrstni red se določi s Schulzejevo metodo (Condorcetova metoda najmočnejše poti). Neobvezno: kvota sestave (npr. uravnotežena zastopanost spolov) in nastavljivo število mest.',
+        // TODO(sl-review): machine-drafted Slovenian, needs native review
+        'lay' => [
+            'how_vote' => 'Označite kandidate, ki jih podpirate, in jih razvrstite — 1 za najljubšega.',
+            'how_decided' => 'Vsak kandidat se primerja z vsakim. Pri vsakem paru šteje, koga je več ljudi postavilo višje. Iz vseh teh primerjav nastane skupni vrstni red.',
+            'good_to_know' => 'Izvoli se več kandidatov, po vrsti — ne le eden. Izvoljeni so tisti na najvišjih mestih, do števila prostih mest.',
+        ],
+        'hint' => 'Odobrite možnosti, ki jih želite na seznamu, nato jih razvrstite po vrsti — 1 = vaša prva izbira.',
+        // Prikaz, ki najprej pove izid (postopno razkrivanje), v slogu razvrščevalnega glasovanja.
+        'outcome_not_binding' => 'Kvorum ni bil dosežen, zato izid ni zavezujoč. Spodnji vrstni red odraža doslej prešteto glasovanje.',
+        'no_result_yet' => 'Za to vprašanje še ni preštetih glasov.',
+        'elected_headline' => 'Izvoljeno — :seats mest',
+        'contested_headline' => ':count mest je spornih — glasovi so resnično izenačeni; razrešitev je stvar pravil vaše organizacije',
+        'order_ties_note' => ':count že izvoljenih mest še potrebuje dokončno določitev vrstnega reda — glasovi so resnično izenačeni; razrešitev je stvar pravil vaše organizacije',
+        'position' => ':name, mesto :pos od :total',
+        'band_span' => 'Mesta :from–:to',
+        'tie_awaiting' => 'Po glasovih resnično izenačeno — razrešitev je stvar pravil vaše organizacije',
+        'by_votes_alone' => 'Samo po glasovih',
+        'with_quota' => 'Z upoštevano kvoto',
+        'with_alternation' => 'Z upoštevanim alternirajočim zaporedjem',
+        'official_badge' => 'Uradni izid',
+        'promoted' => 'Uvrščen/a s kvoto',
+        'alternated' => 'Uvrščen/a z alternacijo',
+        'quota_binding_note' => 'Ta kvota je posvetovalne narave — uradnega izida ne spreminja.',
+        'quota_infeasible' => 'Kvote z razpoložljivimi kandidati ni mogoče izpolniti. Obvelja vrstni red samo po glasovih.',
+        'quota_provisional' => 'Kvota je začasna — izenačenje je treba najprej razrešiti v skladu s pravili vaše organizacije.',
+        'quota_pending_note' => 'Zavezujoča kvota po kategorijah še potrebuje razrešitev izenačenja (v skladu s pravili vaše organizacije), preden je seznam dokončen.',
+        'alternate_warn_no_start_group' => 'Vodilni kandidat nima določene kategorije, zato alternacija ne more izbrati začetne skupine.',
+        'alternate_warn_one_category' => 'Med kandidati je zastopana samo ena kategorija; alternacija potrebuje dve.',
+        'alternate_warn_not_enough_candidates' => 'V obeh kategorijah skupaj ni dovolj kandidatov, da bi z alternacijo zapolnili vsa mesta.',
+        'alternate_warn_extra_category' => 'Med vodilnimi kandidati se pojavi več kot dve kategoriji; alternacija podpira natanko dve.',
+        'alternate_warn_ambiguous_second_group' => 'Vsi vodilni kandidati spadajo v eno kategorijo, sledita pa jim dve ali več drugih kategorij, zato druge kategorije za alternacijo ni mogoče določiti.',
+        'cutoff_note' => 'Mejnik mest — preostala mesta niso izvoljena.',
+        'how_decided' => 'Kako je bil določen vrstni red',
+        'how_decided_hint' => 'Vsak par možnosti se neposredno primerja prek vseh glasovnic. Ena možnost je boljša od druge, če je najmočnejša veriga zaporednih zmag med njima (t. i. »najmočnejša pot«) v tej smeri močnejša kot v nasprotni — tudi če bi neposredna primerjava sama po sebi kazala drugače. Kjer sta obe smeri natanko enako močni, gre za resnično izenačenje; spodaj je prikazano kot izenačen pas, njegova razrešitev — z žrebom, z dodatnim krogom ali s sklepom občnega zbora — pa je stvar pravil vaše organizacije. Sistem sam nikoli ne ugiba.',
+        'beatpath_heading' => 'Moč najmočnejše poti',
+        'beatpath_hint' => 'Vrstica proti stolpcu: moč najmočnejše verige zaporednih zmag od možnosti v vrstici do možnosti v stolpcu. Znak »—« pomeni, da take verige ni.',
+        'beatpath_why_heading' => 'Zakaj je vrstni red tak, kot je',
+        'beatpath_why' => ':winner je boljši/a od :loser — najmočnejša veriga :path (moč :strength).',
+        'beatpath_no_winners' => 'Vsak preostali par je po glasovih resnično izenačen.',
+        'pairwise_heading' => 'Matrika neposrednih primerjav',
+        'pairwise_hint' => 'Vrstica proti stolpcu: koliko glasovnic je možnost v vrstici uvrstilo nad možnost v stolpcu.',
+        'candidate' => 'Možnost',
+        'accounting' => 'Obračun glasovnic',
+        'acc_cast' => 'Oddane glasovnice',
+        'acc_counted' => 'Štete (razvrščena veljavna možnost)',
+        'acc_blank' => 'Prazne (brez razvrstitve)',
+        'acc_invalid' => 'Neveljavne (le neupravičene možnosti)'
     ],
     'created' => [
         'success' => 'Komponenta ustvarjena.'

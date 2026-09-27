@@ -5,6 +5,7 @@ use App\Http\Controllers\BallotApiController;
 use App\Http\Controllers\BallotComponentApiController;
 use App\Http\Controllers\ElectionApiController;
 use App\Http\Controllers\OwnerController;
+use App\Http\Controllers\StatuteTextApiController;
 use App\Http\Controllers\VoteApiController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -40,6 +41,7 @@ Route::middleware(['api', 'scope.bindings'])->prefix('election/{election}/ballot
     Route::get('/{ballot}/result', [BallotApiController::class, 'result'])->name('ballot.api.result')->middleware('can:view,election');
     Route::get('/{ballot}/vote', [BallotApiController::class, 'votes'])->name('ballot.api.votes')->middleware('can:view,election');
     Route::get('/{ballot}/votes.csv', [BallotApiController::class, 'votesCsv'])->name('ballot.api.votes.csv')->middleware('can:view,election');
+    Route::get('/{ballot}/result-tally.csv', [BallotApiController::class, 'resultTallyCsv'])->name('ballot.api.result-tally.csv')->middleware('can:view,election');
     Route::post('/{ballot}/activate', [BallotApiController::class, 'activate'])->name('ballot.api.activate')->middleware('can:update,election');
     Route::post('/{ballot}/deactivate', [BallotApiController::class, 'deactivate'])->name('ballot.api.deactivate')->middleware('can:update,election');
     Route::post('/{ballot}/switch-order', [BallotApiController::class, 'switchOrder'])->name('ballot.api.switch-order')->middleware('can:update,election');
@@ -70,6 +72,13 @@ Route::middleware('api')->prefix('owner')->group(function () {
 // Cross-owner: the Owner header is present but IGNORED here.
 Route::middleware(['api', 'auth.api.admin'])->prefix('admin')->group(function () {
     Route::get('/stats', [AdminStatsController::class, 'stats'])->name('admin.stats');
+});
+
+// Global, non-election-scoped statute/legal-reference text (statute-feature-spec.md
+// §2.4): static reference data identical for every organization, behind the shared
+// bearer-token ApiAuth only — no scope.bindings, no can:view,election.
+Route::middleware('api')->prefix('component-types')->group(function () {
+    Route::get('/statute', [StatuteTextApiController::class, 'index'])->name('component-types.statute');
 });
 
 Route::fallback(function () {

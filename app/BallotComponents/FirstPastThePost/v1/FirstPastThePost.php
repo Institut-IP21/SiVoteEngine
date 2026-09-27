@@ -29,10 +29,15 @@ final class FirstPastThePost extends AbstractBallotComponent
     #[\Override]
     protected function getStrings(): array
     {
+        $laySegments = $this->laySegments('fptp');
+
         return [
             'name' => __('components.fptp.name'),
+            'method' => __('components.fptp.method'),
             'description' => __('components.fptp.description'),
             'hint' => __('components.fptp.hint'),
+            'lay_explanation' => $this->joinLaySegments($laySegments),
+            'lay_segments' => $laySegments,
         ];
     }
 
@@ -43,6 +48,54 @@ final class FirstPastThePost extends AbstractBallotComponent
             'options' => 'bail|required|array|min:2',
             'options.*' => 'bail|required|string|distinct|min:1',
         ];
+    }
+
+    #[\Override]
+    protected function getI18nStrings(): array
+    {
+        return [
+            'name' => $this->bothLocales('components.fptp.name'),
+            'method' => $this->bothLocales('components.fptp.method'),
+        ];
+    }
+
+    #[\Override]
+    protected function getStatuteTextParagraphs(): array
+    {
+        return [
+            'en' => $this->statuteParagraphs('statute.fptp', 'en'),
+            'sl' => $this->statuteParagraphs('statute.fptp', 'sl'),
+        ];
+    }
+
+    #[\Override]
+    protected function getAcademicTextParagraphs(): array
+    {
+        return [
+            'en' => $this->academicText('academic.fptp', 'en'),
+            'sl' => $this->academicText('academic.fptp', 'sl'),
+        ];
+    }
+
+    #[\Override]
+    protected function getManualStepsParagraphs(): array
+    {
+        return [
+            'en' => $this->statuteParagraphs('manual.fptp', 'en'),
+            'sl' => $this->statuteParagraphs('manual.fptp', 'sl'),
+        ];
+    }
+
+    #[\Override]
+    protected function getComparisonRatings(): array
+    {
+        return ['true_prefs' => 2, 'manipulation' => 2, 'simplicity' => 5];
+    }
+
+    #[\Override]
+    protected function getComparisonElected(): array
+    {
+        return $this->bothLocales('comparison.fptp.elected');
     }
 
     /** The literal token a voter's stored answer carries for a deliberate abstention. */

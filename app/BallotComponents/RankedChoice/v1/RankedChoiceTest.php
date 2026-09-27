@@ -484,4 +484,77 @@ class RankedChoiceTest extends TestCase
         $this->assertSame(2, $r['preferences']['A'][0]);
         $this->assertSame(1, $r['preferences']['B'][0]);
     }
+
+    public function test_get_statute_text_returns_nonempty_bilingual_paragraphs(): void
+    {
+        $statute = $this->component->getStatuteText();
+
+        $this->assertSame('RankedChoice', $statute->type);
+        $this->assertNotEmpty($statute->en);
+        $this->assertNotEmpty($statute->sl);
+        foreach ([...$statute->en, ...$statute->sl] as $paragraph) {
+            $this->assertNotSame('', trim($paragraph));
+        }
+    }
+
+    public function test_get_statute_text_mentions_deterministic_lookback_not_random_draw(): void
+    {
+        // D6.2/D6.3 grounding fact: the elimination-tie look-back is engine-
+        // executed but deterministic — the clause must say so explicitly, and
+        // must explicitly deny a random draw for that step.
+        $statute = $this->component->getStatuteText();
+        $en = implode(' ', $statute->en);
+
+        $this->assertStringContainsStringIgnoringCase('look', $en);
+        $this->assertStringContainsString('applied automatically and consistently by the voting system', $en);
+        $this->assertStringContainsString('does not involve any random draw', $en);
+    }
+
+    public function test_get_statute_text_terminal_tie_never_affirms_casting_vote_or_random_draw(): void
+    {
+        $statute = $this->component->getStatuteText();
+        $lower = strtolower(implode(' ', $statute->en));
+        foreach ([
+            'resolved by a casting vote', 'decided by a casting vote', 'broken by a casting vote',
+            'resolved by a random draw', 'decided by a random draw', 'broken by a random draw',
+        ] as $affirmation) {
+            $this->assertStringNotContainsString($affirmation, $lower);
+        }
+    }
+
+    public function test_get_academic_text_returns_populated_bilingual_content(): void
+    {
+        $academic = $this->component->getAcademicText();
+
+        $this->assertSame('RankedChoice', $academic->type);
+        foreach (['en', 'sl'] as $locale) {
+            $this->assertNotSame('', trim($academic->{$locale}['explanation']));
+            $this->assertNotEmpty($academic->{$locale}['pros']);
+            $this->assertNotEmpty($academic->{$locale}['cons']);
+        }
+        $this->assertNotSame($academic->en['explanation'], $academic->sl['explanation']);
+    }
+
+    public function test_get_manual_steps_returns_populated_bilingual_ordered_steps(): void
+    {
+        $manual = $this->component->getManualSteps();
+
+        $this->assertSame('RankedChoice', $manual->type);
+        $this->assertNotEmpty($manual->en);
+        $this->assertNotEmpty($manual->sl);
+        foreach ([...$manual->en, ...$manual->sl] as $step) {
+            $this->assertNotSame('', trim($step));
+        }
+        $this->assertNotSame($manual->en, $manual->sl);
+    }
+
+    public function test_get_method_comparison_returns_the_approved_ratings_and_elected_descriptor(): void
+    {
+        $comparison = $this->component->getMethodComparison();
+
+        $this->assertSame('RankedChoice', $comparison->type);
+        $this->assertSame(['true_prefs' => 4, 'manipulation' => 3, 'simplicity' => 3], $comparison->ratings);
+        $this->assertSame('1', $comparison->elected['en']);
+        $this->assertSame('1', $comparison->elected['sl']);
+    }
 }

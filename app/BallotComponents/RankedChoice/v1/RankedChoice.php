@@ -37,10 +37,15 @@ final class RankedChoice extends AbstractBallotComponent
     #[\Override]
     protected function getStrings(): array
     {
+        $laySegments = $this->laySegments('rankedchoice');
+
         return [
             'name' => __('components.rankedchoice.name'),
+            'method' => __('components.rankedchoice.method'),
             'description' => __('components.rankedchoice.description'),
             'hint' => __('components.rankedchoice.hint'),
+            'lay_explanation' => $this->joinLaySegments($laySegments),
+            'lay_segments' => $laySegments,
         ];
     }
 
@@ -51,6 +56,54 @@ final class RankedChoice extends AbstractBallotComponent
             'options' => 'bail|required|array|min:2',
             'options.*' => 'bail|required|string|distinct|min:1',
         ];
+    }
+
+    #[\Override]
+    protected function getI18nStrings(): array
+    {
+        return [
+            'name' => $this->bothLocales('components.rankedchoice.name'),
+            'method' => $this->bothLocales('components.rankedchoice.method'),
+        ];
+    }
+
+    #[\Override]
+    protected function getStatuteTextParagraphs(): array
+    {
+        return [
+            'en' => $this->statuteParagraphs('statute.rankedchoice', 'en'),
+            'sl' => $this->statuteParagraphs('statute.rankedchoice', 'sl'),
+        ];
+    }
+
+    #[\Override]
+    protected function getAcademicTextParagraphs(): array
+    {
+        return [
+            'en' => $this->academicText('academic.rankedchoice', 'en'),
+            'sl' => $this->academicText('academic.rankedchoice', 'sl'),
+        ];
+    }
+
+    #[\Override]
+    protected function getManualStepsParagraphs(): array
+    {
+        return [
+            'en' => $this->statuteParagraphs('manual.rankedchoice', 'en'),
+            'sl' => $this->statuteParagraphs('manual.rankedchoice', 'sl'),
+        ];
+    }
+
+    #[\Override]
+    protected function getComparisonRatings(): array
+    {
+        return ['true_prefs' => 4, 'manipulation' => 3, 'simplicity' => 3];
+    }
+
+    #[\Override]
+    protected function getComparisonElected(): array
+    {
+        return $this->bothLocales('comparison.rankedchoice.elected');
     }
 
     #[\Override]

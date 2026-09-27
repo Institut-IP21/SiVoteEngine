@@ -49,6 +49,20 @@ class ApprovalVoteTest extends TestCase
     }
 
     /**
+     * @param list<string> $options
+     * @param array<string, mixed> $settings
+     */
+    private function makeComponentWithOptions(array $options, array $settings = []): BallotComponent
+    {
+        return BallotComponent::factory()->make([
+            'type' => 'ApprovalVote',
+            'options' => $options,
+            'settings' => $settings === [] ? null : $settings,
+            'ballot_id' => (string) Str::uuid(),
+        ]);
+    }
+
+    /**
      * @param array<int, Vote> $votes
      * @return array<string, mixed>
      */
@@ -276,6 +290,111 @@ class ApprovalVoteTest extends TestCase
         $this->assertEquals(['abstain'], $r['winners']);
     }
 
+    /**
+     * D1/D3 top-K: with no `settings.seats`, K defaults to 1 and the result
+     * is byte-identical to the pre-top-K single-winner shape — the hard
+     * back-compat requirement.
+     */
+    public function test_seats_default_matches_pre_change_single_winner_shape(): void
+    {
+        $c = $this->makeComponent();
+        $r = $this->calc([
+            $this->vote($c, ['A', 'B']),
+            $this->vote($c, ['B']),
+            $this->vote($c, ['B', 'C']),
+        ], $c);
+
+        $this->assertEquals(1, $r['seats']);
+        $this->assertEquals('B', $r['winner']);
+        $this->assertEquals(['B'], $r['winners']);
+        $this->assertEquals(['B'], $r['elected']);
+        $this->assertEquals([], $r['contested']);
+        $this->assertEquals(0, $r['contested_seats']);
+        $this->assertEquals([], $r['warnings']);
+    }
+
+    public function test_seats_two_elects_top_two_with_no_contest(): void
+    {
+        $c = $this->makeComponentWithOptions(['A', 'B', 'C', 'D'], ['seats' => 2]);
+        $r = $this->calc([
+            $this->vote($c, ['A', 'B', 'C', 'D']),
+            $this->vote($c, ['A', 'B', 'C']),
+            $this->vote($c, ['A', 'B']),
+            $this->vote($c, ['A']),
+        ], $c);
+        // A=4, B=3, C=2, D=1 — no ties, so the top-2 is clean.
+
+        $this->assertEquals(2, $r['seats']);
+        $this->assertEquals(['A', 'B'], $r['elected']);
+        $this->assertEquals([], $r['contested']);
+        $this->assertEquals(0, $r['contested_seats']);
+    }
+
+    public function test_seats_two_cutoff_tie_is_contested_not_elected(): void
+    {
+        $c = $this->makeComponentWithOptions(['A', 'B', 'C', 'E'], ['seats' => 2]);
+        $r = $this->calc([
+            $this->vote($c, ['A', 'B']),
+            $this->vote($c, ['A', 'B']),
+            $this->vote($c, ['A', 'C']),
+            $this->vote($c, ['A', 'C']),
+            $this->vote($c, ['B']),
+            $this->vote($c, ['C']),
+            $this->vote($c, ['E']),
+            $this->vote($c, ['E']),
+        ], $c);
+        // A=4 (guaranteed), B=3 and C=3 genuinely tie for the 1 remaining seat.
+
+        $this->assertEquals(['A'], $r['elected']);
+        $this->assertEqualsCanonicalizing(['B', 'C'], $r['contested']);
+        $this->assertEquals(1, $r['contested_seats']);
+    }
+
+    public function test_seats_requested_beyond_roster_is_clamped_with_a_warning(): void
+    {
+        $c = $this->makeComponentWithOptions(['A', 'B', 'C'], ['seats' => 10]);
+        $r = $this->calc([
+            $this->vote($c, ['A', 'B']),
+            $this->vote($c, ['A']),
+        ], $c);
+
+        $this->assertEquals(3, $r['seats']);
+        $this->assertEquals(['A', 'B', 'C'], $r['elected']);
+        $this->assertEquals([], $r['contested']);
+        $this->assertEquals(['seats clamped to 3 (requested 10, roster has 3)'], $r['warnings']);
+    }
+
+    /**
+     * The clamp warning must fire on config alone -- an unvoted preview of a
+     * misconfigured seats value should not hide the problem until someone
+     * actually votes.
+     */
+    public function test_seats_clamp_warning_fires_even_with_no_votes_cast(): void
+    {
+        $c = $this->makeComponentWithOptions(['A', 'B', 'C'], ['seats' => 10]);
+        $r = $this->calc([], $c);
+
+        $this->assertEquals(3, $r['seats']);
+        $this->assertEquals([], $r['elected']);
+        $this->assertEquals(['seats clamped to 3 (requested 10, roster has 3)'], $r['warnings']);
+    }
+
+    /**
+     * A non-numeric `settings.seats` (e.g. a typo'd "abc") casts to 0, which
+     * would misleadingly read as "requested 0" -- the operator never typed a
+     * number at all, so the warning must say so instead.
+     */
+    public function test_non_numeric_seats_value_warns_without_a_misleading_requested_count(): void
+    {
+        $c = $this->makeComponentWithOptions(['A', 'B', 'C'], ['seats' => 'abc']);
+        $r = $this->calc([
+            $this->vote($c, ['A']),
+        ], $c);
+
+        $this->assertEquals(1, $r['seats']);
+        $this->assertEquals(['seats clamped to 1 (invalid seats value, roster has 3)'], $r['warnings']);
+    }
+
     public function test_all_voters_approve_every_option_is_a_full_tie(): void
     {
         // Degenerate maximum-approval case: every option saturates at the voter count.
@@ -325,5 +444,67 @@ class ApprovalVoteTest extends TestCase
         $this->assertFalse($this->component->validateOptions(['A']));
         $this->assertFalse($this->component->validateOptions(['A', 'A']));
         $this->assertFalse($this->component->validateOptions(['A', '']));
+    }
+
+    public function test_get_statute_text_returns_nonempty_bilingual_paragraphs(): void
+    {
+        $statute = $this->component->getStatuteText();
+
+        $this->assertSame('ApprovalVote', $statute->type);
+        $this->assertNotEmpty($statute->en);
+        $this->assertNotEmpty($statute->sl);
+        foreach ([...$statute->en, ...$statute->sl] as $paragraph) {
+            $this->assertNotSame('', trim($paragraph));
+        }
+    }
+
+    public function test_get_statute_text_cutoff_tie_never_affirms_casting_vote_or_random_draw(): void
+    {
+        // Grounding fact (D1): a tie at the seat cutoff is surfaced, never
+        // broken by a casting vote or a random draw performed by the system.
+        $statute = $this->component->getStatuteText();
+        $lower = strtolower(implode(' ', $statute->en));
+        foreach ([
+            'resolved by a casting vote', 'decided by a casting vote', 'broken by a casting vote',
+            'resolved by a random draw', 'decided by a random draw', 'broken by a random draw',
+        ] as $affirmation) {
+            $this->assertStringNotContainsString($affirmation, $lower);
+        }
+    }
+
+    public function test_get_academic_text_returns_populated_bilingual_content(): void
+    {
+        $academic = $this->component->getAcademicText();
+
+        $this->assertSame('ApprovalVote', $academic->type);
+        foreach (['en', 'sl'] as $locale) {
+            $this->assertNotSame('', trim($academic->{$locale}['explanation']));
+            $this->assertNotEmpty($academic->{$locale}['pros']);
+            $this->assertNotEmpty($academic->{$locale}['cons']);
+        }
+        $this->assertNotSame($academic->en['explanation'], $academic->sl['explanation']);
+    }
+
+    public function test_get_manual_steps_returns_populated_bilingual_ordered_steps(): void
+    {
+        $manual = $this->component->getManualSteps();
+
+        $this->assertSame('ApprovalVote', $manual->type);
+        $this->assertNotEmpty($manual->en);
+        $this->assertNotEmpty($manual->sl);
+        foreach ([...$manual->en, ...$manual->sl] as $step) {
+            $this->assertNotSame('', trim($step));
+        }
+        $this->assertNotSame($manual->en, $manual->sl);
+    }
+
+    public function test_get_method_comparison_returns_the_approved_ratings_and_elected_descriptor(): void
+    {
+        $comparison = $this->component->getMethodComparison();
+
+        $this->assertSame('ApprovalVote', $comparison->type);
+        $this->assertSame(['true_prefs' => 3, 'manipulation' => 3, 'simplicity' => 4], $comparison->ratings);
+        $this->assertSame('Multiple (top K)', $comparison->elected['en']);
+        $this->assertSame('Več (najboljših K)', $comparison->elected['sl']);
     }
 }

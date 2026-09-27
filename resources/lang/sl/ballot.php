@@ -31,7 +31,18 @@ return [
         'no_open_questions' => 'Trenutno ni odprtih vprašanj. Stran se samodejno posodobi, ko se odpre naslednje.',
     ],
     'voteId' => 'Glasovalna koda',
+    'tally_csv' => [
+        'question' => 'Vprašanje',
+        'option' => 'Možnost',
+        'count' => 'Število',
+        'rate' => 'Delež (%)',
+        'elected' => 'Izvoljen',
+        'rank' => 'Mesto/sedež',
+    ],
     'code_info' => 'Koda, ki ste jo prejeli (in je tudi del povezave, ki vas je pripeljala sem), je način, kako sistem ve, da imate pravico glasovati, ne da bi vedel, kdo ste. Zato jo hranite zase in je ne delite z nikomer. S kodo lahko po koncu glasovanja preverite, ali so bili vaši glasovi pravilno zabeleženi.',
+    // TODO(sl-review): machine-drafted Slovenian, needs native review
+    'type_info' => 'Kako deluje :name',
+    'close' => 'Zapri',
     'quorum' => [
         'met' => 'Kvorum dosežen',
         'not_met' => 'Kvorum ni dosežen — udeležba :turnout od zahtevanih :quorum; izid ni zavezujoč.',
