@@ -62,9 +62,9 @@ class BallotComponentApiController extends Controller
             'settings.categories' => 'sometimes|nullable|array',
             'settings.categories.*' => 'nullable|string',
             'settings.quota' => 'sometimes|nullable|array',
-            'settings.quota.category' => 'required_with:settings.quota|string',
-            'settings.quota.type' => 'required_with:settings.quota|in:min,max',
-            'settings.quota.count' => 'required_with:settings.quota|integer|min:0',
+            'settings.quota.type' => 'required_with:settings.quota|in:min,max,alternate',
+            'settings.quota.category' => 'required_if:settings.quota.type,min,max|string',
+            'settings.quota.count' => 'required_if:settings.quota.type,min,max|integer|min:0',
             'settings.quota.binding' => 'sometimes|boolean',
         ];
 
@@ -173,9 +173,9 @@ class BallotComponentApiController extends Controller
             'settings.categories' => 'sometimes|nullable|array',
             'settings.categories.*' => 'nullable|string',
             'settings.quota' => 'sometimes|nullable|array',
-            'settings.quota.category' => 'required_with:settings.quota|string',
-            'settings.quota.type' => 'required_with:settings.quota|in:min,max',
-            'settings.quota.count' => 'required_with:settings.quota|integer|min:0',
+            'settings.quota.type' => 'required_with:settings.quota|in:min,max,alternate',
+            'settings.quota.category' => 'required_if:settings.quota.type,min,max|string',
+            'settings.quota.count' => 'required_if:settings.quota.type,min,max|integer|min:0',
             'settings.quota.binding' => 'sometimes|boolean',
         ];
 
@@ -371,15 +371,16 @@ class BallotComponentApiController extends Controller
     }
 
     /**
-     * `quota` (OrderedList): `{category, type, count, binding}`. The HTTP
-     * validation rules already enforce the basic shape (string category,
-     * type in [min,max], integer count >= 0, optional bool binding); this
-     * normalises the numeric count to `int` and defaults `binding` to true.
-     * Deliberately does NOT enforce the stricter "min needs count>=1"
-     * business rule here — `OrderedList::parseQuota()` re-checks that at
-     * tally time and drops-with-warning if it's violated, which is the
-     * intended lenient behaviour (don't 500, don't hard-fail the request
-     * over it, but don't guess either).
+     * `quota` (OrderedList): `{category, type, count, binding}` for
+     * type in [min,max], or `{type:'alternate', binding}` (category/count
+     * absent/irrelevant — the two groups are derived from settings.categories
+     * at tally time). The HTTP validation rules already enforce the basic
+     * shape; this normalises the numeric count to `int` and defaults
+     * `binding` to true. Deliberately does NOT enforce the stricter "min
+     * needs count>=1" business rule here — `OrderedList::parseQuota()`
+     * re-checks that at tally time and drops-with-warning if it's violated,
+     * which is the intended lenient behaviour (don't 500, don't hard-fail
+     * the request over it, but don't guess either).
      *
      * @param array<string, mixed> $settings
      * @return array{category:string,type:string,count:int,binding:bool}|null
@@ -391,10 +392,20 @@ class BallotComponentApiController extends Controller
         }
 
         $quota = $settings['quota'];
-        $category = $quota['category'] ?? null;
         $type = $quota['type'] ?? null;
-        $count = $quota['count'] ?? null;
         $binding = $quota['binding'] ?? null;
+
+        if ($type === 'alternate') {
+            return [
+                'category' => '',
+                'type' => 'alternate',
+                'count' => 0,
+                'binding' => is_bool($binding) ? $binding : true,
+            ];
+        }
+
+        $category = $quota['category'] ?? null;
+        $count = $quota['count'] ?? null;
 
         if (
             !is_string($category)

@@ -299,6 +299,66 @@ class OrderedListTest extends TestCase
         $this->assertSame('corrected', $r['official']);
     }
 
+    // --- alternation ("zipper") quota, end-to-end through the full tally ---
+
+    /**
+     * Unanimous ballots settle a clean, fully-determined natural order
+     * (A,B,C,D) that does NOT already alternate M,F,M,M. A binding
+     * alternate quota must reorder it into the M,F,M,F... zipper pattern
+     * (A,C,B,D) and become the official result — end-to-end through
+     * PairwiseMatrix -> SchulzeBeatpath -> PositionResolver -> QuotaCorrector.
+     */
+    public function test_binding_alternate_quota_corrects_order_and_marks_official_corrected(): void
+    {
+        $c = $this->makeComponent(['A', 'B', 'C', 'D'], [
+            'seats' => 4,
+            'categories' => ['A' => 'M', 'B' => 'M', 'C' => 'F', 'D' => 'M'],
+            'quota' => ['type' => 'alternate', 'binding' => true],
+        ]);
+        $votes = $this->votes($c, array_fill(0, 5, ['A', 'B', 'C', 'D']));
+
+        $r = $this->calc($votes, $c);
+
+        $this->assertSame(['A', 'B', 'C', 'D'], $r['elected']);
+        $this->assertSame('corrected', $r['official']);
+        $this->assertNotNull($r['corrected']);
+        $this->assertSame(['A', 'C', 'B', 'D'], $r['corrected']['order']);
+        // D13 finding #2: a within-top-K reorder now emits a diff row for
+        // every candidate whose seated position differs from natural (B and
+        // C swap), not only below-cut promotions -- `order` is unchanged.
+        $this->assertSame(
+            [
+                ['candidate' => 'C', 'from' => 'natural:3', 'reason' => 'alternate'],
+                ['candidate' => 'B', 'from' => 'natural:2', 'reason' => 'alternate'],
+            ],
+            $r['corrected']['diff']
+        );
+        $this->assertFalse($r['corrected']['infeasible']);
+        $this->assertFalse($r['corrected']['provisional']);
+    }
+
+    /**
+     * Same ballots/settings as above but advisory (binding:false): the
+     * alternated order is still computed and reported, but `official` stays
+     * 'natural' -- an advisory quota never overrides the votes-alone result.
+     */
+    public function test_advisory_alternate_quota_leaves_official_natural(): void
+    {
+        $c = $this->makeComponent(['A', 'B', 'C', 'D'], [
+            'seats' => 4,
+            'categories' => ['A' => 'M', 'B' => 'M', 'C' => 'F', 'D' => 'M'],
+            'quota' => ['type' => 'alternate', 'binding' => false],
+        ]);
+        $votes = $this->votes($c, array_fill(0, 5, ['A', 'B', 'C', 'D']));
+
+        $r = $this->calc($votes, $c);
+
+        $this->assertSame('natural', $r['official']);
+        $this->assertNotNull($r['corrected']);
+        $this->assertSame(['A', 'C', 'B', 'D'], $r['corrected']['order']);
+        $this->assertFalse($r['corrected']['binding']);
+    }
+
     public function test_empty_votes_returns_fully_formed_empty_shape(): void
     {
         $c = $this->makeComponent(['A', 'B', 'C']);

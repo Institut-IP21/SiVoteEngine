@@ -202,11 +202,16 @@ final class OrderedList extends AbstractBallotComponent
     }
 
     /**
-     * Parse settings.quota defensively: a well-formed quota needs a string
-     * category, a min/max type, and an integer count (>= 1 for "min"; "max"
-     * additionally allows 0, meaning "exclude this category entirely");
-     * binding defaults to true when absent or not a bool. Anything else is
-     * dropped with a warning rather than guessed at.
+     * Parse settings.quota defensively. Two shapes:
+     *  - min/max: a string category, a min/max type, and an integer count
+     *    (>= 1 for "min"; "max" additionally allows 0, meaning "exclude this
+     *    category entirely"); binding defaults to true when absent or not a
+     *    bool.
+     *  - alternate: no category/count (the two groups are derived from
+     *    settings.categories at correction time) -- only a boolean binding,
+     *    defaulting to true. category/count are set to '' / 0 to keep the
+     *    array shape (and its PHPStan annotation) identical across types.
+     * Anything else is dropped with a warning rather than guessed at.
      *
      * @param array<string, mixed> $settings
      * @return array{quota: array{category:string,type:string,count:int,binding:bool}|null, warning: string|null}
@@ -222,8 +227,23 @@ final class OrderedList extends AbstractBallotComponent
             return ['quota' => null, 'warning' => 'quota settings malformed — ignored'];
         }
 
-        $category = $raw['category'] ?? null;
         $type = $raw['type'] ?? null;
+
+        if ($type === 'alternate') {
+            $binding = $raw['binding'] ?? null;
+
+            return [
+                'quota' => [
+                    'category' => '',
+                    'type' => 'alternate',
+                    'count' => 0,
+                    'binding' => is_bool($binding) ? $binding : true,
+                ],
+                'warning' => null,
+            ];
+        }
+
+        $category = $raw['category'] ?? null;
         $count = $raw['count'] ?? null;
         $binding = $raw['binding'] ?? null;
 

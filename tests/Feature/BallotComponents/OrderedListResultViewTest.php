@@ -197,6 +197,34 @@ class OrderedListResultViewTest extends TestCase
     }
 
     /**
+     * A binding alternate quota renders the alternation-specific heading and
+     * badge (not the generic min/max "with the quota applied"/"promoted by
+     * quota" wording), and still carries the official-result badge once
+     * feasible and settled.
+     */
+    public function test_binding_alternate_quota_shows_alternation_heading_and_badge_with_official_badge(): void
+    {
+        [, $ballot] = $this->finishedBallot(
+            ['A', 'B', 'C', 'D'],
+            array_fill(0, 5, ['A', 'B', 'C', 'D']),
+            [
+                'seats' => 3,
+                'categories' => ['A' => 'M', 'B' => 'M', 'C' => 'M', 'D' => 'F'],
+                'quota' => ['type' => 'alternate', 'binding' => true],
+            ]
+        );
+
+        $res = $this->fetchResult($ballot);
+        $res->assertOk();
+        $res->assertSeeText(__('components.orderedlist.by_votes_alone'));
+        $res->assertSeeText(__('components.orderedlist.with_alternation'));
+        $res->assertSeeText(__('components.orderedlist.alternated'));
+        $res->assertSeeText(__('components.orderedlist.official_badge'));
+        $res->assertDontSeeText(__('components.orderedlist.with_quota'));
+        $res->assertDontSeeText(__('components.orderedlist.promoted'));
+    }
+
+    /**
      * A binding quota whose only eligible promotion candidate (D) is
      * genuinely tied with another below-cutoff candidate (E) must stay
      * PROVISIONAL forever -- there is no runner, and no resolution
