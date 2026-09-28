@@ -74,4 +74,16 @@ task('secure:config-cache', function () {
     run("if [ -f $f ]; then chgrp {{http_user}} $f && chmod 640 $f || echo 'WARNING: config cache left unrestricted'; fi");
 });
 
+// After the atomic symlink flip, php-fpm workers keep resolving `current` to the
+// PREVIOUS release (stale realpath/opcache), so Laravel @vite reads the old
+// release's build manifest and emits asset URLs that no longer exist in the new
+// release (404 -> unstyled site). Restart php-fpm so workers pick up the new
+// release. The `deploy` user has a NOPASSWD sudoers entry for exactly this
+// command; runs right after deploy:symlink (part of deploy:publish).
+task('php-fpm:restart', function () {
+    run('sudo -n /usr/bin/systemctl restart php-fpm');
+})->desc('Restart php-fpm so the new release\'s assets are served');
+
+after('deploy:symlink', 'php-fpm:restart');
+
 after('deploy:failed', 'deploy:unlock');
