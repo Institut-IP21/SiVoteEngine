@@ -180,6 +180,8 @@ class OrderedListTest extends TestCase
         $this->assertSame('corrected', $r['official']);
         $this->assertNotNull($r['corrected']);
         $this->assertSame(['A', 'C'], $r['corrected']['order']);
+        $this->assertSame(['A', 'C'], $r['official_order']);
+        $this->assertTrue($r['final']);
         $this->assertFalse($r['corrected']['infeasible']);
         $this->assertFalse($r['corrected']['provisional']);
     }
@@ -232,6 +234,7 @@ class OrderedListTest extends TestCase
         $this->assertEqualsCanonicalizing(['A', 'B', 'C'], $r['elected']);
 
         $this->assertSame('natural', $r['official']);
+        $this->assertFalse($r['final']);
         $this->assertNotNull($r['corrected']);
         $this->assertTrue($r['corrected']['provisional']);
         $this->assertFalse($r['corrected']['infeasible']);
@@ -335,6 +338,185 @@ class OrderedListTest extends TestCase
         );
         $this->assertFalse($r['corrected']['infeasible']);
         $this->assertFalse($r['corrected']['provisional']);
+    }
+
+    // --- Alternation vs. a contested cutoff (prod bug 2026-10-03) ---------
+
+    /**
+     * Prod regression (ballot 23bc3e44, 2026-10-03): natural Schulze order
+     * F1 > M1 > M2 > {M3 = F2} > F3 with 4 seats -- the cut is contested,
+     * but only ACROSS the two groups. A zipper only ever consumes each
+     * group's OWN order (F: F1 > F2 > F3, M: M1 > M2 > M3, both strict), so
+     * the alternated slate is fully determined: F1, M1, F2, M2. It used to
+     * short-circuit on the contested cut and report the natural elected
+     * prefix F1, M1, M2 (two Ms back to back) under the "with alternation"
+     * heading.
+     */
+    public function test_alternate_resolves_a_cross_group_tie_at_the_cutoff(): void
+    {
+        $c = $this->makeComponent(
+            ['F1', 'M1', 'M2', 'M3', 'F2', 'F3'],
+            [
+                'seats' => 4,
+                'categories' => ['F1' => 'F', 'F2' => 'F', 'F3' => 'F', 'M1' => 'M', 'M2' => 'M', 'M3' => 'M'],
+                'quota' => ['type' => 'alternate', 'binding' => true],
+            ]
+        );
+        $votes = $this->votes($c, [
+            ['F1', 'M1', 'M2', 'M3', 'F2', 'F3'],
+            ['F1', 'M1', 'M2', 'F2', 'M3', 'F3'],
+        ]);
+
+        $r = $this->calc($votes, $c);
+
+        // The natural cut really is contested (M3 vs F2 for seat 4).
+        $this->assertNotNull($r['cutoff_decision']);
+        $this->assertEqualsCanonicalizing(['M3', 'F2'], $r['cutoff_decision']['candidates']);
+
+        $this->assertSame(['F1', 'M1', 'F2', 'M2'], $r['corrected']['order']);
+        $this->assertFalse($r['corrected']['provisional']);
+        $this->assertFalse($r['corrected']['infeasible']);
+        $this->assertSame('corrected', $r['official']);
+        // The official slate, and finality, are the alternated ones -- the
+        // natural cut tie no longer holds the result open.
+        $this->assertSame(['F1', 'M1', 'F2', 'M2'], $r['official_order']);
+        $this->assertTrue($r['final']);
+        $this->assertSame([], array_filter($r['warnings'], static fn (string $w): bool => str_contains($w, 'surfaced')));
+    }
+
+    /**
+     * Same profile, tied pair swapped in the roster: identical result -- no
+     * array-order coin flip.
+     */
+    public function test_alternate_cross_group_cutoff_tie_is_roster_order_independent(): void
+    {
+        $c = $this->makeComponent(
+            ['F1', 'M1', 'M2', 'F2', 'M3', 'F3'],
+            [
+                'seats' => 4,
+                'categories' => ['F1' => 'F', 'F2' => 'F', 'F3' => 'F', 'M1' => 'M', 'M2' => 'M', 'M3' => 'M'],
+                'quota' => ['type' => 'alternate', 'binding' => true],
+            ]
+        );
+        $votes = $this->votes($c, [
+            ['F1', 'M1', 'M2', 'M3', 'F2', 'F3'],
+            ['F1', 'M1', 'M2', 'F2', 'M3', 'F3'],
+        ]);
+
+        $r = $this->calc($votes, $c);
+
+        $this->assertSame(['F1', 'M1', 'F2', 'M2'], $r['corrected']['order']);
+        $this->assertSame('corrected', $r['official']);
+    }
+
+    /**
+     * A SAME-group tie the zipper actually has to consume stays surfaced:
+     * {F2 = F3} both compete for the second F seat. The determined prefix
+     * (F1, M1) is reported; nothing past the first undetermined seat is.
+     */
+    public function test_alternate_same_group_tie_at_a_needed_seat_surfaces_only_the_determined_prefix(): void
+    {
+        $c = $this->makeComponent(
+            ['F1', 'M1', 'M2', 'F2', 'F3', 'M3'],
+            [
+                'seats' => 4,
+                'categories' => ['F1' => 'F', 'F2' => 'F', 'F3' => 'F', 'M1' => 'M', 'M2' => 'M', 'M3' => 'M'],
+                'quota' => ['type' => 'alternate', 'binding' => true],
+            ]
+        );
+        $votes = $this->votes($c, [
+            ['F1', 'M1', 'M2', 'F2', 'F3', 'M3'],
+            ['F1', 'M1', 'M2', 'F3', 'F2', 'M3'],
+        ]);
+
+        $r = $this->calc($votes, $c);
+
+        $this->assertTrue($r['corrected']['provisional']);
+        $this->assertSame(['F1', 'M1'], $r['corrected']['order']);
+        $this->assertSame('natural', $r['official']);
+        $this->assertFalse($r['final']);
+    }
+
+    /**
+     * A cross-group ORDER tie inside the top-K (no contested cut) does not
+     * block the zipper either: {M1 = F2} tied at 2-3, zipper F1, M1, F2, M2.
+     */
+    public function test_alternate_cross_group_order_tie_inside_top_k_is_resolved(): void
+    {
+        $c = $this->makeComponent(
+            ['F1', 'M1', 'F2', 'M2', 'F3'],
+            [
+                'seats' => 4,
+                'categories' => ['F1' => 'F', 'F2' => 'F', 'F3' => 'F', 'M1' => 'M', 'M2' => 'M'],
+                'quota' => ['type' => 'alternate', 'binding' => true],
+            ]
+        );
+        $votes = $this->votes($c, [
+            ['F1', 'M1', 'F2', 'M2', 'F3'],
+            ['F1', 'F2', 'M1', 'M2', 'F3'],
+        ]);
+
+        $r = $this->calc($votes, $c);
+
+        $this->assertNull($r['cutoff_decision']);
+        $this->assertSame(['F1', 'M1', 'F2', 'M2'], $r['corrected']['order']);
+        $this->assertFalse($r['corrected']['provisional']);
+        $this->assertSame('corrected', $r['official']);
+    }
+
+    /**
+     * A tie for the natural #1 spot ACROSS groups makes the start group
+     * itself undecided: surface, report nothing.
+     */
+    public function test_alternate_cross_group_tie_for_first_place_surfaces_with_empty_prefix(): void
+    {
+        $c = $this->makeComponent(
+            ['F1', 'M1', 'F2', 'M2'],
+            [
+                'seats' => 2,
+                'categories' => ['F1' => 'F', 'F2' => 'F', 'M1' => 'M', 'M2' => 'M'],
+                'quota' => ['type' => 'alternate', 'binding' => true],
+            ]
+        );
+        $votes = $this->votes($c, [
+            ['F1', 'M1', 'F2', 'M2'],
+            ['M1', 'F1', 'F2', 'M2'],
+        ]);
+
+        $r = $this->calc($votes, $c);
+
+        $this->assertTrue($r['corrected']['provisional']);
+        $this->assertSame([], $r['corrected']['order']);
+        $this->assertSame('natural', $r['official']);
+    }
+
+    /**
+     * Contested cut where the tie decides WHICH groups the zipper uses: the
+     * natural top-2 is {F1} + one of {M1 (M), X1 (untagged)}. If M1 takes
+     * the seat the slate is F1, M1; if X1 does, an untagged front-runner
+     * makes the zipper infeasible. Must surface, not guess.
+     */
+    public function test_alternate_contested_cut_that_changes_the_group_set_surfaces(): void
+    {
+        $c = $this->makeComponent(
+            ['F1', 'M1', 'X1', 'F2'],
+            [
+                'seats' => 2,
+                'categories' => ['F1' => 'F', 'F2' => 'F', 'M1' => 'M'],
+                'quota' => ['type' => 'alternate', 'binding' => true],
+            ]
+        );
+        $votes = $this->votes($c, [
+            ['F1', 'M1', 'X1', 'F2'],
+            ['F1', 'X1', 'M1', 'F2'],
+        ]);
+
+        $r = $this->calc($votes, $c);
+
+        $this->assertNotNull($r['cutoff_decision']);
+        $this->assertTrue($r['corrected']['provisional']);
+        $this->assertFalse($r['corrected']['infeasible']);
+        $this->assertSame('natural', $r['official']);
     }
 
     /**

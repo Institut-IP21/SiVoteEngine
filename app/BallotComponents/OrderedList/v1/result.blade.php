@@ -23,13 +23,8 @@
     // final, so it must not block success.
     $quotaPending = $corrected !== null && ($corrected['binding'] ?? false) && ($corrected['provisional'] ?? false);
 
-    // The engine never resolves a surfaced tie itself, so ANY band that can
-    // still affect the K reported seats (span[0] <= K) keeps the result from
-    // being final; a band entirely below K (span[0] > K) is display-only
-    // ordering entanglement among already-excluded candidates and never
-    // blocks success.
-    $topKBands = array_values(array_filter($bands, fn ($b) => ($b['span'][0] ?? 1) <= $seats));
-    $success = $hasResult && $topKBands === [] && ! $quotaPending;
+    // Finality is the engine's single predicate (OrderedList::calculateResults).
+    $success = $hasResult && ($res['final'] ?? false);
 
     // When not final, report two INDEPENDENT figures rather than one
     // conflated count: membership (does this seat have a settled occupant at

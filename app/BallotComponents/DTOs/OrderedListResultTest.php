@@ -27,6 +27,8 @@ class OrderedListResultTest extends TestCase
         $this->assertSame(['strength' => [], 'winners' => []], $r['beatpath']);
         $this->assertSame(['candidates' => [], 'matrix' => []], $r['pairwise']);
         $this->assertSame([], $r['warnings']);
+        $this->assertSame([], $r['official_order']);
+        $this->assertFalse($r['final']);
     }
 
     public function test_full_round_trip(): void
@@ -85,6 +87,7 @@ class OrderedListResultTest extends TestCase
             pairwise: $pairwise,
             accounting: $accounting,
             warnings: $warnings,
+            final: true,
         );
 
         $this->assertInstanceOf(ComponentResult::class, $dto);
@@ -99,12 +102,15 @@ class OrderedListResultTest extends TestCase
         $this->assertSame($cutoffDecision, $arr['cutoff_decision']);
         $this->assertSame($corrected, $arr['corrected']);
         $this->assertSame('corrected', $arr['official']);
+        // official_order follows the corrected slate when that is official.
+        $this->assertSame(['A', 'C'], $arr['official_order']);
+        $this->assertTrue($arr['final']);
         $this->assertSame($beatpath, $arr['beatpath']);
         $this->assertSame($pairwise, $arr['pairwise']);
         $this->assertSame($accounting, $arr['accounting']);
         $this->assertSame($warnings, $arr['warnings']);
         $this->assertSame(
-            ['seats', 'strength_measure', 'ranking', 'elected', 'bands', 'cutoff_decision', 'corrected', 'official', 'beatpath', 'pairwise', 'accounting', 'warnings'],
+            ['seats', 'strength_measure', 'ranking', 'elected', 'bands', 'cutoff_decision', 'corrected', 'official', 'official_order', 'final', 'beatpath', 'pairwise', 'accounting', 'warnings'],
             array_keys($arr)
         );
     }

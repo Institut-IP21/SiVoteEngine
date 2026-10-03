@@ -559,9 +559,13 @@ final readonly class BallotService
     private function orderedListTallyRows(array $results): array
     {
         $ranking = is_array($results['ranking'] ?? null) ? $results['ranking'] : [];
-        $elected = array_map('strval', is_array($results['elected'] ?? null) ? $results['elected'] : []);
+        // The OFFICIAL slate -- a binding quota's corrected order when that is
+        // the official result, else the natural elected list.
+        $officialOrder = $results['official_order'] ?? $results['elected'] ?? null;
+        $elected = array_map('strval', is_array($officialOrder) ? $officialOrder : []);
         $cutoffDecision = is_array($results['cutoff_decision'] ?? null) ? $results['cutoff_decision'] : null;
-        $contested = $cutoffDecision !== null
+        // A natural-cut tie is moot once a binding quota slate is official.
+        $contested = $cutoffDecision !== null && ($results['official'] ?? 'natural') !== 'corrected'
             ? array_map('strval', is_array($cutoffDecision['candidates'] ?? null) ? $cutoffDecision['candidates'] : [])
             : [];
 

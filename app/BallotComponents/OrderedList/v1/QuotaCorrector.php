@@ -45,6 +45,17 @@ final class QuotaCorrector
         }
         $natural = array_map(static fn (array $e): string => $e['candidate'], $naturalEntries);
 
+        // Alternation is dispatched BEFORE the contested-cut surfacing below:
+        // a zipper consumes only each group's OWN order, so a tie at the cut
+        // between candidates of DIFFERENT groups never affects it. Whether a
+        // given tie matters is decided inside applyAlternate, which still
+        // surfaces (never guesses) every tie the zipper really depends on.
+        if ($quota['type'] === 'alternate') {
+            $this->result = $this->applyAlternate($ranking, $cutoffDecision, $bands, $categories, $binding, $seats);
+
+            return;
+        }
+
         // 1. Surface, rather than guess, while the cutoff itself is contested.
         if ($cutoffDecision !== null) {
             $order = [];
@@ -67,19 +78,9 @@ final class QuotaCorrector
 
         $inBand = $this->bandMembership($bands);
 
-        // 2. Alternation has no single "category" (it derives its two
-        // groups from settings.categories itself), so it is dispatched
-        // before the category-membership check below, which does not apply
-        // to it.
-        if ($quota['type'] === 'alternate') {
-            $this->result = $this->applyAlternate($naturalEntries, $belowCutEntries, $categories, $binding, $inBand);
-
-            return;
-        }
-
         $category = $quota['category'];
 
-        // 3. A quota whose category no candidate carries is dropped, not guessed at.
+        // 2. A quota whose category no candidate carries is dropped, not guessed at.
         if (!in_array($category, array_values($categories), true)) {
             $this->warnings[] = 'quota category not among candidate categories — quota ignored';
             $this->result = [
@@ -236,6 +237,31 @@ final class QuotaCorrector
      * may reorder members WITHIN the natural top-K too, since the natural
      * order is not guaranteed to already alternate.
      *
+     * Ties (D14, prod regression 2026-10-03). The zipper's output is a
+     * function of exactly three things: the start group, the second group,
+     * and each group's OWN internal order over the prefix it consumes. The
+     * relative order of two candidates from DIFFERENT groups never matters
+     * -- seat i takes "the best remaining member of group X" regardless of
+     * where any member of group Y sits. So a tie is surfaced only when it
+     * actually leaves one of those three things undecided:
+     *
+     *   - start group: every candidate that could be #1 (best_pos === 1)
+     *     must share one category (untagged counts as its own value);
+     *   - group set: under a contested cut, the categories of the surely-
+     *     seated set (status elected) and of the possibly-seated set
+     *     (elected + contested) must coincide -- every real top-K lies
+     *     between the two, so equality means the tie cannot change which
+     *     groups (or which guard) apply;
+     *   - each pick: the picked candidate must strictly beat every not-yet-
+     *     placed member of the pool it was taken from. Two candidates in
+     *     different bands are always strictly ordered (non-overlapping
+     *     position intervals), so only a same-band peer with no internal
+     *     beatpath constraint can make a pick ambiguous.
+     *
+     * A contested natural cut therefore no longer short-circuits the
+     * zipper: a tie between, e.g., an M and an F for the last natural seat
+     * is irrelevant once the slate is built per group.
+     *
      * Precondition (D13, amended D13.1): the domain is what the zipper can
      * actually SEAT -- the fill below makes exactly `seats` picks, each
      * advancing one pool pointer, so it can never reach a candidate outside
@@ -245,102 +271,95 @@ final class QuotaCorrector
      * from below the cut would itself be a guess (D13.1). Group derivation:
      *
      *   1. Start group: `group1` = the natural #1 candidate's own category.
-     *      Untagged -> infeasible, `alternate_warn_no_start_group` (the
-     *      start group is genuinely undefined; fail honestly rather than
-     *      falling back to a lower candidate).
-     *   2. `topCats` = the distinct TAGGED categories among `naturalEntries`
-     *      (the natural top-`seats` slate -- the set that WOULD be seated
-     *      with no quota at all).
-     *      - Guard 4a: any candidate in `naturalEntries` is untagged ->
-     *        infeasible, `alternate_warn_extra_category` (an untagged
-     *        front-runner would be silently displaced by a 2-group zipper).
+     *      Untagged -> infeasible, `alternate_warn_no_start_group`.
+     *   2. `topCats` = the distinct TAGGED categories among the natural
+     *      top-`seats` slate (under a contested cut: the possibly-seated
+     *      set, after the group-set check above).
+     *      - Guard 4a: any untagged candidate in it -> infeasible,
+     *        `alternate_warn_extra_category`.
      *      - Guard 4b: `|topCats| >= 3` -> infeasible,
-     *        `alternate_warn_extra_category` (more than two categories
-     *        among the leading candidates; a same-untracked candidate that
-     *        ranks BELOW naturalEntries -- would not win anyway -- is
-     *        correctly ignored, since topCats only looks at naturalEntries).
+     *        `alternate_warn_extra_category`.
      *      - `|topCats| == 2`: `group2` = the other element of `topCats`.
-     *        Both groups are anchored in the naturally-seated set, so any
-     *        further category below the cut is provably never-seatable (the
-     *        zipper only ever alternates group1/group2, and run-out stays
-     *        within them) -- correctly ignored. This is the D13 fix for
-     *        finding #1 (Case A/B stay feasible).
-     *      - `|topCats| == 1` (monochromatic top-K): the second group can
-     *        only come from below the cut, so it must be UNAMBIGUOUS.
-     *        `otherCats` = the distinct tagged categories over the WHOLE
-     *        roster (natural + below-cut) that are `!= group1`.
-     *          - `|otherCats| == 0` -> infeasible,
-     *            `alternate_warn_one_category` (only one category anywhere).
-     *          - `|otherCats| == 1` -> `group2` = that sole other category
-     *            (the central rebalance case: an all-group1 top-K vs a
-     *            single below-cut group -- MUST stay feasible).
-     *          - `|otherCats| >= 2` -> infeasible,
-     *            `alternate_warn_ambiguous_second_group` (D13.1: two or more
-     *            candidate categories could fill the second slot -- refuse
-     *            rather than let whichever ranks highest silently win with
-     *            no warning).
-     *   3. The two pools: every candidate (natural + below-cut, natural
-     *      order preserved) tagged group1 or group2 respectively; untagged
-     *      or other-category candidates are excluded from both -- they can
-     *      never be part of a group1/group2 zipper.
-     *      - Guard 3: if the two pools together can't fill every seat ->
-     *        infeasible, `alternate_warn_not_enough_candidates`. (By
-     *        construction this is now always satisfied once guards 1/4a/4b
-     *        and the monochromatic-branch guards pass -- every one of the
-     *        `seats` naturalEntries is tagged group1 or group2, so the pools
-     *        already sum to >= seats -- but the check is kept as the
-     *        explicit invariant the run-out branch below relies on.)
+     *      - `|topCats| == 1` (monochromatic top-K): `otherCats` = the
+     *        distinct tagged categories over the WHOLE roster `!= group1`;
+     *        0 -> infeasible (`alternate_warn_one_category`), 1 -> that one,
+     *        >=2 -> infeasible (`alternate_warn_ambiguous_second_group`).
+     *   3. The two pools: every candidate tagged group1 or group2 (natural
+     *      order preserved); Guard 3: together they must fill every seat
+     *      (`alternate_warn_not_enough_candidates`).
      *
      * Fill: walk the alternating pattern seat by seat, taking the highest
      * natural-ranked not-yet-placed candidate of the wanted group; once a
-     * group is exhausted, fill the rest from the other group (owner rule),
-     * which always yields a full slate since guard 3 guarantees the two
-     * pools together have >= seats members. A pick that lands on a member
-     * of an unresolved band is surfaced as provisional -- exactly like
-     * `applyMin`/`applyMax`'s `touchesBand`, the engine does not privilege
-     * one tied candidate over another by array order. This also covers a
-     * tie for the natural #1 spot itself: the very first pick is always the
-     * highest-natural-ranked group1 member, so if that pick is itself in an
-     * unresolved band, seat 1 already surfaces provisional.
+     * group is exhausted, fill the rest from the other group (owner rule).
      *
-     * Diff (audit only -- `order` itself never changes because of this):
-     * every candidate whose SEATED position differs from its natural one
-     * gets a diff row (`reason:'alternate'`) -- not only below-cut
-     * promotions. A below-cut entrant records `from:'below_cut'`; a
-     * candidate who stayed in the top-K but moved position records
-     * `from:'natural:<1-based prior rank>'`.
+     * Provisional result: `order` is the DETERMINED PREFIX only -- the
+     * seats the zipper fills identically however the organization resolves
+     * the tie -- never the natural order (which, shown under the
+     * "with alternation" heading, read as a broken zipper).
      *
-     * @param list<array{candidate:string,best_pos:int,worst_pos:int,determined:bool,status:string}> $naturalEntries
-     * @param list<array{candidate:string,best_pos:int,worst_pos:int,determined:bool,status:string}> $belowCutEntries
+     * Diff (audit only): every seated candidate whose position differs from
+     * its natural one -- `from:'natural:<1-based rank>'` for a surely-seated
+     * candidate, `from:'contested'` for one from a contested cut, and
+     * `from:'below_cut'` for one from below it.
+     *
+     * @param list<array{candidate:string,best_pos:int,worst_pos:int,determined:bool,status:string}> $ranking
+     * @param array{remaining_seats:int,candidates:list<string>,internal_constraints:list<array{winner:string,loser:string}>,head_to_head:array<string,array<string,int>>}|null $cutoffDecision
+     * @param list<array{candidates:list<string>,span:array{0:int,1:int},internal_constraints:list<array{winner:string,loser:string}>,head_to_head:array<string,array<string,int>>,affects_cutoff:bool}> $bands
      * @param array<string,string> $categories
-     * @param array<string,bool> $inBand
      * @return array{order:list<string>,diff:list<array{candidate:string,from:string,reason:string}>,infeasible:bool,provisional:bool,binding:bool}
      */
-    private function applyAlternate(array $naturalEntries, array $belowCutEntries, array $categories, bool $binding, array $inBand): array
+    private function applyAlternate(array $ranking, ?array $cutoffDecision, array $bands, array $categories, bool $binding, int $seats): array
     {
-        $natural = array_map(static fn (array $e): string => $e['candidate'], $naturalEntries);
-        $seats = count($naturalEntries);
-
-        if ($naturalEntries === []) {
-            return ['order' => $natural, 'diff' => [], 'infeasible' => false, 'provisional' => false, 'binding' => $binding];
+        if ($ranking === []) {
+            return ['order' => [], 'diff' => [], 'infeasible' => false, 'provisional' => false, 'binding' => $binding];
         }
 
-        /** @var list<array{candidate:string,best_pos:int,worst_pos:int,determined:bool,status:string}> $allEntries */
-        $allEntries = [...$naturalEntries, ...$belowCutEntries];
+        // The surely-seated and possibly-seated sets. With a settled cut
+        // both are simply the natural top-`seats` slate.
+        if ($cutoffDecision === null) {
+            $surelySeated = array_slice($ranking, 0, $seats);
+            $possiblySeated = $surelySeated;
+        } else {
+            $surelySeated = array_values(array_filter($ranking, static fn (array $e): bool => $e['status'] === 'elected'));
+            $possiblySeated = array_values(array_filter($ranking, static fn (array $e): bool => $e['status'] !== 'excluded'));
+        }
+        $natural = array_map(static fn (array $e): string => $e['candidate'], $surelySeated);
 
-        // Guard 1 -- start group: the natural #1 candidate's own category.
-        $group1 = $categories[$naturalEntries[0]['candidate']] ?? null;
-        if ($group1 === null) {
-            $this->warnings[] = __('components.orderedlist.alternate_warn_no_start_group');
+        $infeasible = function (string $warningKey) use ($natural, $binding): array {
+            $this->warnings[] = __($warningKey);
 
             return ['order' => $natural, 'diff' => [], 'infeasible' => true, 'provisional' => false, 'binding' => $binding];
+        };
+
+        // Start group must not depend on a tie for first place.
+        $startCats = [];
+        foreach ($ranking as $e) {
+            if ($e['best_pos'] === 1) {
+                $startCats[$categories[$e['candidate']] ?? "\0untagged"] = true;
+            }
+        }
+        if (count($startCats) > 1) {
+            return $this->surfaceAlternate([], $binding);
         }
 
-        // D13.1 -- topCats: the distinct TAGGED categories among
-        // naturalEntries (the set that would be seated with no quota).
+        // The group set must not depend on how a contested cut resolves.
+        $surelyCats = $this->categorySignature($surelySeated, $categories);
+        $possiblyCats = $this->categorySignature($possiblySeated, $categories);
+        if ($surelyCats !== $possiblyCats) {
+            return $this->surfaceAlternate([], $binding);
+        }
+
+        // Guard 1 -- start group: the natural #1 candidate's own category.
+        $group1 = $categories[$ranking[0]['candidate']] ?? null;
+        if ($group1 === null) {
+            return $infeasible('components.orderedlist.alternate_warn_no_start_group');
+        }
+
+        // D13.1 -- topCats: the distinct TAGGED categories among the
+        // (tie-invariant, checked above) seated set.
         $topCatsSet = [];
         $hasUntaggedInTop = false;
-        foreach ($naturalEntries as $e) {
+        foreach ($possiblySeated as $e) {
             $cat = $categories[$e['candidate']] ?? null;
             if ($cat === null) {
                 $hasUntaggedInTop = true;
@@ -350,23 +369,15 @@ final class QuotaCorrector
         }
 
         // Guard 4a -- an untagged front-runner would be silently displaced.
-        if ($hasUntaggedInTop) {
-            $this->warnings[] = __('components.orderedlist.alternate_warn_extra_category');
-
-            return ['order' => $natural, 'diff' => [], 'infeasible' => true, 'provisional' => false, 'binding' => $binding];
-        }
-
         // Guard 4b -- more than two categories among the leading candidates.
-        if (count($topCatsSet) >= 3) {
-            $this->warnings[] = __('components.orderedlist.alternate_warn_extra_category');
-
-            return ['order' => $natural, 'diff' => [], 'infeasible' => true, 'provisional' => false, 'binding' => $binding];
+        if ($hasUntaggedInTop || count($topCatsSet) >= 3) {
+            return $infeasible('components.orderedlist.alternate_warn_extra_category');
         }
 
         $group2 = null;
 
         if (count($topCatsSet) === 2) {
-            // Both groups are anchored in naturalEntries; anything else
+            // Both groups are anchored in the seated set; anything else
             // below the cut is provably never-seatable by the zipper.
             foreach (array_keys($topCatsSet) as $cat) {
                 if ($cat !== $group1) {
@@ -375,11 +386,10 @@ final class QuotaCorrector
                 }
             }
         } else {
-            // Monochromatic top-K (topCatsSet === [group1 => true]): the
-            // second group must come from below the cut, and must be
-            // UNAMBIGUOUS across the whole roster.
+            // Monochromatic top-K: the second group must come from below the
+            // cut, and must be UNAMBIGUOUS across the whole roster.
             $otherCatsSet = [];
-            foreach ($allEntries as $e) {
+            foreach ($ranking as $e) {
                 $cat = $categories[$e['candidate']] ?? null;
                 if ($cat !== null && $cat !== $group1) {
                     $otherCatsSet[$cat] = true;
@@ -387,113 +397,140 @@ final class QuotaCorrector
             }
 
             if (count($otherCatsSet) === 0) {
-                $this->warnings[] = __('components.orderedlist.alternate_warn_one_category');
-
-                return ['order' => $natural, 'diff' => [], 'infeasible' => true, 'provisional' => false, 'binding' => $binding];
+                return $infeasible('components.orderedlist.alternate_warn_one_category');
             }
 
             if (count($otherCatsSet) >= 2) {
-                $this->warnings[] = __('components.orderedlist.alternate_warn_ambiguous_second_group');
-
-                return ['order' => $natural, 'diff' => [], 'infeasible' => true, 'provisional' => false, 'binding' => $binding];
+                return $infeasible('components.orderedlist.alternate_warn_ambiguous_second_group');
             }
 
-            foreach (array_keys($otherCatsSet) as $cat) {
-                $group2 = $cat;
-                break;
-            }
+            $group2 = array_key_first($otherCatsSet);
         }
 
-        // Unreachable in practice: |topCats|==2 always has a non-group1
-        // element (group1 itself is one of the two), and the |topCats|==1
-        // branch above already returns for 0 or >=2 other categories,
-        // leaving exactly one to assign. Kept as an explicit, statically
-        // provable guard rather than a `@var` cast over dead code.
+        // Unreachable in practice (see the derivation above); kept as an
+        // explicit, statically provable guard.
         if ($group2 === null) {
-            $this->warnings[] = __('components.orderedlist.alternate_warn_one_category');
-
-            return ['order' => $natural, 'diff' => [], 'infeasible' => true, 'provisional' => false, 'binding' => $binding];
+            return $infeasible('components.orderedlist.alternate_warn_one_category');
         }
 
         // The two pools (natural order preserved). Untagged/other-category
         // candidates are excluded from both -- never reachable by the zipper.
-        $poolStart = array_values(array_filter(
-            $allEntries,
-            static fn (array $e): bool => ($categories[$e['candidate']] ?? null) === $group1
+        $poolStart = array_values(array_map(
+            static fn (array $e): string => $e['candidate'],
+            array_filter($ranking, static fn (array $e): bool => ($categories[$e['candidate']] ?? null) === $group1)
         ));
-        $poolOther = array_values(array_filter(
-            $allEntries,
-            static fn (array $e): bool => ($categories[$e['candidate']] ?? null) === $group2
+        $poolOther = array_values(array_map(
+            static fn (array $e): string => $e['candidate'],
+            array_filter($ranking, static fn (array $e): bool => ($categories[$e['candidate']] ?? null) === $group2)
         ));
 
         // Guard 3 -- the two pools together must be able to fill every seat.
         if (count($poolStart) + count($poolOther) < $seats) {
-            $this->warnings[] = __('components.orderedlist.alternate_warn_not_enough_candidates');
-
-            return ['order' => $natural, 'diff' => [], 'infeasible' => true, 'provisional' => false, 'binding' => $binding];
+            return $infeasible('components.orderedlist.alternate_warn_not_enough_candidates');
         }
 
-        // Fill: unchanged mechanics, running on the two pools defined above
-        // (group1 = start). Guard 3 guarantees the run-out branch stays in
-        // bounds.
+        // Tie lookup: band index per candidate, and the strict beatpath
+        // constraints inside each band.
+        $bandOf = [];
+        /** @var array<string,array<string,bool>> $beats */
+        $beats = [];
+        foreach ($bands as $bi => $band) {
+            foreach ($band['candidates'] as $c) {
+                $bandOf[$c] = $bi;
+            }
+            foreach ($band['internal_constraints'] as $con) {
+                $beats[$con['winner']][$con['loser']] = true;
+            }
+        }
+
         $ptrStart = 0;
         $ptrOther = 0;
-
         $order = [];
-        $provisional = false;
 
         for ($i = 0; $i < $seats; $i++) {
             $wantStart = $i % 2 === 0;
+            // Run-out (owner rule): once a group is exhausted, fill from the other.
+            $fromStart = $wantStart ? $ptrStart < count($poolStart) : $ptrOther >= count($poolOther);
 
-            if ($wantStart) {
-                if ($ptrStart < count($poolStart)) {
-                    $pick = $poolStart[$ptrStart];
-                    $ptrStart++;
-                } else {
-                    // Run-out (owner rule): fill from the other group.
-                    $pick = $poolOther[$ptrOther];
-                    $ptrOther++;
-                }
+            if ($fromStart) {
+                $pool = $poolStart;
+                $ptr = $ptrStart++;
             } else {
-                if ($ptrOther < count($poolOther)) {
-                    $pick = $poolOther[$ptrOther];
-                    $ptrOther++;
-                } else {
-                    $pick = $poolStart[$ptrStart];
-                    $ptrStart++;
+                $pool = $poolOther;
+                $ptr = $ptrOther++;
+            }
+            $pick = $pool[$ptr];
+
+            // Ambiguous iff a not-yet-placed member of the SAME pool is tied
+            // with the pick (same band, no strict beatpath between them).
+            for ($j = $ptr + 1, $n = count($pool); $j < $n; $j++) {
+                $rival = $pool[$j];
+                if (isset($bandOf[$pick], $bandOf[$rival])
+                    && $bandOf[$pick] === $bandOf[$rival]
+                    && !($beats[$pick][$rival] ?? false)
+                ) {
+                    return $this->surfaceAlternate($order, $binding);
                 }
             }
 
-            if ($inBand[$pick['candidate']] ?? false) {
-                $provisional = true;
-            }
-
-            $order[] = $pick['candidate'];
+            $order[] = $pick;
         }
 
-        if ($provisional) {
-            $this->warnings[] = "quota surfaced: a tie must be resolved (per your organization's rules) first";
-
-            return ['order' => $natural, 'diff' => [], 'infeasible' => false, 'provisional' => true, 'binding' => $binding];
+        /** @var array<string,int> $rankIndex */
+        $rankIndex = [];
+        $statusOf = [];
+        foreach ($ranking as $idx => $e) {
+            $rankIndex[$e['candidate']] = $idx;
+            $statusOf[$e['candidate']] = $e['status'];
         }
-
-        // Finding #2: a diff row for every seated candidate whose position
-        // differs from its natural one -- below-cut entrants AND within-
-        // top-K reorders alike. `order` itself is unaffected; this is audit
-        // metadata only.
-        /** @var array<string,int> $naturalPos */
-        $naturalPos = array_flip($natural);
+        $naturalSet = array_flip($natural);
 
         $diff = [];
         foreach ($order as $pos => $candidate) {
-            if (!array_key_exists($candidate, $naturalPos)) {
+            if (array_key_exists($candidate, $naturalSet)) {
+                if ($rankIndex[$candidate] !== $pos) {
+                    $diff[] = ['candidate' => $candidate, 'from' => 'natural:' . ($rankIndex[$candidate] + 1), 'reason' => 'alternate'];
+                }
+            } elseif (($statusOf[$candidate] ?? null) === 'contested') {
+                $diff[] = ['candidate' => $candidate, 'from' => 'contested', 'reason' => 'alternate'];
+            } else {
                 $diff[] = ['candidate' => $candidate, 'from' => 'below_cut', 'reason' => 'alternate'];
-            } elseif ($naturalPos[$candidate] !== $pos) {
-                $diff[] = ['candidate' => $candidate, 'from' => 'natural:' . ($naturalPos[$candidate] + 1), 'reason' => 'alternate'];
             }
         }
 
         return ['order' => $order, 'diff' => $diff, 'infeasible' => false, 'provisional' => false, 'binding' => $binding];
+    }
+
+    /**
+     * A surfaced alternation: only the determined prefix is reported.
+     *
+     * @param list<string> $prefix
+     * @return array{order:list<string>,diff:list<array{candidate:string,from:string,reason:string}>,infeasible:bool,provisional:bool,binding:bool}
+     */
+    private function surfaceAlternate(array $prefix, bool $binding): array
+    {
+        $this->warnings[] = "quota surfaced: a tie must be resolved (per your organization's rules) first";
+
+        return ['order' => $prefix, 'diff' => [], 'infeasible' => false, 'provisional' => true, 'binding' => $binding];
+    }
+
+    /**
+     * Sorted distinct categories of a candidate set, untagged as its own value.
+     *
+     * @param list<array{candidate:string,best_pos:int,worst_pos:int,determined:bool,status:string}> $entries
+     * @param array<string,string> $categories
+     * @return list<string>
+     */
+    private function categorySignature(array $entries, array $categories): array
+    {
+        $set = [];
+        foreach ($entries as $e) {
+            $set[$categories[$e['candidate']] ?? "\0untagged"] = true;
+        }
+        $keys = array_map('strval', array_keys($set));
+        sort($keys);
+
+        return $keys;
     }
 
     /**

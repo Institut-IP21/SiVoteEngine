@@ -689,8 +689,8 @@ class QuotaCorrectorTest extends TestCase
      * The M,F pattern's second slot needs "the highest-ranked unplaced F",
      * but the two candidates who could fill it (D, E) are genuinely tied
      * with each other (an unresolved band) -- the engine must surface this,
-     * never pick D over E (or vice versa) merely by array order, and the
-     * natural order stands until the organization resolves the tie itself.
+     * never pick D over E (or vice versa) merely by array order; only the
+     * determined prefix is reported until the organization resolves the tie.
      */
     public function test_alternate_pick_needing_a_tied_candidate_stays_provisional_forever(): void
     {
@@ -716,7 +716,9 @@ class QuotaCorrectorTest extends TestCase
         $qc = new QuotaCorrector($ranking, null, $bands, $categories, $quota, 3);
         $result = $qc->result();
 
-        $this->assertSame(['A', 'B', 'C'], $result['order']);
+        // Only the determined prefix is reported (D14): seat 1 is A; seat 2
+        // needs an F and D/E are tied for it.
+        $this->assertSame(['A'], $result['order']);
         $this->assertSame([], $result['diff']);
         $this->assertFalse($result['infeasible']);
         $this->assertTrue($result['provisional']);
@@ -976,7 +978,8 @@ class QuotaCorrectorTest extends TestCase
         $qc = new QuotaCorrector($ranking, null, $bands, $categories, $quota, 2);
         $result = $qc->result();
 
-        $this->assertSame(['A', 'B'], $result['order']);
+        // Start group itself undecided (A:M vs B:F tied for #1) -> nothing determined.
+        $this->assertSame([], $result['order']);
         $this->assertSame([], $result['diff']);
         $this->assertFalse($result['infeasible']);
         $this->assertTrue($result['provisional']);

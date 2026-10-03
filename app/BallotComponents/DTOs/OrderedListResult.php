@@ -24,6 +24,9 @@ final readonly class OrderedListResult implements ComponentResult
      * @param array{candidates:list<string>,matrix:array<string,array<string,int>>} $pairwise
      * @param array{cast:int,blank:int,invalid_only:int,counted:int} $accounting
      * @param list<string> $warnings
+     * @param bool $final the engine's single finality predicate -- every
+     *        consumer (result page, tally CSV, web_app) reads this instead of
+     *        re-deriving it from bands/quota state.
      */
     public function __construct(
         public int $seats,
@@ -37,7 +40,21 @@ final readonly class OrderedListResult implements ComponentResult
         public array $pairwise,
         public array $accounting,
         public array $warnings,
+        public bool $final = false,
     ) {}
+
+    /**
+     * The OFFICIAL slate: the binding quota's corrected order when that is
+     * the official result, otherwise the natural (surely-)elected list.
+     *
+     * @return list<string>
+     */
+    public function officialOrder(): array
+    {
+        return ($this->official === 'corrected' && $this->corrected !== null)
+            ? $this->corrected['order']
+            : $this->elected;
+    }
 
     public static function empty(int $seats): self
     {
@@ -68,6 +85,8 @@ final readonly class OrderedListResult implements ComponentResult
             'cutoff_decision' => $this->cutoffDecision,
             'corrected' => $this->corrected,
             'official' => $this->official,
+            'official_order' => $this->officialOrder(),
+            'final' => $this->final,
             'beatpath' => $this->beatpath,
             'pairwise' => $this->pairwise,
             'accounting' => $this->accounting,

@@ -186,6 +186,38 @@ class BallotServiceTest extends TestCase
         $this->assertSame('', $davor[5]);
     }
 
+    /**
+     * A binding quota's corrected slate is the OFFICIAL result, so the tally
+     * CSV must report it (prod regression 2026-10-03) -- not the natural
+     * slate, and not a "contested" marker for a natural-cut tie the
+     * alternation made moot.
+     */
+    public function test_results_tally_csv_reports_the_binding_alternation_slate(): void
+    {
+        [, $ballot, $components] = $this->make([
+            ['type' => 'OrderedList', 'version' => 'v1', 'title' => 'Board', 'options' => ['F1', 'M1', 'M2', 'M3', 'F2', 'F3'], 'settings' => [
+                'seats' => 4,
+                'categories' => ['F1' => 'F', 'F2' => 'F', 'F3' => 'F', 'M1' => 'M', 'M2' => 'M', 'M3' => 'M'],
+                'quota' => ['type' => 'alternate', 'binding' => true],
+            ]],
+        ]);
+        Vote::factory()->forBallot($ballot)->withValues([$components[0]->id => ['F1', 'M1', 'M2', 'M3', 'F2', 'F3']])->create();
+        Vote::factory()->forBallot($ballot)->withValues([$components[0]->id => ['F1', 'M1', 'M2', 'F2', 'M3', 'F3']])->create();
+
+        $csv = $this->service->resultsTallyCsv($ballot);
+
+        foreach (['F1' => '1', 'M1' => '2', 'F2' => '3', 'M2' => '4'] as $option => $rank) {
+            $row = $this->findCsvRow($csv, $option);
+            $this->assertSame('yes', $row[4], $option);
+            $this->assertSame($rank, $row[5], $option);
+        }
+        foreach (['M3', 'F3'] as $option) {
+            $row = $this->findCsvRow($csv, $option);
+            $this->assertSame('no', $row[4], $option);
+            $this->assertSame('', $row[5], $option);
+        }
+    }
+
     public function test_results_tally_csv_shows_the_elected_set_and_a_contested_marker_at_a_tied_cutoff(): void
     {
         [, $ballot, $components] = $this->make([

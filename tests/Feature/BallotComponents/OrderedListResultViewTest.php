@@ -257,6 +257,35 @@ class OrderedListResultViewTest extends TestCase
         $res->assertDontSee('Runner');
     }
 
+    /**
+     * Prod regression 2026-10-03: a binding alternation over a natural cut
+     * contested only ACROSS groups (M3 vs F2 for seat 4) is final -- the
+     * page must show the elected headline and the alternated slate
+     * F1, M1, F2, M2, never "1 seat contested" + the natural F1, M1, M2.
+     */
+    public function test_binding_alternation_over_a_cross_group_cutoff_tie_is_final_and_alternates(): void
+    {
+        [, $ballot] = $this->finishedBallot(
+            ['F1', 'M1', 'M2', 'M3', 'F2', 'F3'],
+            [
+                ['F1', 'M1', 'M2', 'M3', 'F2', 'F3'],
+                ['F1', 'M1', 'M2', 'F2', 'M3', 'F3'],
+            ],
+            [
+                'seats' => 4,
+                'categories' => ['F1' => 'F', 'F2' => 'F', 'F3' => 'F', 'M1' => 'M', 'M2' => 'M', 'M3' => 'M'],
+                'quota' => ['type' => 'alternate', 'binding' => true],
+            ]
+        );
+
+        $res = $this->fetchResult($ballot);
+        $res->assertOk();
+        $res->assertSeeText(__('components.orderedlist.elected_headline', ['seats' => 4]));
+        $res->assertDontSeeText(__('components.orderedlist.contested_headline', ['count' => 1]));
+        $res->assertDontSeeText(__('components.orderedlist.quota_pending_note'));
+        $res->assertSeeTextInOrder(['1. F1', '2. M1', '3. F2', '4. M2']);
+    }
+
     public function test_disclosure_is_collapsed_and_shows_pairwise_matrix_beatpath_and_accounting(): void
     {
         [, $ballot] = $this->finishedBallot(['A', 'B', 'C'], [['A', 'B'], ['A', 'B'], ['A']], ['seats' => 2]);

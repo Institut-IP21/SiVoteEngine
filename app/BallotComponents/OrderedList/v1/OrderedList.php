@@ -205,6 +205,24 @@ final class OrderedList extends AbstractBallotComponent
             ? 'corrected'
             : 'natural';
 
+        // Finality -- the ONE predicate every consumer reads. An official
+        // alternation slate is fully determined by construction (the
+        // corrector surfaces every tie the zipper depends on; cross-group
+        // ties never matter to it), so natural-order ties -- even a contested
+        // natural cut -- do not keep it from being final. Otherwise any band
+        // that can still touch the K seats, or a binding quota still waiting
+        // on a tie, keeps the result open.
+        $alternationOfficial = $official === 'corrected' && $quota['type'] === 'alternate';
+        $topKBandOpen = false;
+        foreach ($positions->bands() as $band) {
+            if ($band['span'][0] <= $seats) {
+                $topKBandOpen = true;
+                break;
+            }
+        }
+        $quotaPending = $corrected !== null && $quotaBinding && $corrected['provisional'];
+        $final = $alternationOfficial || (!$topKBandOpen && !$quotaPending);
+
         return new OrderedListResult(
             seats: $seats,
             ranking: $positions->ranking(),
@@ -217,6 +235,7 @@ final class OrderedList extends AbstractBallotComponent
             pairwise: ['candidates' => $pairwiseMatrix->candidates(), 'matrix' => $pairwiseMatrix->matrix()],
             accounting: $accounting,
             warnings: $warnings,
+            final: $final,
         );
     }
 
