@@ -286,8 +286,100 @@ class OrderedListResultViewTest extends TestCase
         $res->assertDontSeeText(trans_choice('components.orderedlist.elected_headline', 3, ['seats' => 3]));
         // A keeps seat 1 either way; B is surely seated but its seat differs
         // ([A, C, B] by alternation vs [A, B, D] by votes alone).
-        $res->assertSeeTextInOrder(['1. A', '2. ' . __('components.orderedlist.seat_undecided')]);
-        $res->assertSeeText(__('components.orderedlist.still_tied_for_open_seats', ['names' => 'B, C, D']));
+        $res->assertSeeTextInOrder([__('components.orderedlist.official_badge'), 'A', __('components.orderedlist.seat_undecided'), __('components.orderedlist.seat_undecided')]);
+        // The C/D tie is spelled out: each way it can go, and what follows.
+        $res->assertSeeTextInOrder([
+            trans_choice('components.orderedlist.tie_heading', 2, ['seats' => '2–3']),
+            $this->tieIf('C', 'D'),
+            '2. C', '3. B',
+            __('components.orderedlist.tie_out', ['names' => 'D']),
+            $this->tieIf('D', 'C'),
+            '2. B', '3. D',
+            __('components.orderedlist.tie_out', ['names' => 'C']),
+            __('components.orderedlist.tie_option_infeasible'),
+        ]);
+        $res->assertDontSeeText(__('components.orderedlist.still_tied_for_open_seats', ['names' => 'B, C, D']));
+    }
+
+    /**
+     * A natural tie straddling the cutoff says how many of the tied get in:
+     * A first on every ballot, B/C/D in a perfect cycle, 2 seats.
+     */
+    public function test_tie_straddling_the_cutoff_says_how_many_of_the_tied_get_in(): void
+    {
+        [, $ballot] = $this->finishedBallot(
+            ['A', 'B', 'C', 'D'],
+            [
+                ['A', 'B', 'C', 'D'],
+                ['A', 'C', 'D', 'B'],
+                ['A', 'D', 'B', 'C'],
+            ],
+            ['seats' => 2]
+        );
+
+        $res = $this->fetchResult($ballot);
+        $res->assertOk();
+        $res->assertSeeText(trans_choice('components.orderedlist.band_seats_left', 1, ['count' => 1]));
+    }
+
+    /**
+     * Under a binding quota the votes-alone "N of them get in" line would
+     * contradict the official slate (min 1 F seats F5, not M3/M4), so it
+     * is not shown.
+     */
+    public function test_band_seats_line_is_hidden_when_a_binding_quota_decides_the_seats(): void
+    {
+        [, $ballot] = $this->finishedBallot(
+            ['A', 'B', 'M3', 'M4', 'F5'],
+            [
+                ['A', 'B', 'M3', 'M4', 'F5'],
+                ['A', 'B', 'M4', 'M3', 'F5'],
+            ],
+            [
+                'seats' => 3,
+                'categories' => ['A' => 'M', 'B' => 'M', 'M3' => 'M', 'M4' => 'M', 'F5' => 'F'],
+                'quota' => ['type' => 'min', 'category' => 'F', 'count' => 1, 'binding' => true],
+            ]
+        );
+
+        $res = $this->fetchResult($ballot);
+        $res->assertOk();
+        $res->assertSeeText(trans_choice('components.orderedlist.elected_headline', 3, ['seats' => 3]));
+        $res->assertDontSeeText(trans_choice('components.orderedlist.band_seats_left', 1, ['count' => 1]));
+    }
+
+    /**
+     * Two ties that do not influence each other read as two short lists
+     * (seats 1-2: A or B first; seat 4: D or E), not four combinations.
+     */
+    public function test_independent_ties_are_explained_separately(): void
+    {
+        [, $ballot] = $this->finishedBallot(
+            ['A', 'B', 'C', 'D', 'E', 'F'],
+            [
+                ['A', 'B', 'C', 'D', 'E', 'F'],
+                ['B', 'A', 'C', 'E', 'D', 'F'],
+            ],
+            [
+                'seats' => 4,
+                'categories' => ['A' => 'F', 'B' => 'F', 'C' => 'M', 'D' => 'F', 'E' => 'F', 'F' => 'M'],
+                'quota' => ['type' => 'max', 'category' => 'M', 'count' => 2, 'binding' => true],
+            ]
+        );
+
+        $res = $this->fetchResult($ballot);
+        $res->assertOk();
+        $res->assertSeeTextInOrder([
+            trans_choice('components.orderedlist.tie_heading', 2, ['seats' => '1–2']),
+            $this->tieIf('A', 'B'),
+            '1. A', '2. B',
+            $this->tieIf('B', 'A'),
+            '1. B', '2. A',
+            trans_choice('components.orderedlist.tie_heading', 1, ['seats' => '4']),
+            $this->tieIf('D', 'E'),
+            '4. D',
+            __('components.orderedlist.tie_out', ['names' => 'E']),
+        ]);
     }
 
     /**
@@ -344,7 +436,17 @@ class OrderedListResultViewTest extends TestCase
         $res->assertSeeText(trans_choice('components.orderedlist.elected_headline', 4, ['seats' => 4]));
         $res->assertDontSeeText(trans_choice('components.orderedlist.contested_headline', 1, ['count' => 1]));
         $res->assertDontSeeText(__('components.orderedlist.quota_pending_note'));
-        $res->assertSeeTextInOrder(['1. F1', '2. M1', '3. F2', '4. M2']);
+        // The official alternated list LEADS (prod 2026-10-04: the votes-alone
+        // order on top read as the result); votes alone follows, labelled.
+        $res->assertSeeTextInOrder([
+            __('components.orderedlist.with_alternation'),
+            __('components.orderedlist.official_badge'),
+            'F1', 'M1', 'F2', 'M2',
+            __('components.orderedlist.cutoff_note'),
+            'M3', 'F3',
+            __('components.orderedlist.by_votes_alone'),
+            __('components.orderedlist.votes_alone_comparison'),
+        ]);
     }
 
     public function test_disclosure_is_collapsed_and_shows_pairwise_matrix_beatpath_and_accounting(): void
@@ -390,5 +492,10 @@ class OrderedListResultViewTest extends TestCase
         $res->assertDontSee('Runner');
         $res->assertDontSee('resolve-tie');
         $res->assertDontSee('Ranked Pairs');
+    }
+
+    private function tieIf(string $ahead, string $behind): string
+    {
+        return __('components.orderedlist.tie_if', ['clauses' => __('components.orderedlist.tie_clause', ['ahead' => $ahead, 'behind' => $behind])]) . ':';
     }
 }

@@ -68,7 +68,21 @@
     </div>
     @endif
 
-    @if ($hasResult)
+    @if ($hasResult && $res['official'] === 'corrected')
+        {{-- A binding quota decides the seats: its slate IS the result, so it
+             leads; the votes-alone order follows only for comparison. --}}
+        <div class="flex items-center justify-between gap-2 mb-2">
+            <p class="m-0 text-[11px] uppercase tracking-[0.07em] font-bold text-muted">{{ ($component->settings['quota']['type'] ?? null) === 'alternate' ? __('components.orderedlist.with_alternation') : __('components.orderedlist.with_quota') }}</p>
+            <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-secure-soft text-secure">{{ __('components.orderedlist.official_badge') }}</span>
+        </div>
+        @include($component->component_path . '/_official', ['res' => $res, 'component' => $component])
+
+        <div class="mt-6 pt-4 border-t border-line">
+            <p class="mb-1 text-[11px] uppercase tracking-[0.07em] font-bold text-muted">{{ __('components.orderedlist.by_votes_alone') }}</p>
+            <p class="mb-2 text-[12px] text-muted">{{ __('components.orderedlist.votes_alone_comparison') }}</p>
+            @include($component->component_path . '/_ranking', ['res' => $res, 'component' => $component, 'compact' => true])
+        </div>
+    @elseif ($hasResult)
         @include($component->component_path . '/_ranking', ['res' => $res, 'component' => $component])
 
         @if ($res['corrected'] !== null)

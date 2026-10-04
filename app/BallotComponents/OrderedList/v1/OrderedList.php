@@ -195,6 +195,7 @@ final class OrderedList extends AbstractBallotComponent
                 (int) config('ballot.orderedlist_quota_max_nodes', QuotaCorrector::MAX_NODES),
             );
             $corrected = $quotaCorrector->result();
+            $corrected['scenarios'] = $quotaCorrector->scenarios();
             $quotaBinding = $quota['binding'];
             $quotaWarnings = $quotaCorrector->warnings();
         }

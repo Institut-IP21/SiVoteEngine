@@ -53,11 +53,29 @@ namespace App\BallotComponents\OrderedList\v1;
  * @phpstan-type Hyp array{0:string,1:bool,2:string,3:string,4:string}
  * @phpstan-type Summary array<string,Hyp>
  * @phpstan-type State array{lv:int,e:int,g1:?string,g2:?string,inf:?string}
- * @phpstan-type Result array{order:list<string>,diff:list<array{candidate:string,from:string,reason:string}>,infeasible:bool,partly_infeasible:bool,provisional:bool,binding:bool,too_complex:bool,seated:list<string>,contested:list<string>,positions:array<string,int>}
+ * @phpstan-type Scenario array{order:list<string>,infeasible:bool,forced:array<string,array{0:int,1:int}>,prefixes:list<list<int>>}
+ * @phpstan-type TieOption array{when:list<array{ahead:string,behind:list<string>}>,seats:array<int,string>,out:list<string>,infeasible:bool}
+ * @phpstan-type Tie array{seats:list<int>,options:list<TieOption>}
+ * @phpstan-type Result array{order:list<string>,diff:list<array{candidate:string,from:string,reason:string}>,infeasible:bool,partly_infeasible:bool,provisional:bool,binding:bool,too_complex:bool,seated:list<string>,contested:list<string>,positions:array<string,int>,scenarios:list<Tie>|null}
  */
 final class QuotaCorrector
 {
     public const int MAX_NODES = 100000;
+
+    /** Distinct tie outcomes worth spelling out one by one. */
+    public const int MAX_SCENARIOS = 6;
+
+    /** Tie-resolution branches walked while explaining them. */
+    private const int MAX_BRANCHES = 256;
+
+    /**
+     * Candidates whose seat is still open beyond which no short explanation
+     * can exist (7 tied for one seat is already 7 options), so none is tried.
+     */
+    private const int MAX_OPEN_CANDIDATES = 12;
+
+    /** State budget for explaining the ties (the explanation is optional). */
+    private const int MAX_EXPLAIN_NODES = 20000;
 
     /** Candidates are packed one byte each up to here, two bytes beyond. */
     private const int ONE_BYTE_CANDIDATES = 254;
@@ -205,6 +223,359 @@ final class QuotaCorrector
     public function warnings(): array
     {
         return $this->warnings;
+    }
+
+    /**
+     * How the open ties decide a provisional slate, as independent TIES:
+     * each covers some of the undecided seats and lists its options -- who
+     * takes those seats (`seats`, 1-based), who of the tied candidates then
+     * misses out (`out`), and the condition that leads there (`when`: each
+     * `ahead` candidate placed before its `behind` ones). Ties that do not
+     * influence each other are reported separately, so two unrelated ties
+     * read as two short lists, not every combination of both.
+     *
+     * A whole-slate condition is EXACT -- every resolution meeting it gives
+     * that slate, and no other slate's resolutions meet it -- or left empty
+     * when no such plain condition exists. `infeasible` marks a resolution
+     * in which the quota cannot apply (the votes-alone top stands there).
+     *
+     * Null when the slate is final, the quota fell back to the fail-safe,
+     * or more than {@see self::MAX_SCENARIOS} options would be needed (the
+     * page then just names who is still tied).
+     *
+     * @return list<Tie>|null
+     */
+    public function scenarios(): ?array
+    {
+        $outcomes = $this->outcomes();
+
+        return $outcomes === null ? null : $this->ties($outcomes);
+    }
+
+    /**
+     * Every distinct slate the open ties can produce, with the tie-order
+     * relations all its resolutions share (`forced`) and the decision-tree
+     * branches (`prefixes`) that lead to it.
+     *
+     * @return list<Scenario>|null
+     */
+    private function outcomes(): ?array
+    {
+        if (!$this->result['provisional'] || $this->result['too_complex'] || $this->n === 0) {
+            return null;
+        }
+        $open = count($this->result['contested']) + count($this->result['seated']) - count($this->result['positions']);
+        if ($open > self::MAX_OPEN_CANDIDATES) {
+            return null;
+        }
+
+        if ($this->n > self::ONE_BYTE_CANDIDATES) {
+            $this->w = 2;
+            $this->unset = "\xFF\xFF";
+            $this->mixed = "\xFE\xFE";
+        }
+        $this->nodes = max(0, $this->maxNodes - self::MAX_EXPLAIN_NODES);
+        $this->memoryCeiling = $this->memoryCeiling();
+        $leaves = [];
+        try {
+            $this->branch(str_repeat('1', $this->n), 0, ['lv' => 0, 'e' => 0, 'g1' => null, 'g2' => null, 'inf' => null], [], $leaves);
+        } catch (QuotaTooComplex) {
+            return null;
+        } finally {
+            $this->memo = [];
+        }
+
+        /** @var array<string,list<array{prefix:list<int>,infeasible:bool}>> $byOutcome */
+        $byOutcome = [];
+        /** @var array<string,list<string>> $slates */
+        $slates = [];
+        foreach ($leaves as $leaf) {
+            $key = implode("\0", $leaf['order']) . ($leaf['infeasible'] ? "\0!" : '');
+            $byOutcome[$key][] = ['prefix' => $leaf['prefix'], 'infeasible' => $leaf['infeasible']];
+            $slates[$key] = $leaf['order'];
+        }
+        if (count($byOutcome) > self::MAX_SCENARIOS ** 2) {
+            return null;
+        }
+
+        $scenarios = [];
+        foreach ($byOutcome as $key => $group) {
+            $common = null;
+            foreach ($group as $leaf) {
+                $relations = $this->forcedRelations($leaf['prefix']);
+                $common = $common === null ? $relations : array_intersect_key($common, $relations);
+            }
+            $scenarios[] = [
+                'order' => $slates[$key],
+                'infeasible' => $group[0]['infeasible'],
+                'forced' => $common ?? [],
+                'prefixes' => array_map(static fn (array $leaf): array => $leaf['prefix'], $group),
+            ];
+        }
+
+        return $scenarios;
+    }
+
+    /**
+     * Split the possible slates into independent ties: undecided seats
+     * whose occupants vary together form one tie; seats that vary
+     * independently of each other are separate ties. Factored only when the
+     * slates are exactly every combination of the ties' options (and the
+     * quota applies in all of them); otherwise one tie over every undecided
+     * seat, one option per slate.
+     *
+     * @param list<Scenario> $outcomes
+     * @return list<Tie>|null
+     */
+    private function ties(array $outcomes): ?array
+    {
+        $open = [];
+        for ($s = 0; $s < $this->k; $s++) {
+            $values = array_unique(array_map(static fn (array $o): string => $o['order'][$s] ?? '', $outcomes));
+            if (count($values) > 1) {
+                $open[] = $s;
+            }
+        }
+        // Occupants of the given seats (plus whether the quota applies, so a
+        // votes-alone slate that happens to match the zipper stays apart).
+        $project = static fn (array $o, array $seats): string => implode("\0", array_map(static fn (int $s): string => $o['order'][$s] ?? '', $seats)) . ($o['infeasible'] ? "\0!" : '');
+        $distinct = static fn (array $seats): int => count(array_unique(array_map(static fn (array $o): string => $project($o, $seats), $outcomes)));
+
+        // Merge seat groups until every pair varies independently.
+        $blocks = array_map(static fn (int $s): array => [$s], $open);
+        // Splitting needs the quota to apply alike in every resolution.
+        $mixedFeasibility = count(array_unique(array_map(static fn (array $o): bool => $o['infeasible'], $outcomes))) > 1;
+        $merged = true;
+        while ($merged && !$mixedFeasibility) {
+            $merged = false;
+            foreach ($blocks as $a => $seatsA) {
+                foreach ($blocks as $b => $seatsB) {
+                    if ($b <= $a) {
+                        continue;
+                    }
+                    if ($distinct([...$seatsA, ...$seatsB]) !== $distinct($seatsA) * $distinct($seatsB)) {
+                        $blocks[$a] = [...$seatsA, ...$seatsB];
+                        sort($blocks[$a]);
+                        unset($blocks[$b]);
+                        $blocks = array_values($blocks);
+                        $merged = true;
+                        continue 3;
+                    }
+                }
+            }
+        }
+        $product = array_product(array_map($distinct, $blocks));
+        if ($mixedFeasibility || count($blocks) < 2 || $product !== count($outcomes)) {
+            $blocks = [$open];
+        }
+
+        $ties = [];
+        foreach ($blocks as $seats) {
+            /** @var array<string,list<Scenario>> $byValue */
+            $byValue = [];
+            foreach ($outcomes as $o) {
+                $byValue[$project($o, $seats)][] = $o;
+            }
+            if (count($byValue) > self::MAX_SCENARIOS) {
+                return null;
+            }
+            $inSeats = [];
+            foreach ($outcomes as $o) {
+                foreach ($seats as $s) {
+                    if (isset($o['order'][$s])) {
+                        $inSeats[$o['order'][$s]] = true;
+                    }
+                }
+            }
+
+            $options = [];
+            foreach ($byValue as $value => $group) {
+                $o = $group[0];
+                $occupants = [];
+                foreach ($seats as $s) {
+                    if (isset($o['order'][$s])) {
+                        $occupants[$s + 1] = $o['order'][$s];
+                    }
+                }
+                $out = array_values(array_diff(array_map('strval', array_keys($inSeats)), $o['order']));
+                usort($out, fn (string $a, string $b): int => $this->index[$a] <=> $this->index[$b]);
+                $options[] = [
+                    'when' => $this->condition($group, $outcomes, static fn (array $other): bool => $project($other, $seats) !== (string) $value),
+                    'seats' => $occupants,
+                    'out' => $out,
+                    'infeasible' => $o['infeasible'],
+                ];
+            }
+            // Options with a plain condition first; the rest after them.
+            usort($options, static fn (array $a, array $b): int => ($a['when'] === []) <=> ($b['when'] === []));
+            $ties[] = ['seats' => array_map(static fn (int $s): int => $s + 1, $seats), 'options' => $options];
+        }
+
+        return $ties;
+    }
+
+    /**
+     * The condition leading to a group of slates, as "ahead of" statements:
+     * the tie-order relations every resolution in the group shares, kept
+     * only if EXACT -- every branch leading to any other slate breaks at
+     * least one of them. Empty when no such plain condition exists.
+     *
+     * @param list<Scenario> $group
+     * @param list<Scenario> $outcomes
+     * @param callable(Scenario):bool $isOther
+     * @return list<array{ahead:string,behind:list<string>}>
+     */
+    private function condition(array $group, array $outcomes, callable $isOther): array
+    {
+        $common = null;
+        foreach ($group as $g) {
+            $common = $common === null ? $g['forced'] : array_intersect_key($common, $g['forced']);
+        }
+        if ($common === null || $common === []) {
+            return [];
+        }
+        foreach ($outcomes as $other) {
+            if (!$isOther($other)) {
+                continue;
+            }
+            foreach ($other['prefixes'] as $prefix) {
+                $breaks = false;
+                foreach ($common as [$x, $y]) {
+                    if ($this->forces($prefix, $y, $x)) {
+                        $breaks = true;
+                        break;
+                    }
+                }
+                if (!$breaks) {
+                    return [];
+                }
+            }
+        }
+
+        return $this->describe($common);
+    }
+
+    /**
+     * Walk the tie resolutions as a decision tree, branching only while the
+     * slate is still open (the memoised DP answers that at every node).
+     *
+     * @param State $state
+     * @param list<array{0:int,1:int,2:State,3:string}> $path placements so far: candidate, position, state before, placed mask before
+     * @param list<array{prefix:list<int>,order:list<string>,infeasible:bool}> $leaves
+     */
+    private function branch(string $rest, int $placed, array $state, array $path, array &$leaves): void
+    {
+        $summary = $this->solve($rest, $placed, $state);
+        if (count($summary) === 1 && !reset($summary)[1]) {
+            $hyp = (string) array_key_first($summary);
+            $slate = $summary[$hyp][0];
+            foreach ($path as [$i, $at, $before, $mask]) {
+                $seat = $this->seatFor($i, $at, $before, $mask, $hyp);
+                if ($seat !== null) {
+                    $slate = substr_replace($slate, $this->encode($i), $seat * $this->w, $this->w);
+                }
+            }
+            if (count($leaves) >= self::MAX_BRANCHES) {
+                throw new QuotaTooComplex();
+            }
+            $order = [];
+            foreach (str_split($slate, $this->w) as $code) {
+                if ($code !== $this->unset) {
+                    $order[] = $this->roster[$this->decode($code)];
+                }
+            }
+            $leaves[] = [
+                'prefix' => array_map(static fn (array $step): int => $step[0], $path),
+                'order' => $order,
+                'infeasible' => $this->hypMeta[$hyp]['infeasible'],
+            ];
+
+            return;
+        }
+
+        $placedMask = strtr($rest, '01', '10');
+        for ($i = 0; $i < $this->n; $i++) {
+            if ($rest[$i] !== '1' || str_contains($this->pred[$i] & $rest, '1')) {
+                continue;
+            }
+            $childRest = $rest;
+            $childRest[$i] = '0';
+            $this->branch($childRest, $placed + 1, $this->advance($i, $placed, $state), [...$path, [$i, $placed, $state, $placedMask]], $leaves);
+        }
+    }
+
+    /**
+     * Every "x before y" between two TIED candidates (incomparable by the
+     * votes) that holds in all resolutions starting with `$prefix`.
+     *
+     * @param list<int> $prefix
+     * @return array<string,array{0:int,1:int}> "x,y" => [x, y]
+     */
+    private function forcedRelations(array $prefix): array
+    {
+        $at = array_flip($prefix);
+        $relations = [];
+        foreach ($prefix as $x) {
+            for ($y = 0; $y < $this->n; $y++) {
+                if ($y !== $x && $this->pred[$x][$y] === '0' && $this->succ[$x][$y] === '0'
+                    && (!isset($at[$y]) || $at[$x] < $at[$y])) {
+                    $relations["{$x},{$y}"] = [$x, $y];
+                }
+            }
+        }
+
+        return $relations;
+    }
+
+    /**
+     * Does every resolution starting with `$prefix` place `$x` before `$y`?
+     *
+     * @param list<int> $prefix
+     */
+    private function forces(array $prefix, int $x, int $y): bool
+    {
+        $ax = array_search($x, $prefix, true);
+        if ($ax === false) {
+            return $this->succ[$x][$y] === '1';
+        }
+        $ay = array_search($y, $prefix, true);
+
+        return $ay === false || $ax < $ay;
+    }
+
+    /**
+     * The fewest "ahead of" statements carrying a relation set: drop any
+     * pair already implied through a third candidate (by the votes or by
+     * another statement), then group by the candidate placed ahead.
+     *
+     * @param array<string,array{0:int,1:int}> $relations
+     * @return list<array{ahead:string,behind:list<string>}>
+     */
+    private function describe(array $relations): array
+    {
+        $before = fn (int $a, int $b): bool => $this->succ[$a][$b] === '1' || isset($relations["{$a},{$b}"]);
+        $kept = [];
+        foreach ($relations as [$x, $y]) {
+            $implied = false;
+            for ($z = 0; $z < $this->n && !$implied; $z++) {
+                $implied = $z !== $x && $z !== $y && $before($x, $z) && $before($z, $y);
+            }
+            if (!$implied) {
+                $kept[$x][] = $y;
+            }
+        }
+        ksort($kept);
+
+        $when = [];
+        foreach ($kept as $x => $ys) {
+            sort($ys);
+            $when[] = [
+                'ahead' => (string) $this->roster[$x],
+                'behind' => array_map(fn (int $y): string => (string) $this->roster[$y], $ys),
+            ];
+        }
+
+        return $when;
     }
 
     /**
@@ -1250,6 +1621,7 @@ final class QuotaCorrector
             'seated' => $seated,
             'contested' => $contested,
             'positions' => $positions,
+            'scenarios' => null,
         ];
     }
 }

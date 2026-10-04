@@ -26,6 +26,8 @@
     $stillTied = $corrected['provisional']
         ? array_values(array_merge(array_diff($corrected['seated'], array_keys($corrected['positions'])), $corrected['contested']))
         : [];
+
+    $ties = $corrected['scenarios'] ?? null;
 @endphp
 <div class="mt-4 grid gap-3" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr))">
     <div class="rounded-xl p-3" style="border:1px solid var(--color-line)">
@@ -60,7 +62,9 @@
                 </li>
             @endforeach
         </ol>
-        @if ($stillTied !== [])
+        @if (! empty($ties))
+            @include($component->component_path . '/_ties', ['ties' => $ties])
+        @elseif ($stillTied !== [])
             <p class="mt-2 text-[12px] text-muted" style="overflow-wrap:anywhere">{{ __('components.orderedlist.still_tied_for_open_seats', ['names' => implode(', ', $stillTied)]) }}</p>
         @endif
         @if (! $corrected['binding'])

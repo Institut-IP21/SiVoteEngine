@@ -39,7 +39,7 @@ class QuotaCorrectorPropertyTest extends TestCase
 
             $outcomes = [];
             foreach ($this->linearExtensions($roster, $reachable) as $order) {
-                $outcomes[] = $this->reference($order, $seats, $categories, $quota);
+                $outcomes[] = $this->reference($order, $seats, $categories, $quota) + ['order' => $order];
             }
             $context = json_encode(compact('trial', 'roster', 'seats', 'categories', 'quota') + ['reach' => $this->pairs($reachable)], JSON_THROW_ON_ERROR);
 
@@ -67,6 +67,74 @@ class QuotaCorrectorPropertyTest extends TestCase
             $this->assertSame($this->agreedPositions($slates), $this->stringKeyed($actual['positions']), "positions mismatch: {$context}");
 
             $this->assertSame($this->normalized($actual), $this->normalized($viaDp), "closed form vs DP mismatch: {$context}");
+
+            $this->assertTiesExplainEveryResolution($qc->scenarios(), $actual, $outcomes, $context);
+        }
+    }
+
+    /**
+     * The tie explanation must be exact: its ties cover precisely the
+     * undecided seats; in every resolution exactly one option of each tie
+     * matches the resulting slate (and its infeasible flag); and an option's
+     * condition, when it states one, holds in exactly the resolutions that
+     * produce that option.
+     *
+     * @param list<array{seats:list<int>,options:list<array{when:list<array{ahead:string,behind:list<string>}>,seats:array<int,string>,out:list<string>,infeasible:bool}>}>|null $ties
+     * @param array<string,mixed> $actual
+     * @param list<array{order:list<string>,slate:list<string>,infeasible:bool}> $outcomes
+     */
+    private function assertTiesExplainEveryResolution(?array $ties, array $actual, array $outcomes, string $context): void
+    {
+        if (!$actual['provisional']) {
+            $this->assertNull($ties, "final slate needs no tie explanation: {$context}");
+
+            return;
+        }
+        if ($ties === null) {
+            return; // too many outcomes to list -- allowed
+        }
+
+        $slateLength = count($outcomes[0]['slate']);
+        /** @var array<array-key,int> $positions */
+        $positions = $actual['positions'];
+        $undecided = array_values(array_diff(range(1, max(1, $slateLength)), array_values($positions)));
+        $covered = array_merge(...array_map(static fn (array $t): array => $t['seats'], $ties));
+        sort($covered);
+        $this->assertSame($undecided, $covered, "ties must cover exactly the undecided seats: {$context}");
+
+        // Separate ties read as independent: every combination must occur.
+        $distinctSlates = count(array_unique(array_map(static fn (array $o): string => implode("\0", $o['slate']), $outcomes)));
+        $combinations = array_product(array_map(static fn (array $t): int => count($t['options']), $ties));
+        $this->assertSame($distinctSlates, $combinations, "ties are not independent: {$context}");
+
+        foreach ($outcomes as $outcome) {
+            $at = array_flip($outcome['order']);
+            foreach ($ties as $tie) {
+                $matches = 0;
+                foreach ($tie['options'] as $option) {
+                    $hit = true;
+                    foreach ($option['seats'] as $seat => $name) {
+                        $hit = $hit && ($outcome['slate'][$seat - 1] ?? null) === (string) $name;
+                    }
+                    $matches += $hit ? 1 : 0;
+                    if ($hit) {
+                        $this->assertSame($outcome['infeasible'], $option['infeasible'], "option infeasible flag: {$context}");
+                        foreach ($option['out'] as $out) {
+                            $this->assertNotContains((string) $out, $outcome['slate'], "an 'out' candidate is seated: {$context}");
+                        }
+                    }
+                    if ($option['when'] !== []) {
+                        $holds = true;
+                        foreach ($option['when'] as $w) {
+                            foreach ($w['behind'] as $behind) {
+                                $holds = $holds && $at[(string) $w['ahead']] < $at[(string) $behind];
+                            }
+                        }
+                        $this->assertSame($hit, $holds, 'condition ' . json_encode($option['when']) . " not exact for order " . implode(',', $outcome['order']) . ": {$context}");
+                    }
+                }
+                $this->assertSame(1, $matches, 'resolution ' . implode(',', $outcome['order']) . " matches {$matches} options of a tie: {$context}");
+            }
         }
     }
 
@@ -243,6 +311,41 @@ class QuotaCorrectorPropertyTest extends TestCase
         $this->assertFalse($result['infeasible']);
         $this->assertFalse($result['too_complex']);
         $this->assertSame($this->normalized($result), $this->normalized($viaDp));
+    }
+
+    /**
+     * The tie explanation names only the tie that matters: M1 > M2, then
+     * M3, F1, F2 all tied; 3 seats, min 1 F. Whether M3 is third does not
+     * matter (an F enters either way) -- only F1 vs F2 decides seat 3.
+     * A final slate (2 seats, min 1 M: M1, M2) has nothing to explain.
+     */
+    public function test_tie_explanation_names_only_the_deciding_tie(): void
+    {
+        $roster = ['M1', 'M2', 'M3', 'F1', 'F2'];
+        $categories = ['M1' => 'M', 'M2' => 'M', 'M3' => 'M', 'F1' => 'F', 'F2' => 'F'];
+        $rank = ['M1' => 0, 'M2' => 1, 'M3' => 2, 'F1' => 2, 'F2' => 2];
+        $reachable = [];
+        foreach ($roster as $x) {
+            foreach ($roster as $y) {
+                $reachable[$x][$y] = $rank[$x] < $rank[$y];
+            }
+        }
+        $positions = new PositionResolver($roster, $reachable, [], 3);
+        $quota = ['category' => 'F', 'type' => 'min', 'count' => 1, 'binding' => true];
+
+        $ties = (new QuotaCorrector($positions->ranking(), $positions->bands(), $categories, $quota, 3))->scenarios();
+
+        $this->assertSame([[
+            'seats' => [3],
+            'options' => [
+                ['when' => [['ahead' => 'F1', 'behind' => ['F2']]], 'seats' => [3 => 'F1'], 'out' => ['F2'], 'infeasible' => false],
+                ['when' => [['ahead' => 'F2', 'behind' => ['F1']]], 'seats' => [3 => 'F2'], 'out' => ['F1'], 'infeasible' => false],
+            ],
+        ]], $ties);
+
+        $final = new PositionResolver($roster, $reachable, [], 2);
+        $minM = ['category' => 'M', 'type' => 'min', 'count' => 1, 'binding' => true];
+        $this->assertNull((new QuotaCorrector($final->ranking(), $final->bands(), $categories, $minM, 2))->scenarios());
     }
 
     /**

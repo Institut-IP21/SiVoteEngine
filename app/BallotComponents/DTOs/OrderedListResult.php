@@ -19,7 +19,7 @@ final readonly class OrderedListResult implements ComponentResult
      * @param list<string> $elected
      * @param list<array{candidates:list<string>,span:array{0:int,1:int},internal_constraints:list<array{winner:string,loser:string}>,head_to_head:array<string,array<string,int>>,affects_cutoff:bool}> $bands
      * @param array{remaining_seats:int,candidates:list<string>,internal_constraints:list<array{winner:string,loser:string}>,head_to_head:array<string,array<string,int>>}|null $cutoffDecision
-     * @param array{order:list<string>,diff:list<array{candidate:string,from:string,reason:string}>,infeasible:bool,partly_infeasible:bool,provisional:bool,binding:bool,too_complex:bool,seated:list<string>,contested:list<string>,positions:array<string,int>}|null $corrected
+     * @param array{order:list<string>,diff:list<array{candidate:string,from:string,reason:string}>,infeasible:bool,partly_infeasible:bool,provisional:bool,binding:bool,too_complex:bool,seated:list<string>,contested:list<string>,positions:array<string,int>,scenarios?:list<array{seats:list<int>,options:list<array{when:list<array{ahead:string,behind:list<string>}>,seats:array<int,string>,out:list<string>,infeasible:bool}>}>|null}|null $corrected
      * @param array{strength:array<string,array<string,int|null>>,winners:list<array{winner:string,loser:string,strength:int,path:list<string>}>} $beatpath
      * @param array{candidates:list<string>,matrix:array<string,array<string,int>>} $pairwise
      * @param array{cast:int,blank:int,invalid_only:int,counted:int} $accounting
@@ -110,7 +110,7 @@ final readonly class OrderedListResult implements ComponentResult
     }
 
     /**
-     * @return array{order:list<string>,diff:list<array{candidate:string,from:string,reason:string}>,infeasible:bool,partly_infeasible:bool,provisional:bool,binding:bool,too_complex:bool,seated:list<string>,contested:list<string>,positions:array<string,int>}|null
+     * @return array{order:list<string>,diff:list<array{candidate:string,from:string,reason:string}>,infeasible:bool,partly_infeasible:bool,provisional:bool,binding:bool,too_complex:bool,seated:list<string>,contested:list<string>,positions:array<string,int>,scenarios?:list<array{seats:list<int>,options:list<array{when:list<array{ahead:string,behind:list<string>}>,seats:array<int,string>,out:list<string>,infeasible:bool}>}>|null}|null
      */
     private function officialCorrected(): ?array
     {

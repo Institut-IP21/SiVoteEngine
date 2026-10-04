@@ -5,7 +5,9 @@
     // an unresolved band renders as a grouped, tinted block spanning its
     // position range -- surfaced as-is, since the engine never resolves a
     // genuine tie itself. Params: $res (OrderedListResult::toArray()),
-    // $component.
+    // $component, optional $compact (true when this is only the votes-alone
+    // comparison under an official quota list: smaller, muted, no tint).
+    $compact = $compact ?? false;
     $ranking = $res['ranking'];
     $bands = $res['bands'];
     $seats = $res['seats'];
@@ -63,22 +65,32 @@
     @foreach ($rows as $i => $row)
         @if ($row['kind'] === 'single')
             <li @class([
-                'flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 -mx-2.5',
-                'bg-secure-soft' => $row['status'] === 'elected',
+                'flex items-center gap-2.5 rounded-lg -mx-2.5',
+                'px-2.5 py-1.5' => ! $compact,
+                'px-2.5 py-0.5 text-[13px]' => $compact,
+                'bg-secure-soft' => $row['status'] === 'elected' && ! $compact,
             ])>
                 <span class="inline-flex items-center justify-center flex-shrink-0 w-6 h-6 rounded-full text-[11px] font-bold" style="border:1px solid var(--color-line); background:#fff; color:var(--color-ink)"
                     aria-label="{{ __('components.orderedlist.position', ['name' => $row['candidate'], 'pos' => $row['position'], 'total' => $total]) }}">{{ $row['position'] }}</span>
-                <span class="flex-1 text-ink {{ $row['status'] === 'elected' ? 'font-semibold' : 'font-medium' }}" style="overflow-wrap:anywhere">{{ $row['candidate'] }}</span>
+                <span class="flex-1 {{ $compact ? 'text-muted' : 'text-ink' }} {{ $row['status'] === 'elected' && ! $compact ? 'font-semibold' : 'font-medium' }}" style="overflow-wrap:anywhere">{{ $row['candidate'] }}</span>
                 @if (($categories[$row['candidate']] ?? null) !== null)
                     <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full text-muted" style="background:var(--color-canvas)">{{ $categories[$row['candidate']] }}</span>
                 @endif
             </li>
         @else
-            <li class="rounded-lg px-2.5 py-2 -mx-2.5 bg-warn-soft">
-                <p class="mb-1.5 text-[12px] font-semibold text-warn-fg">
+            <li class="rounded-lg px-2.5 -mx-2.5 {{ $compact ? 'py-1 text-muted' : 'py-2 bg-warn-soft' }}">
+                <p class="mb-1.5 text-[12px] font-semibold {{ $compact ? 'text-muted' : 'text-warn-fg' }}">
                     {{ __('components.orderedlist.band_span', ['from' => $row['band']['span'][0], 'to' => $row['band']['span'][1]]) }}
                     — {{ __('components.orderedlist.tie_awaiting') }}
                 </p>
+                @php
+                    // A band straddling the cutoff: say how many of its members get in
+                    // -- by votes alone, so not when a binding quota decides the seats.
+                    $seatsLeft = ($res['official'] ?? 'natural') === 'natural' ? $seats - $row['band']['span'][0] + 1 : 0;
+                @endphp
+                @if ($seatsLeft > 0 && $seatsLeft < count($row['band']['candidates']))
+                    <p class="mb-1.5 text-[12px] text-warn-fg">{{ trans_choice('components.orderedlist.band_seats_left', $seatsLeft, ['count' => $seatsLeft]) }}</p>
+                @endif
                 <div class="flex flex-wrap gap-1.5">
                     @foreach ($row['band']['candidates'] as $c)
                         <span class="text-[12px] font-medium px-2 py-0.5 rounded-full text-ink" style="background:#fff; border:1px solid var(--color-line)">{{ $c }}</span>
