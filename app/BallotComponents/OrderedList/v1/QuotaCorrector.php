@@ -5,101 +5,197 @@ declare(strict_types=1);
 namespace App\BallotComponents\OrderedList\v1;
 
 /**
- * Optional post-tally quota balancing over the determined top-K (the
- * "natural" order). Runs only when the cutoff is settled: a contested
- * cutoff is always SURFACED first, never guessed at (D5). Minimal-
- * displacement: swaps the fewest members needed to satisfy a min/max
- * category quota, preserving the natural relative order of everyone not
- * swapped, and refuses to guess across an unresolved (surfaced) tie among
- * the swap candidates.
+ * Optional post-tally category quota (min / max / alternation) over the
+ * Schulze result -- EXACT BY CONSTRUCTION (D15, 2026-10-04).
+ *
+ * The votes settle a strict partial order, not a total one: genuine ties
+ * are left as "bands". The engine never breaks a tie, so the question the
+ * quota must answer is "what slate results however the organization
+ * resolves the ties?". The answer reports only what EVERY resolution (every
+ * linear extension of the partial order) agrees on: the slate when they all
+ * agree (`provisional:false`), otherwise the common prefix (`order`), the
+ * candidates seated in every resolution (`seated`), those seated in some
+ * but not all (`contested`), and the seats whose occupant is the same in
+ * all of them (`positions`). Nothing is guessed, and nothing every
+ * resolution agrees on is withheld.
+ *
+ * How (no enumeration of whole orders):
+ *
+ *   - Each quota rule is written as a small ONLINE automaton that reads a
+ *     total order front to back and decides, the moment it reads a
+ *     candidate, which slate seat (if any) that candidate takes. Its state
+ *     is tiny (a few counters / the two alternation groups), never the
+ *     order read so far.
+ *   - The linear extensions are walked as a dynamic program over
+ *     (still-unplaced candidates, automaton state). Two prefixes that
+ *     placed the same set with the same automaton state have identical
+ *     futures, so each such state is solved once (memoised): order ties
+ *     among candidates cost a set, not a factorial.
+ *   - A state's answer is a constant-size SUMMARY of every slate its
+ *     completions produce (one representative slate, whether they differ,
+ *     the seat-by-seat agreement, intersection and union) -- never the
+ *     slates themselves -- so memory is bounded by the number of states.
+ *   - Candidates that can come next and are indistinguishable to the
+ *     automaton (same observed class, same relations to everyone left) are
+ *     explored once; the others' summaries are the representative's with
+ *     the two names swapped.
+ *
+ * If the state space grows past {@see self::MAX_NODES} the result fails
+ * safe: provisional, nothing certain, every candidate contested, flagged
+ * `too_complex`.
+ *
+ * The partial order is rebuilt from PositionResolver's output: candidates
+ * in different bands are always strictly ordered by ranking index (two
+ * incomparable candidates necessarily have overlapping position intervals,
+ * so they land in the same band); inside a band, `internal_constraints`
+ * lists every strict beatpath pair.
+ *
+ * @phpstan-type Hyp array{0:string,1:bool,2:string,3:string,4:string}
+ * @phpstan-type Summary array<string,Hyp>
+ * @phpstan-type State array{lv:int,e:int,g1:?string,g2:?string,inf:?string}
+ * @phpstan-type Result array{order:list<string>,diff:list<array{candidate:string,from:string,reason:string}>,infeasible:bool,partly_infeasible:bool,provisional:bool,binding:bool,too_complex:bool,seated:list<string>,contested:list<string>,positions:array<string,int>}
  */
 final class QuotaCorrector
 {
-    /** @var array{order:list<string>,diff:list<array{candidate:string,from:string,reason:string}>,infeasible:bool,provisional:bool,binding:bool} */
+    public const int MAX_NODES = 100000;
+
+    /** Candidates are packed one byte each up to here, two bytes beyond. */
+    private const int ONE_BYTE_CANDIDATES = 254;
+
+    private const int MAX_CANDIDATES = 65000;
+
+    /** Memory the memo may add on top of what the request already uses. */
+    private const int MEMORY_HEADROOM = 64 * 1024 * 1024;
+
+    /** @var 1|2 bytes per packed candidate */
+    private int $w = 1;
+
+    /** Seat not assigned (yet) in a summary. */
+    private string $unset = "\xFF";
+
+    /** Seat occupied by different candidates in different resolutions. */
+    private string $mixed = "\xFE";
+
+    private int $memoryCeiling = PHP_INT_MAX;
+
+    /** @var Result */
     private array $result;
 
     /** @var list<string> */
     private array $warnings = [];
 
+    /** @var list<string> candidate per ranking index */
+    private array $roster = [];
+
+    /** @var array<string,int> candidate => ranking index */
+    private array $index = [];
+
+    private int $n;
+
+    /** Seats actually filled: min(seats, candidates). */
+    private int $k;
+
+    /** @var list<string> per candidate: '1' at every candidate that beats it */
+    private array $pred = [];
+
+    /** @var list<string> per candidate: '1' at every candidate it beats */
+    private array $succ = [];
+
+    /** 'natural' (top-k as is), 'minmax' or 'alternate'. */
+    private string $mode;
+
+    private bool $naturalInfeasible = false;
+
+    private ?string $naturalWarning = null;
+
+    /** @var array<int,bool> min/max: candidate is on the side that may LEAVE the top */
+    private array $leaveSide = [];
+
+    /** min/max: the first `keepBound` leave-side candidates of the top stay. */
+    private int $keepBound = 0;
+
+    /** @var array<int,?string> */
+    private array $categoryOf = [];
+
+    /** @var array<string,string> category => candidate mask */
+    private array $categoryMask = [];
+
+    /** @var array<string,array<string,list<int>>> "g1\0g2" => [group => its seats, in order] */
+    private array $patterns = [];
+
+    /** @var array<string,string> state => packed Summary ({@see pack()}) */
+    private array $memo = [];
+
+    /** @var array<string,array{infeasible:bool,warnings:list<string>}> */
+    private array $hypMeta = [];
+
+    private int $nodes = 0;
+
     /**
      * @param list<array{candidate:string,best_pos:int,worst_pos:int,determined:bool,status:string}> $ranking
-     * @param array{remaining_seats:int,candidates:list<string>,internal_constraints:list<array{winner:string,loser:string}>,head_to_head:array<string,array<string,int>>}|null $cutoffDecision
      * @param list<array{candidates:list<string>,span:array{0:int,1:int},internal_constraints:list<array{winner:string,loser:string}>,head_to_head:array<string,array<string,int>>,affects_cutoff:bool}> $bands
      * @param array<string,string> $categories
      * @param array{category:string,type:string,count:int,binding:bool} $quota
      */
-    public function __construct(array $ranking, ?array $cutoffDecision, array $bands, array $categories, array $quota, int $seats)
-    {
-        $binding = $quota['binding'];
+    public function __construct(
+        private readonly array $ranking,
+        array $bands,
+        private readonly array $categories,
+        private readonly array $quota,
+        private readonly int $seats,
+        private readonly int $maxNodes = self::MAX_NODES,
+        private readonly bool $closedForms = true,
+    ) {
+        if ($ranking === []) {
+            $this->n = 0;
+            $this->k = 0;
+            $this->mode = 'natural';
+            $this->result = $this->shape([], [], false, false, false, false, [], [], []);
 
-        /** @var list<array{candidate:string,best_pos:int,worst_pos:int,determined:bool,status:string}> $naturalEntries */
-        $naturalEntries = [];
-        /** @var list<array{candidate:string,best_pos:int,worst_pos:int,determined:bool,status:string}> $belowCutEntries */
-        $belowCutEntries = [];
+            return;
+        }
+
         foreach ($ranking as $i => $entry) {
-            if ($i < $seats) {
-                $naturalEntries[] = $entry;
-            } else {
-                $belowCutEntries[] = $entry;
+            $this->roster[] = (string) $entry['candidate'];
+            $this->index[(string) $entry['candidate']] = $i;
+        }
+        $this->n = count($this->roster);
+        $this->k = min($seats, $this->n);
+
+        $this->buildOrder($bands);
+        $this->configure();
+
+        $closed = $this->closedForm();
+        if ($closed !== null) {
+            $this->result = $closed;
+
+            return;
+        }
+
+        try {
+            if ($this->n > self::MAX_CANDIDATES) {
+                throw new QuotaTooComplex();
             }
-        }
-        $natural = array_map(static fn (array $e): string => $e['candidate'], $naturalEntries);
-
-        // Alternation is dispatched BEFORE the contested-cut surfacing below:
-        // a zipper consumes only each group's OWN order, so a tie at the cut
-        // between candidates of DIFFERENT groups never affects it. Whether a
-        // given tie matters is decided inside applyAlternate, which still
-        // surfaces (never guesses) every tie the zipper really depends on.
-        if ($quota['type'] === 'alternate') {
-            $this->result = $this->applyAlternate($ranking, $cutoffDecision, $bands, $categories, $binding, $seats);
-
-            return;
-        }
-
-        // 1. Surface, rather than guess, while the cutoff itself is contested.
-        if ($cutoffDecision !== null) {
-            $order = [];
-            foreach ($ranking as $entry) {
-                if ($entry['status'] === 'elected') {
-                    $order[] = $entry['candidate'];
-                }
+            if ($this->n > self::ONE_BYTE_CANDIDATES) {
+                $this->w = 2;
+                $this->unset = "\xFF\xFF";
+                $this->mixed = "\xFE\xFE";
             }
-            $this->warnings[] = 'quota surfaced: the cut is contested — resolve per your organization\'s rules';
-            $this->result = [
-                'order' => $order,
-                'diff' => [],
-                'infeasible' => false,
-                'provisional' => true,
-                'binding' => $binding,
-            ];
+            $this->memoryCeiling = $this->memoryCeiling();
+            $summary = $this->solve(str_repeat('1', $this->n), 0, ['lv' => 0, 'e' => 0, 'g1' => null, 'g2' => null, 'inf' => null]);
+        } catch (QuotaTooComplex) {
+            $this->warnings[] = __('components.orderedlist.quota_warn_too_complex');
+            $this->result = $this->fallback();
 
             return;
+        } finally {
+            $this->memo = [];
         }
 
-        $inBand = $this->bandMembership($bands);
-
-        $category = $quota['category'];
-
-        // 2. A quota whose category no candidate carries is dropped, not guessed at.
-        if (!in_array($category, array_values($categories), true)) {
-            $this->warnings[] = 'quota category not among candidate categories — quota ignored';
-            $this->result = [
-                'order' => $natural,
-                'diff' => [],
-                'infeasible' => false,
-                'provisional' => false,
-                'binding' => $binding,
-            ];
-
-            return;
-        }
-
-        $this->result = $quota['type'] === 'max'
-            ? $this->applyMax($naturalEntries, $belowCutEntries, $categories, $category, $quota['count'], $binding, $inBand)
-            : $this->applyMin($naturalEntries, $belowCutEntries, $categories, $category, $quota['count'], $binding, $inBand);
+        $this->result = $this->aggregate($summary);
     }
 
-    /** @return array{order:list<string>,diff:list<array{candidate:string,from:string,reason:string}>,infeasible:bool,provisional:bool,binding:bool} */
+    /** @return Result */
     public function result(): array
     {
         return $this->result;
@@ -112,467 +208,1048 @@ final class QuotaCorrector
     }
 
     /**
+     * Predecessor / successor masks of the strict partial order.
+     *
      * @param list<array{candidates:list<string>,span:array{0:int,1:int},internal_constraints:list<array{winner:string,loser:string}>,head_to_head:array<string,array<string,int>>,affects_cutoff:bool}> $bands
-     * @return array<string,bool>
      */
-    private function bandMembership(array $bands): array
+    private function buildOrder(array $bands): void
     {
-        $members = [];
-        foreach ($bands as $band) {
-            foreach ($band['candidates'] as $c) {
-                $members[$c] = true;
-            }
-        }
-
-        return $members;
-    }
-
-    /**
-     * @param list<array{candidate:string,best_pos:int,worst_pos:int,determined:bool,status:string}> $naturalEntries
-     * @param list<array{candidate:string,best_pos:int,worst_pos:int,determined:bool,status:string}> $belowCutEntries
-     * @param array<string,string> $categories
-     * @param array<string,bool> $inBand
-     * @return array{order:list<string>,diff:list<array{candidate:string,from:string,reason:string}>,infeasible:bool,provisional:bool,binding:bool}
-     */
-    private function applyMin(array $naturalEntries, array $belowCutEntries, array $categories, string $category, int $count, bool $binding, array $inBand): array
-    {
-        $natural = array_map(static fn (array $e): string => $e['candidate'], $naturalEntries);
-
-        $inCutInCat = array_values(array_filter(
-            $naturalEntries,
-            static fn (array $e): bool => ($categories[$e['candidate']] ?? null) === $category
-        ));
-        $n = count($inCutInCat);
-
-        if ($n >= $count) {
-            return ['order' => $natural, 'diff' => [], 'infeasible' => false, 'provisional' => false, 'binding' => $binding];
-        }
-
-        $need = $count - $n;
-
-        $promoteesEntries = array_values(array_filter(
-            $belowCutEntries,
-            static fn (array $e): bool => ($categories[$e['candidate']] ?? null) === $category
-        ));
-
-        $demoteesEntries = array_values(array_filter(
-            $naturalEntries,
-            static fn (array $e): bool => ($categories[$e['candidate']] ?? null) !== $category
-        ));
-        usort($demoteesEntries, static fn (array $a, array $b): int => $b['worst_pos'] <=> $a['worst_pos']);
-
-        $totalInCategory = $n + count($promoteesEntries);
-
-        if ($totalInCategory < $count || count($promoteesEntries) < $need || count($demoteesEntries) < $need) {
-            $this->warnings[] = "quota infeasible: not enough {$category} candidates to satisfy the minimum";
-
-            return ['order' => $natural, 'diff' => [], 'infeasible' => true, 'provisional' => false, 'binding' => $binding];
-        }
-
-        $promotionSet = array_slice($promoteesEntries, 0, $need);
-        $demotionSet = array_slice($demoteesEntries, 0, $need);
-
-        if ($this->touchesBand($promotionSet, $demotionSet, $inBand)) {
-            $this->warnings[] = "quota surfaced: a tie must be resolved (per your organization's rules) first";
-
-            return ['order' => $natural, 'diff' => [], 'infeasible' => false, 'provisional' => true, 'binding' => $binding];
-        }
-
-        return $this->applySwap($naturalEntries, $demotionSet, $promotionSet, 'min_quota:' . $category, $binding);
-    }
-
-    /**
-     * @param list<array{candidate:string,best_pos:int,worst_pos:int,determined:bool,status:string}> $naturalEntries
-     * @param list<array{candidate:string,best_pos:int,worst_pos:int,determined:bool,status:string}> $belowCutEntries
-     * @param array<string,string> $categories
-     * @param array<string,bool> $inBand
-     * @return array{order:list<string>,diff:list<array{candidate:string,from:string,reason:string}>,infeasible:bool,provisional:bool,binding:bool}
-     */
-    private function applyMax(array $naturalEntries, array $belowCutEntries, array $categories, string $category, int $count, bool $binding, array $inBand): array
-    {
-        $natural = array_map(static fn (array $e): string => $e['candidate'], $naturalEntries);
-
-        $inCutInCat = array_values(array_filter(
-            $naturalEntries,
-            static fn (array $e): bool => ($categories[$e['candidate']] ?? null) === $category
-        ));
-        $n = count($inCutInCat);
-
-        if ($n <= $count) {
-            return ['order' => $natural, 'diff' => [], 'infeasible' => false, 'provisional' => false, 'binding' => $binding];
-        }
-
-        $need = $n - $count;
-
-        $demoteesEntries = $inCutInCat;
-        usort($demoteesEntries, static fn (array $a, array $b): int => $b['worst_pos'] <=> $a['worst_pos']);
-
-        $promoteesEntries = array_values(array_filter(
-            $belowCutEntries,
-            static fn (array $e): bool => ($categories[$e['candidate']] ?? null) !== $category
-        ));
-
-        if (count($promoteesEntries) < $need) {
-            $this->warnings[] = "quota infeasible: not enough non-{$category} candidates available";
-
-            return ['order' => $natural, 'diff' => [], 'infeasible' => true, 'provisional' => false, 'binding' => $binding];
-        }
-
-        $promotionSet = array_slice($promoteesEntries, 0, $need);
-        $demotionSet = array_slice($demoteesEntries, 0, $need);
-
-        if ($this->touchesBand($promotionSet, $demotionSet, $inBand)) {
-            $this->warnings[] = "quota surfaced: a tie must be resolved (per your organization's rules) first";
-
-            return ['order' => $natural, 'diff' => [], 'infeasible' => false, 'provisional' => true, 'binding' => $binding];
-        }
-
-        return $this->applySwap($naturalEntries, $demotionSet, $promotionSet, 'max_quota:' . $category, $binding);
-    }
-
-    /**
-     * Alternation ("zipper") quota: an ordered slate that alternates between
-     * exactly two categories, starting with the natural #1 candidate's own
-     * group. Unlike min/max (which only swaps across the seat cutoff), this
-     * may reorder members WITHIN the natural top-K too, since the natural
-     * order is not guaranteed to already alternate.
-     *
-     * Ties (D14, prod regression 2026-10-03). The zipper's output is a
-     * function of exactly three things: the start group, the second group,
-     * and each group's OWN internal order over the prefix it consumes. The
-     * relative order of two candidates from DIFFERENT groups never matters
-     * -- seat i takes "the best remaining member of group X" regardless of
-     * where any member of group Y sits. So a tie is surfaced only when it
-     * actually leaves one of those three things undecided:
-     *
-     *   - start group: every candidate that could be #1 (best_pos === 1)
-     *     must share one category (untagged counts as its own value);
-     *   - group set: under a contested cut, the categories of the surely-
-     *     seated set (status elected) and of the possibly-seated set
-     *     (elected + contested) must coincide -- every real top-K lies
-     *     between the two, so equality means the tie cannot change which
-     *     groups (or which guard) apply;
-     *   - each pick: the picked candidate must strictly beat every not-yet-
-     *     placed member of the pool it was taken from. Two candidates in
-     *     different bands are always strictly ordered (non-overlapping
-     *     position intervals), so only a same-band peer with no internal
-     *     beatpath constraint can make a pick ambiguous.
-     *
-     * A contested natural cut therefore no longer short-circuits the
-     * zipper: a tie between, e.g., an M and an F for the last natural seat
-     * is irrelevant once the slate is built per group.
-     *
-     * Precondition (D13, amended D13.1): the domain is what the zipper can
-     * actually SEAT -- the fill below makes exactly `seats` picks, each
-     * advancing one pool pointer, so it can never reach a candidate outside
-     * the `seats`-length alternating slate of the two chosen groups. An
-     * also-ran sitting below that seatable range (untagged, or a third
-     * category) must NOT force infeasible, UNLESS choosing the second group
-     * from below the cut would itself be a guess (D13.1). Group derivation:
-     *
-     *   1. Start group: `group1` = the natural #1 candidate's own category.
-     *      Untagged -> infeasible, `alternate_warn_no_start_group`.
-     *   2. `topCats` = the distinct TAGGED categories among the natural
-     *      top-`seats` slate (under a contested cut: the possibly-seated
-     *      set, after the group-set check above).
-     *      - Guard 4a: any untagged candidate in it -> infeasible,
-     *        `alternate_warn_extra_category`.
-     *      - Guard 4b: `|topCats| >= 3` -> infeasible,
-     *        `alternate_warn_extra_category`.
-     *      - `|topCats| == 2`: `group2` = the other element of `topCats`.
-     *      - `|topCats| == 1` (monochromatic top-K): `otherCats` = the
-     *        distinct tagged categories over the WHOLE roster `!= group1`;
-     *        0 -> infeasible (`alternate_warn_one_category`), 1 -> that one,
-     *        >=2 -> infeasible (`alternate_warn_ambiguous_second_group`).
-     *   3. The two pools: every candidate tagged group1 or group2 (natural
-     *      order preserved); Guard 3: together they must fill every seat
-     *      (`alternate_warn_not_enough_candidates`).
-     *
-     * Fill: walk the alternating pattern seat by seat, taking the highest
-     * natural-ranked not-yet-placed candidate of the wanted group; once a
-     * group is exhausted, fill the rest from the other group (owner rule).
-     *
-     * Provisional result: `order` is the DETERMINED PREFIX only -- the
-     * seats the zipper fills identically however the organization resolves
-     * the tie -- never the natural order (which, shown under the
-     * "with alternation" heading, read as a broken zipper).
-     *
-     * Diff (audit only): every seated candidate whose position differs from
-     * its natural one -- `from:'natural:<1-based rank>'` for a surely-seated
-     * candidate, `from:'contested'` for one from a contested cut, and
-     * `from:'below_cut'` for one from below it.
-     *
-     * @param list<array{candidate:string,best_pos:int,worst_pos:int,determined:bool,status:string}> $ranking
-     * @param array{remaining_seats:int,candidates:list<string>,internal_constraints:list<array{winner:string,loser:string}>,head_to_head:array<string,array<string,int>>}|null $cutoffDecision
-     * @param list<array{candidates:list<string>,span:array{0:int,1:int},internal_constraints:list<array{winner:string,loser:string}>,head_to_head:array<string,array<string,int>>,affects_cutoff:bool}> $bands
-     * @param array<string,string> $categories
-     * @return array{order:list<string>,diff:list<array{candidate:string,from:string,reason:string}>,infeasible:bool,provisional:bool,binding:bool}
-     */
-    private function applyAlternate(array $ranking, ?array $cutoffDecision, array $bands, array $categories, bool $binding, int $seats): array
-    {
-        if ($ranking === []) {
-            return ['order' => [], 'diff' => [], 'infeasible' => false, 'provisional' => false, 'binding' => $binding];
-        }
-
-        // The surely-seated and possibly-seated sets. With a settled cut
-        // both are simply the natural top-`seats` slate.
-        if ($cutoffDecision === null) {
-            $surelySeated = array_slice($ranking, 0, $seats);
-            $possiblySeated = $surelySeated;
-        } else {
-            $surelySeated = array_values(array_filter($ranking, static fn (array $e): bool => $e['status'] === 'elected'));
-            $possiblySeated = array_values(array_filter($ranking, static fn (array $e): bool => $e['status'] !== 'excluded'));
-        }
-        $natural = array_map(static fn (array $e): string => $e['candidate'], $surelySeated);
-
-        $infeasible = function (string $warningKey) use ($natural, $binding): array {
-            $this->warnings[] = __($warningKey);
-
-            return ['order' => $natural, 'diff' => [], 'infeasible' => true, 'provisional' => false, 'binding' => $binding];
-        };
-
-        // Start group must not depend on a tie for first place.
-        $startCats = [];
-        foreach ($ranking as $e) {
-            if ($e['best_pos'] === 1) {
-                $startCats[$categories[$e['candidate']] ?? "\0untagged"] = true;
-            }
-        }
-        if (count($startCats) > 1) {
-            return $this->surfaceAlternate([], $binding);
-        }
-
-        // The group set must not depend on how a contested cut resolves.
-        $surelyCats = $this->categorySignature($surelySeated, $categories);
-        $possiblyCats = $this->categorySignature($possiblySeated, $categories);
-        if ($surelyCats !== $possiblyCats) {
-            return $this->surfaceAlternate([], $binding);
-        }
-
-        // Guard 1 -- start group: the natural #1 candidate's own category.
-        $group1 = $categories[$ranking[0]['candidate']] ?? null;
-        if ($group1 === null) {
-            return $infeasible('components.orderedlist.alternate_warn_no_start_group');
-        }
-
-        // D13.1 -- topCats: the distinct TAGGED categories among the
-        // (tie-invariant, checked above) seated set.
-        $topCatsSet = [];
-        $hasUntaggedInTop = false;
-        foreach ($possiblySeated as $e) {
-            $cat = $categories[$e['candidate']] ?? null;
-            if ($cat === null) {
-                $hasUntaggedInTop = true;
-            } else {
-                $topCatsSet[$cat] = true;
-            }
-        }
-
-        // Guard 4a -- an untagged front-runner would be silently displaced.
-        // Guard 4b -- more than two categories among the leading candidates.
-        if ($hasUntaggedInTop || count($topCatsSet) >= 3) {
-            return $infeasible('components.orderedlist.alternate_warn_extra_category');
-        }
-
-        $group2 = null;
-
-        if (count($topCatsSet) === 2) {
-            // Both groups are anchored in the seated set; anything else
-            // below the cut is provably never-seatable by the zipper.
-            foreach (array_keys($topCatsSet) as $cat) {
-                if ($cat !== $group1) {
-                    $group2 = $cat;
-                    break;
-                }
-            }
-        } else {
-            // Monochromatic top-K: the second group must come from below the
-            // cut, and must be UNAMBIGUOUS across the whole roster.
-            $otherCatsSet = [];
-            foreach ($ranking as $e) {
-                $cat = $categories[$e['candidate']] ?? null;
-                if ($cat !== null && $cat !== $group1) {
-                    $otherCatsSet[$cat] = true;
-                }
-            }
-
-            if (count($otherCatsSet) === 0) {
-                return $infeasible('components.orderedlist.alternate_warn_one_category');
-            }
-
-            if (count($otherCatsSet) >= 2) {
-                return $infeasible('components.orderedlist.alternate_warn_ambiguous_second_group');
-            }
-
-            $group2 = array_key_first($otherCatsSet);
-        }
-
-        // Unreachable in practice (see the derivation above); kept as an
-        // explicit, statically provable guard.
-        if ($group2 === null) {
-            return $infeasible('components.orderedlist.alternate_warn_one_category');
-        }
-
-        // The two pools (natural order preserved). Untagged/other-category
-        // candidates are excluded from both -- never reachable by the zipper.
-        $poolStart = array_values(array_map(
-            static fn (array $e): string => $e['candidate'],
-            array_filter($ranking, static fn (array $e): bool => ($categories[$e['candidate']] ?? null) === $group1)
-        ));
-        $poolOther = array_values(array_map(
-            static fn (array $e): string => $e['candidate'],
-            array_filter($ranking, static fn (array $e): bool => ($categories[$e['candidate']] ?? null) === $group2)
-        ));
-
-        // Guard 3 -- the two pools together must be able to fill every seat.
-        if (count($poolStart) + count($poolOther) < $seats) {
-            return $infeasible('components.orderedlist.alternate_warn_not_enough_candidates');
-        }
-
-        // Tie lookup: band index per candidate, and the strict beatpath
-        // constraints inside each band.
         $bandOf = [];
-        /** @var array<string,array<string,bool>> $beats */
-        $beats = [];
+        $beatsInBand = [];
         foreach ($bands as $bi => $band) {
             foreach ($band['candidates'] as $c) {
                 $bandOf[$c] = $bi;
             }
             foreach ($band['internal_constraints'] as $con) {
-                $beats[$con['winner']][$con['loser']] = true;
+                $beatsInBand[$con['winner']][$con['loser']] = true;
             }
         }
 
-        $ptrStart = 0;
-        $ptrOther = 0;
-        $order = [];
-
-        for ($i = 0; $i < $seats; $i++) {
-            $wantStart = $i % 2 === 0;
-            // Run-out (owner rule): once a group is exhausted, fill from the other.
-            $fromStart = $wantStart ? $ptrStart < count($poolStart) : $ptrOther >= count($poolOther);
-
-            if ($fromStart) {
-                $pool = $poolStart;
-                $ptr = $ptrStart++;
-            } else {
-                $pool = $poolOther;
-                $ptr = $ptrOther++;
+        $beats = static function (int $i, string $a, int $j, string $b) use ($bandOf, $beatsInBand): bool {
+            if ($i === $j) {
+                return false;
             }
-            $pick = $pool[$ptr];
+            $band = $bandOf[$a] ?? null;
 
-            // Ambiguous iff a not-yet-placed member of the SAME pool is tied
-            // with the pick (same band, no strict beatpath between them).
-            for ($j = $ptr + 1, $n = count($pool); $j < $n; $j++) {
-                $rival = $pool[$j];
-                if (isset($bandOf[$pick], $bandOf[$rival])
-                    && $bandOf[$pick] === $bandOf[$rival]
-                    && !($beats[$pick][$rival] ?? false)
-                ) {
-                    return $this->surfaceAlternate($order, $binding);
-                }
+            return ($band !== null && $band === ($bandOf[$b] ?? null))
+                ? ($beatsInBand[$a][$b] ?? false)
+                : $i < $j;
+        };
+
+        foreach ($this->roster as $i => $a) {
+            $succ = '';
+            $pred = '';
+            foreach ($this->roster as $j => $b) {
+                $succ .= $beats($i, $a, $j, $b) ? '1' : '0';
+                $pred .= $beats($j, $b, $i, $a) ? '1' : '0';
             }
-
-            $order[] = $pick;
+            $this->succ[] = $succ;
+            $this->pred[] = $pred;
         }
-
-        /** @var array<string,int> $rankIndex */
-        $rankIndex = [];
-        $statusOf = [];
-        foreach ($ranking as $idx => $e) {
-            $rankIndex[$e['candidate']] = $idx;
-            $statusOf[$e['candidate']] = $e['status'];
-        }
-        $naturalSet = array_flip($natural);
-
-        $diff = [];
-        foreach ($order as $pos => $candidate) {
-            if (array_key_exists($candidate, $naturalSet)) {
-                if ($rankIndex[$candidate] !== $pos) {
-                    $diff[] = ['candidate' => $candidate, 'from' => 'natural:' . ($rankIndex[$candidate] + 1), 'reason' => 'alternate'];
-                }
-            } elseif (($statusOf[$candidate] ?? null) === 'contested') {
-                $diff[] = ['candidate' => $candidate, 'from' => 'contested', 'reason' => 'alternate'];
-            } else {
-                $diff[] = ['candidate' => $candidate, 'from' => 'below_cut', 'reason' => 'alternate'];
-            }
-        }
-
-        return ['order' => $order, 'diff' => $diff, 'infeasible' => false, 'provisional' => false, 'binding' => $binding];
     }
 
     /**
-     * A surfaced alternation: only the determined prefix is reported.
+     * Pick the automaton. Min/max feasibility does not depend on how ties
+     * resolve (it only compares category totals with the seat count), so an
+     * infeasible or inapplicable min/max quota is settled here and the
+     * slate is simply the natural top in every resolution.
+     */
+    private function configure(): void
+    {
+        foreach ($this->roster as $i => $c) {
+            $cat = $this->categories[$c] ?? null;
+            $this->categoryOf[$i] = $cat;
+            if ($cat !== null) {
+                $this->categoryMask[$cat] ??= str_repeat('0', $this->n);
+                $this->categoryMask[$cat][$i] = '1';
+            }
+        }
+
+        if ($this->k === 0) {
+            $this->mode = 'natural';
+
+            return;
+        }
+
+        if ($this->quota['type'] === 'alternate') {
+            $this->mode = 'alternate';
+
+            return;
+        }
+
+        $category = $this->quota['category'];
+        $count = $this->quota['count'];
+        $isMin = $this->quota['type'] === 'min';
+
+        if (!in_array($category, $this->categoryOf, true)) {
+            $this->mode = 'natural';
+            $this->naturalWarning = __('components.orderedlist.quota_warn_category_absent', ['category' => $category]);
+
+            return;
+        }
+
+        $inCategory = 0;
+        foreach ($this->roster as $i => $c) {
+            $in = $this->categoryOf[$i] === $category;
+            $inCategory += $in ? 1 : 0;
+            // min: non-members may leave the top; max: members may.
+            $this->leaveSide[$i] = $isMin ? !$in : $in;
+        }
+
+        $feasible = $isMin
+            ? $inCategory >= $count && $this->k >= $count
+            : ($this->n - $inCategory) >= $this->k - $count;
+        if (!$feasible) {
+            $this->mode = 'natural';
+            $this->naturalInfeasible = true;
+            $this->naturalWarning = $isMin
+                ? __('components.orderedlist.quota_warn_min_infeasible', ['category' => $category])
+                : __('components.orderedlist.quota_warn_max_infeasible', ['category' => $category]);
+
+            return;
+        }
+
+        $this->mode = 'minmax';
+        // min: at most k-count non-members keep their seat; max: at most count members.
+        $this->keepBound = $isMin ? $this->k - $count : $count;
+    }
+
+    /**
+     * Summary of every slate produced by completing the current prefix,
+     * over every linear extension of the unplaced candidates `$rest`.
      *
-     * @param list<string> $prefix
-     * @return array{order:list<string>,diff:list<array{candidate:string,from:string,reason:string}>,infeasible:bool,provisional:bool,binding:bool}
+     * @param string $rest '1' per still-unplaced candidate
+     * @param State $state
+     * @return Summary
      */
-    private function surfaceAlternate(array $prefix, bool $binding): array
+    private function solve(string $rest, int $placed, array $state): array
     {
-        $this->warnings[] = "quota surfaced: a tie must be resolved (per your organization's rules) first";
-
-        return ['order' => $prefix, 'diff' => [], 'infeasible' => false, 'provisional' => true, 'binding' => $binding];
-    }
-
-    /**
-     * Sorted distinct categories of a candidate set, untagged as its own value.
-     *
-     * @param list<array{candidate:string,best_pos:int,worst_pos:int,determined:bool,status:string}> $entries
-     * @param array<string,string> $categories
-     * @return list<string>
-     */
-    private function categorySignature(array $entries, array $categories): array
-    {
-        $set = [];
-        foreach ($entries as $e) {
-            $set[$categories[$e['candidate']] ?? "\0untagged"] = true;
+        $key = $rest . '|' . $state['lv'] . '|' . $state['e'] . '|' . $this->field($state['g1']) . $this->field($state['g2']) . $this->field($state['inf']);
+        if (isset($this->memo[$key])) {
+            return $this->unpack($this->memo[$key]);
         }
-        $keys = array_map('strval', array_keys($set));
-        sort($keys);
-
-        return $keys;
-    }
-
-    /**
-     * @param list<array{candidate:string,best_pos:int,worst_pos:int,determined:bool,status:string}> $promotionSet
-     * @param list<array{candidate:string,best_pos:int,worst_pos:int,determined:bool,status:string}> $demotionSet
-     * @param array<string,bool> $inBand
-     */
-    private function touchesBand(array $promotionSet, array $demotionSet, array $inBand): bool
-    {
-        foreach (array_merge($promotionSet, $demotionSet) as $e) {
-            if ($inBand[$e['candidate']] ?? false) {
-                return true;
-            }
+        if (++$this->nodes > $this->maxNodes || (($this->nodes & 63) === 0 && memory_get_usage() > $this->memoryCeiling)) {
+            throw new QuotaTooComplex();
         }
 
-        return false;
-    }
+        if ($this->complete($rest, $placed, $state)) {
+            $hyp = $this->hypothesis($state);
+            $summary = [$hyp => [
+                str_repeat($this->unset, $this->k),
+                false,
+                str_repeat($this->unset, $this->k),
+                str_repeat('0', $this->n),
+                str_repeat('0', $this->n),
+            ]];
 
-    /**
-     * @param list<array{candidate:string,best_pos:int,worst_pos:int,determined:bool,status:string}> $naturalEntries
-     * @param list<array{candidate:string,best_pos:int,worst_pos:int,determined:bool,status:string}> $demotionSet
-     * @param list<array{candidate:string,best_pos:int,worst_pos:int,determined:bool,status:string}> $promotionSet
-     * @return array{order:list<string>,diff:list<array{candidate:string,from:string,reason:string}>,infeasible:bool,provisional:bool,binding:bool}
-     */
-    private function applySwap(array $naturalEntries, array $demotionSet, array $promotionSet, string $reason, bool $binding): array
-    {
-        $demoteCandidates = array_map(static fn (array $e): string => $e['candidate'], $demotionSet);
+            $this->memo[$key] = $this->pack($summary);
 
-        $order = [];
-        foreach ($naturalEntries as $e) {
-            if (in_array($e['candidate'], $demoteCandidates, true)) {
+            return $summary;
+        }
+
+        // Candidates that can legally come next, grouped into classes the
+        // automaton cannot tell apart from here on.
+        /** @var array<string,list<int>> $classes */
+        $classes = [];
+        for ($i = 0; $i < $this->n; $i++) {
+            if ($rest[$i] !== '1' || str_contains($this->pred[$i] & $rest, '1')) {
                 continue;
             }
-            $order[] = $e['candidate'];
+            $classKey = $this->observed($i, $placed, $state) . '|' . ($this->succ[$i] & $rest);
+            $classes[$classKey][] = $i;
         }
+
+        $placedMask = strtr($rest, '01', '10');
+        $out = [];
+        foreach ($classes as $class) {
+            $rep = $class[0];
+            $childRest = $rest;
+            $childRest[$rep] = '0';
+            $child = $this->solve($childRest, $placed + 1, $this->advance($rep, $placed, $state));
+            $branch = $this->place($rep, $placed, $state, $placedMask, $child);
+            $out = $this->merge($out, $branch);
+            foreach (array_slice($class, 1) as $member) {
+                $out = $this->merge($out, $this->swap($branch, $rep, $member));
+            }
+        }
+
+        $this->memo[$key] = $this->pack($out);
+
+        return $out;
+    }
+
+    /**
+     * One string per memoised state keeps memory at a few hundred bytes per
+     * state (an array of arrays costs several times that).
+     *
+     * @param Summary $summary
+     */
+    private function pack(array $summary): string
+    {
+        $packed = '';
+        foreach ($summary as $hyp => $h) {
+            $hyp = (string) $hyp;
+            $packed .= pack('N', strlen($hyp)) . $hyp . ($h[1] ? '1' : '0') . $h[0] . $h[2] . $h[3] . $h[4];
+        }
+
+        return $packed;
+    }
+
+    /** @return Summary */
+    private function unpack(string $packed): array
+    {
+        $summary = [];
+        $at = 0;
+        $length = strlen($packed);
+        while ($at < $length) {
+            /** @var array{1:int} $len */
+            $len = unpack('N', $packed, $at);
+            $hyp = substr($packed, $at + 4, $len[1]);
+            $at += 4 + $len[1];
+            $seats = $this->k * $this->w;
+            $summary[$hyp] = [
+                substr($packed, $at + 1, $seats),
+                $packed[$at] === '1',
+                substr($packed, $at + 1 + $seats, $seats),
+                substr($packed, $at + 1 + 2 * $seats, $this->n),
+                substr($packed, $at + 1 + 2 * $seats + $this->n, $this->n),
+            ];
+            $at += 1 + 2 * $seats + 2 * $this->n;
+        }
+
+        return $summary;
+    }
+
+    /**
+     * Has every slate seat been decided? The rest of the order is then
+     * irrelevant.
+     *
+     * @param State $state
+     */
+    private function complete(string $rest, int $placed, array $state): bool
+    {
+        if ($placed < $this->k) {
+            return false;
+        }
+        if ($this->mode === 'natural' || $state['inf'] !== null) {
+            return true;
+        }
+        if ($this->mode === 'minmax') {
+            return $state['e'] >= $this->need($state);
+        }
+
+        /** @var string $g1 */
+        $g1 = $state['g1'];
+        /** @var string $g2 */
+        $g2 = $state['g2'];
+        $pattern = $this->pattern($g1, $g2);
+        $placedMask = strtr($rest, '01', '10');
+
+        return substr_count($placedMask & $this->categoryMask[$g1], '1') >= count($pattern[$g1])
+            && substr_count($placedMask & $this->categoryMask[$g2], '1') >= count($pattern[$g2]);
+    }
+
+    /**
+     * What the automaton can observe about candidate `$i`, now and in any
+     * later state. Candidates with the same value (and the same relations
+     * to everyone unplaced) are interchangeable.
+     *
+     * @param State $state
+     */
+    private function observed(int $i, int $placed, array $state): string
+    {
+        if ($this->mode === 'natural' || $state['inf'] !== null) {
+            return '';
+        }
+        if ($this->mode === 'minmax') {
+            return $this->leaveSide[$i] ? 'L' : 'E';
+        }
+
+        $cat = $this->categoryOf[$i];
+        if ($state['g1'] === null || $state['g2'] === null) {
+            return 'c:' . ($cat ?? "\0");
+        }
+
+        return $cat === $state['g1'] ? 'a' : ($cat === $state['g2'] ? 'b' : 'o');
+    }
+
+    /**
+     * Automaton transition: read candidate `$i` as the next in the order.
+     *
+     * @param State $state
+     * @return State
+     */
+    private function advance(int $i, int $placed, array $state): array
+    {
+        if ($this->mode === 'minmax') {
+            if ($placed < $this->k) {
+                $state['lv'] += $this->leaveSide[$i] ? 1 : 0;
+            } elseif (!$this->leaveSide[$i] && $state['e'] < $this->need($state)) {
+                $state['e']++;
+            }
+
+            return $state;
+        }
+        if ($this->mode === 'natural' || $state['inf'] !== null || $placed >= $this->k) {
+            return $state;
+        }
+
+        // Alternation, still inside the natural top (D13/D13.1 group rules).
+        $cat = $this->categoryOf[$i];
+        if ($placed === 0) {
+            if ($cat === null) {
+                $state['inf'] = 'components.orderedlist.alternate_warn_no_start_group';
+
+                return $state;
+            }
+            $state['g1'] = $cat;
+        } elseif ($cat === null) {
+            $state['inf'] = 'components.orderedlist.alternate_warn_extra_category';
+
+            return $state;
+        } elseif ($cat !== $state['g1']) {
+            if ($state['g2'] === null) {
+                $state['g2'] = $cat;
+            } elseif ($cat !== $state['g2']) {
+                $state['inf'] = 'components.orderedlist.alternate_warn_extra_category';
+
+                return $state;
+            }
+        }
+
+        if ($placed + 1 === $this->k) {
+            // The top is complete: settle the second group and the pools.
+            if ($state['g2'] === null) {
+                $others = array_values(array_unique(array_filter(
+                    $this->categoryOf,
+                    static fn (?string $c): bool => $c !== null && $c !== $state['g1']
+                )));
+                if ($others === []) {
+                    $state['inf'] = 'components.orderedlist.alternate_warn_one_category';
+
+                    return $state;
+                }
+                if (count($others) >= 2) {
+                    $state['inf'] = 'components.orderedlist.alternate_warn_ambiguous_second_group';
+
+                    return $state;
+                }
+                $state['g2'] = $others[0];
+            }
+            /** @var string $g1 */
+            $g1 = $state['g1'];
+            if (substr_count($this->categoryMask[$g1], '1') + substr_count($this->categoryMask[$state['g2']], '1') < $this->k) {
+                $state['inf'] = 'components.orderedlist.alternate_warn_not_enough_candidates';
+            }
+        }
+
+        return $state;
+    }
+
+    /**
+     * Prepend "candidate `$i` read at position `$placed`" to every slate of
+     * a child summary. Which seat it takes depends on the child's outcome
+     * (hypothesis): an alternation that turns out infeasible keeps the
+     * natural top instead of the zipper.
+     *
+     * @param State $state the state BEFORE reading `$i`
+     * @param Summary $child
+     * @return Summary
+     */
+    private function place(int $i, int $placed, array $state, string $placedMask, array $child): array
+    {
+        $code = $this->encode($i);
+        foreach ($child as $hyp => $h) {
+            $seat = $this->seatFor($i, $placed, $state, $placedMask, $hyp);
+            if ($seat === null) {
+                continue;
+            }
+            $h[0] = substr_replace($h[0], $code, $seat * $this->w, $this->w);
+            $h[2] = substr_replace($h[2], $code, $seat * $this->w, $this->w);
+            $h[3][$i] = '1';
+            $h[4][$i] = '1';
+            $child[$hyp] = $h;
+        }
+
+        return $child;
+    }
+
+    /**
+     * The slate seat (0-based) candidate `$i` takes when read at position
+     * `$placed`, or null if it is not seated.
+     *
+     * @param State $state the state BEFORE reading `$i`
+     */
+    private function seatFor(int $i, int $placed, array $state, string $placedMask, string $hyp): ?int
+    {
+        if ($hyp[0] === 'n' || $hyp[0] === 'i') {
+            return $placed < $this->k ? $placed : null;
+        }
+
+        if ($hyp[0] === 'm') {
+            if ($placed < $this->k) {
+                if ($this->leaveSide[$i] && $state['lv'] + 1 > $this->keepBound) {
+                    return null; // among the worst-placed of the over-represented side
+                }
+
+                return $placed - max(0, $state['lv'] - $this->keepBound);
+            }
+            $need = $this->need($state);
+            if (!$this->leaveSide[$i] && $state['e'] < $need) {
+                return $this->k - $need + $state['e'];
+            }
+
+            return null;
+        }
+
+        // 'z' . g1 . "\0" . g2: the zipper.
+        [$g1, $g2] = explode("\0", substr($hyp, 1), 2);
+        $cat = $this->categoryOf[$i];
+        if ($cat !== $g1 && $cat !== $g2) {
+            return null;
+        }
+        $rank = substr_count($placedMask & $this->categoryMask[$cat], '1');
+
+        return $this->pattern($g1, $g2)[$cat][$rank] ?? null;
+    }
+
+    /**
+     * Min/max: how many below-cut candidates must enter (known once the top
+     * is complete; the leavers are exactly the leave-side overflow).
+     *
+     * @param State $state
+     */
+    private function need(array $state): int
+    {
+        return max(0, $state['lv'] - $this->keepBound);
+    }
+
+    /**
+     * Seats taken by each alternation group: alternate starting with g1;
+     * once a group runs out the other fills the remaining seats.
+     *
+     * @return array<string,list<int>>
+     */
+    private function pattern(string $g1, string $g2): array
+    {
+        $key = $g1 . "\0" . $g2;
+        if (!isset($this->patterns[$key])) {
+            $a = substr_count($this->categoryMask[$g1], '1');
+            $b = substr_count($this->categoryMask[$g2], '1');
+            $seats = [$g1 => [], $g2 => []];
+            $usedA = 0;
+            $usedB = 0;
+            for ($s = 0; $s < $this->k; $s++) {
+                $fromStart = $s % 2 === 0 ? $usedA < $a : $usedB >= $b;
+                if ($fromStart) {
+                    $seats[$g1][] = $s;
+                    $usedA++;
+                } else {
+                    $seats[$g2][] = $s;
+                    $usedB++;
+                }
+            }
+            $this->patterns[$key] = $seats;
+        }
+
+        return $this->patterns[$key];
+    }
+
+    /**
+     * The outcome class of a completed prefix.
+     *
+     * @param State $state
+     */
+    private function hypothesis(array $state): string
+    {
+        if ($this->mode === 'natural') {
+            $this->hypMeta['n'] ??= [
+                'infeasible' => $this->naturalInfeasible,
+                'warnings' => $this->naturalWarning === null ? [] : [$this->naturalWarning],
+            ];
+
+            return 'n';
+        }
+        if ($this->mode === 'minmax') {
+            $this->hypMeta['m'] ??= ['infeasible' => false, 'warnings' => []];
+
+            return 'm';
+        }
+        if ($state['inf'] !== null) {
+            $hyp = 'i' . $state['inf'];
+            $this->hypMeta[$hyp] ??= ['infeasible' => true, 'warnings' => [__($state['inf'])]];
+
+            return $hyp;
+        }
+        $hyp = 'z' . $state['g1'] . "\0" . $state['g2'];
+        $this->hypMeta[$hyp] ??= ['infeasible' => false, 'warnings' => []];
+
+        return $hyp;
+    }
+
+    /**
+     * @param Summary $a
+     * @param Summary $b
+     * @return Summary
+     */
+    private function merge(array $a, array $b): array
+    {
+        foreach ($b as $hyp => $h) {
+            $a[$hyp] = isset($a[$hyp]) ? $this->mergeHyp($a[$hyp], $h) : $h;
+        }
+
+        return $a;
+    }
+
+    /**
+     * @param Hyp $a
+     * @param Hyp $b
+     * @return Hyp
+     */
+    private function mergeHyp(array $a, array $b): array
+    {
+        $agree = $a[2];
+        if ($agree !== $b[2]) {
+            for ($s = 0, $w = $this->w; $s < $this->k; $s++) {
+                if (substr($agree, $s * $w, $w) !== substr($b[2], $s * $w, $w)) {
+                    $agree = substr_replace($agree, $this->mixed, $s * $w, $w);
+                }
+            }
+        }
+
+        return [$a[0], $a[1] || $b[1] || $a[0] !== $b[0], $agree, $a[3] & $b[3], $a[4] | $b[4]];
+    }
+
+    /**
+     * Rename two interchangeable candidates throughout a summary.
+     *
+     * @param Summary $summary
+     * @return Summary
+     */
+    private function swap(array $summary, int $x, int $y): array
+    {
+        foreach ($summary as $hyp => $h) {
+            foreach ([3, 4] as $set) {
+                [$h[$set][$x], $h[$set][$y]] = [$h[$set][$y], $h[$set][$x]];
+            }
+            $summary[$hyp] = [$this->rename($h[0], $x, $y), $h[1], $this->rename($h[2], $x, $y), $h[3], $h[4]];
+        }
+
+        return $summary;
+    }
+
+    /** Swap two candidates' codes in a packed seat string (aligned). */
+    private function rename(string $seats, int $x, int $y): string
+    {
+        $cx = $this->encode($x);
+        $cy = $this->encode($y);
+        if ($this->w === 1) {
+            return strtr($seats, [$cx => $cy, $cy => $cx]);
+        }
+        $out = '';
+        foreach (str_split($seats, 2) as $code) {
+            $out .= $code === $cx ? $cy : ($code === $cy ? $cx : $code);
+        }
+
+        return $out;
+    }
+
+    private function encode(int $i): string
+    {
+        return $this->w === 1 ? chr($i) : pack('n', $i);
+    }
+
+    private function decode(string $code): int
+    {
+        if ($this->w === 1) {
+            return ord($code);
+        }
+        /** @var array{1:int} $value */
+        $value = unpack('n', $code);
+
+        return $value[1];
+    }
+
+    /** Length-prefixed memo-key field (category names are arbitrary strings). */
+    private function field(?string $value): string
+    {
+        return $value === null ? '-|' : strlen($value) . ':' . $value . '|';
+    }
+
+    /**
+     * Absolute memory_usage() bound for the memo: what the request already
+     * uses plus a fixed headroom, kept well inside memory_limit.
+     */
+    private function memoryCeiling(): int
+    {
+        $now = memory_get_usage();
+        $limit = trim((string) ini_get('memory_limit'));
+        if ($limit === '' || $limit === '-1') {
+            return $now + self::MEMORY_HEADROOM;
+        }
+        $bytes = (int) $limit;
+        $unit = strtolower(substr($limit, -1));
+        $bytes *= match ($unit) {
+            'g' => 1024 ** 3,
+            'm' => 1024 ** 2,
+            'k' => 1024,
+            default => 1,
+        };
+
+        return $now + max(0, min(self::MEMORY_HEADROOM, intdiv(($bytes - $now) * 6, 10)));
+    }
+
+    /**
+     * Fold every outcome class into what all resolutions agree on.
+     *
+     * @param Summary $summary
+     * @return Result
+     */
+    private function aggregate(array $summary): array
+    {
+        $first = null;
+        $multi = false;
+        $agree = '';
+        $inter = '';
+        $union = '';
+        $allInfeasible = true;
+        $anyInfeasible = false;
+
+        foreach ($summary as $hyp => $h) {
+            $meta = $this->hypMeta[$hyp];
+            foreach ($meta['warnings'] as $w) {
+                if (!in_array($w, $this->warnings, true)) {
+                    $this->warnings[] = $w;
+                }
+            }
+            $allInfeasible = $allInfeasible && $meta['infeasible'];
+            $anyInfeasible = $anyInfeasible || $meta['infeasible'];
+
+            if ($first === null) {
+                [$first, $multi, $agree, $inter, $union] = $h;
+                continue;
+            }
+            [$first, $multi, $agree, $inter, $union] = $this->mergeHyp([$first, $multi, $agree, $inter, $union], $h);
+        }
+        /** @var string $first */
+
+        if ($multi) {
+            $this->warnings[] = __('components.orderedlist.quota_warn_surfaced');
+        }
+
+        $positions = [];
+        $prefix = [];
+        $prefixOpen = true;
+        for ($s = 0; $s < $this->k; $s++) {
+            $code = substr($agree, $s * $this->w, $this->w);
+            if ($code === $this->mixed || $code === $this->unset) {
+                $prefixOpen = false;
+                continue;
+            }
+            $candidate = $this->roster[$this->decode($code)];
+            $positions[$candidate] = $s + 1;
+            if ($prefixOpen) {
+                $prefix[] = $candidate;
+            }
+        }
+
+        $seated = [];
+        $contested = [];
+        for ($i = 0; $i < $this->n; $i++) {
+            if ($inter[$i] === '1') {
+                $seated[] = $this->roster[$i];
+            } elseif ($union[$i] === '1') {
+                $contested[] = $this->roster[$i];
+            }
+        }
+        $sortKey = fn (string $c): array => [$positions[$c] ?? PHP_INT_MAX, $this->index[$c]];
+        usort($seated, static fn (string $a, string $b): int => $sortKey($a) <=> $sortKey($b));
+
+        $order = $multi
+            ? $prefix
+            : array_map(fn (string $code): string => $this->roster[$this->decode($code)], str_split($first, $this->w));
+
+        return $this->shape(
+            $order,
+            $this->diff($seated, $positions),
+            $allInfeasible,
+            $anyInfeasible && !$allInfeasible,
+            $multi,
+            false,
+            $seated,
+            $contested,
+            $positions,
+        );
+    }
+
+    /**
+     * Exact answers that need no search. Null when the case needs the DP.
+     *
+     * @return Result|null
+     */
+    private function closedForm(): ?array
+    {
+        if (!$this->closedForms) {
+            return null;
+        }
+        if ($this->mode === 'natural') {
+            return $this->naturalResult($this->naturalInfeasible, $this->naturalWarning === null ? [] : [$this->naturalWarning]);
+        }
+        if ($this->mode === 'alternate') {
+            return $this->alternationResult();
+        }
+
+        return null;
+    }
+
+    /**
+     * The natural top in every resolution: exactly the resolver's position
+     * intervals (best/worst position over all linear extensions). Seated:
+     * worst position within the seats; contested: only the best one is;
+     * certain seat: best = worst.
+     *
+     * @param list<string> $warnings
+     * @return Result
+     */
+    private function naturalResult(bool $infeasible, array $warnings): array
+    {
+        $seated = [];
+        $contested = [];
+        $positions = [];
+        foreach ($this->ranking as $i => $entry) {
+            $c = $this->roster[$i];
+            if ($entry['worst_pos'] <= $this->k) {
+                $seated[] = $c;
+            } elseif ($entry['best_pos'] <= $this->k) {
+                $contested[] = $c;
+            }
+            if ($entry['best_pos'] === $entry['worst_pos'] && $entry['best_pos'] <= $this->k) {
+                $positions[$c] = $entry['best_pos'];
+            }
+        }
+
+        return $this->closedResult($seated, $contested, $positions, $infeasible, $warnings);
+    }
+
+    /**
+     * Alternation whose two groups (and feasibility) are the same in every
+     * resolution -- the usual case. The zipper's seat s then takes the r-th
+     * best member of its group, so each candidate's possible seats follow
+     * exactly from its rank interval INSIDE its group (one plus the group
+     * members that beat it, up to one plus those it does not beat). If the
+     * rule is infeasible in every resolution, the natural top stands. If
+     * the groups or feasibility can differ between resolutions, null (DP).
+     *
+     * @return Result|null
+     */
+    private function alternationResult(): ?array
+    {
+        $infeasible = fn (string $key): array => $this->naturalResult(true, [__($key)]);
+
+        $always = $this->alternationAlwaysInfeasible();
+        if ($always !== null) {
+            return $infeasible($always);
+        }
+
+        // The start group is fixed when everyone who could be #1 shares it.
+        $leaders = [];
+        foreach ($this->ranking as $i => $entry) {
+            if ($entry['best_pos'] === 1) {
+                $leaders[$this->categoryOf[$i] ?? "\0"] = true;
+            }
+        }
+        if (count($leaders) !== 1) {
+            return null; // the start group itself hinges on a tie
+        }
+        $g1 = (string) array_key_first($leaders);
+        if ($g1 === "\0") {
+            return $infeasible('components.orderedlist.alternate_warn_no_start_group');
+        }
+
+        $sureCats = [];
+        $maybeOthers = [];
+        $sureOthers = [];
+        foreach ($this->ranking as $i => $entry) {
+            if ($entry['best_pos'] > $this->k) {
+                continue;
+            }
+            $sure = $entry['worst_pos'] <= $this->k;
+            $cat = $this->categoryOf[$i];
+            if ($cat === null) {
+                if ($sure) {
+                    return $infeasible('components.orderedlist.alternate_warn_extra_category');
+                }
+
+                return null;
+            }
+            if ($sure) {
+                $sureCats[$cat] = true;
+            }
+            if ($cat !== $g1) {
+                $maybeOthers[$cat] = true;
+                if ($sure) {
+                    $sureOthers[$cat] = true;
+                }
+            }
+        }
+        if (count($sureCats) >= 3) {
+            return $infeasible('components.orderedlist.alternate_warn_extra_category');
+        }
+        if (count($maybeOthers) >= 2) {
+            return null;
+        }
+
+        $rosterOthers = array_values(array_unique(array_filter(
+            $this->categoryOf,
+            static fn (?string $c): bool => $c !== null && $c !== $g1
+        )));
+        if ($maybeOthers === []) {
+            if ($rosterOthers === []) {
+                return $infeasible('components.orderedlist.alternate_warn_one_category');
+            }
+            if (count($rosterOthers) >= 2) {
+                return $infeasible('components.orderedlist.alternate_warn_ambiguous_second_group');
+            }
+            $g2 = $rosterOthers[0];
+        } else {
+            $g2 = (string) array_key_first($maybeOthers);
+            if ($sureOthers === [] && $rosterOthers !== [$g2]) {
+                return null; // an all-g1 top would derive another (or no) second group
+            }
+        }
+
+        if (substr_count($this->categoryMask[$g1], '1') + substr_count($this->categoryMask[$g2], '1') < $this->k) {
+            return $infeasible('components.orderedlist.alternate_warn_not_enough_candidates');
+        }
+
+        $pattern = $this->pattern($g1, $g2);
+        $seated = [];
+        $contested = [];
+        $positions = [];
+        foreach ([$g1, $g2] as $group) {
+            $mask = $this->categoryMask[$group];
+            $members = substr_count($mask, '1');
+            $seatsOfGroup = $pattern[$group];
+            for ($i = 0; $i < $this->n; $i++) {
+                if ($mask[$i] !== '1') {
+                    continue;
+                }
+                $minRank = 1 + substr_count($this->pred[$i] & $mask, '1');
+                $maxRank = $members - substr_count($this->succ[$i] & $mask, '1');
+                $c = $this->roster[$i];
+                if ($maxRank <= count($seatsOfGroup)) {
+                    $seated[] = $c;
+                } elseif ($minRank <= count($seatsOfGroup)) {
+                    $contested[] = $c;
+                }
+                if ($minRank === $maxRank && $minRank <= count($seatsOfGroup)) {
+                    $positions[$c] = $seatsOfGroup[$minRank - 1] + 1;
+                }
+            }
+        }
+        usort($contested, fn (string $a, string $b): int => $this->index[$a] <=> $this->index[$b]);
+
+        return $this->closedResult($seated, $contested, $positions, false, []);
+    }
+
+    /**
+     * @param list<string> $seated
+     * @param list<string> $contested
+     * @param array<string,int> $positions
+     * @param list<string> $warnings
+     * @return Result
+     */
+    private function closedResult(array $seated, array $contested, array $positions, bool $infeasible, array $warnings): array
+    {
+        $provisional = count($positions) < $this->k;
+        foreach ($warnings as $w) {
+            $this->warnings[] = $w;
+        }
+        if ($provisional) {
+            $this->warnings[] = __('components.orderedlist.quota_warn_surfaced');
+        }
+
+        asort($positions);
+        $bySeat = array_flip($positions);
+        $order = [];
+        for ($s = 1; isset($bySeat[$s]); $s++) {
+            $order[] = (string) $bySeat[$s];
+        }
+        $sortKey = fn (string $c): array => [$positions[$c] ?? PHP_INT_MAX, $this->index[$c]];
+        usort($seated, static fn (string $a, string $b): int => $sortKey($a) <=> $sortKey($b));
+
+        return $this->shape($order, $this->diff($seated, $positions), $infeasible, false, $provisional, false, $seated, $contested, $positions);
+    }
+
+    /**
+     * Beyond the cap: a SOUND partial answer, never a guess. Seated only
+     * where a cheap argument proves it for every resolution; contested is a
+     * superset of everyone who could take a seat; no certain seat numbers.
+     *
+     *   - natural top (min/max inapplicable or infeasible): exactly the
+     *     resolver's elected / contested statuses;
+     *   - min/max: a surely-elected candidate on the side that never leaves
+     *     stays; one on the leaving side stays when even counting every
+     *     same-side candidate that could precede it, it is within the
+     *     candidates who keep their seat. Anyone who could be in the top or
+     *     could enter from below may be seated;
+     *   - alternation: nothing is certain; anyone who could be in the top,
+     *     or belongs to a category the zipper could draw from, may be seated.
+     *
+     * @return Result
+     */
+    private function fallback(): array
+    {
+        $infeasible = $this->naturalInfeasible
+            || (($this->mode ?? null) === 'alternate' && $this->alternationAlwaysInfeasible() !== null);
+        $seated = [];
+        $possible = [];
+        foreach ($this->ranking as $i => $entry) {
+            $c = $this->roster[$i];
+            $surelyTop = $entry['status'] === 'elected';
+            $maybeTop = $entry['best_pos'] <= $this->k;
+            $category = $this->categories[$c] ?? null;
+
+            if (!isset($this->mode)) {
+                $possible[] = $c;
+                continue;
+            }
+
+            if ($this->mode === 'natural' || $infeasible) {
+                if ($surelyTop) {
+                    $seated[] = $c;
+                } elseif ($maybeTop) {
+                    $possible[] = $c;
+                }
+                continue;
+            }
+
+            if ($this->mode === 'minmax') {
+                if ($surelyTop && (!$this->leaveSide[$i] || $this->maxLeaveRank($i) <= $this->keepBound)) {
+                    $seated[] = $c;
+                } elseif ($maybeTop || !$this->leaveSide[$i]) {
+                    $possible[] = $c;
+                }
+                continue;
+            }
+
+            if ($maybeTop || $category !== null) {
+                $possible[] = $c;
+            }
+        }
+
+        return $this->shape([], [], $infeasible, false, true, true, $seated, $possible, []);
+    }
+
+    /**
+     * An alternation infeasibility that holds in EVERY tie resolution,
+     * whoever ends up #1 (an untagged #1 is infeasible on its own), as a
+     * warning key; null when some resolution may be feasible.
+     */
+    private function alternationAlwaysInfeasible(): ?string
+    {
+        $sizes = [];
+        foreach ($this->categoryMask as $mask) {
+            $sizes[] = substr_count($mask, '1');
+        }
+        if (count($sizes) < 2) {
+            return 'components.orderedlist.alternate_warn_one_category';
+        }
+
+        $sureCats = [];
+        foreach ($this->ranking as $i => $entry) {
+            if ($entry['worst_pos'] > $this->k) {
+                continue;
+            }
+            $cat = $this->categoryOf[$i];
+            if ($cat === null) {
+                return 'components.orderedlist.alternate_warn_extra_category';
+            }
+            $sureCats[$cat] = true;
+        }
+        if (count($sureCats) >= 3) {
+            return 'components.orderedlist.alternate_warn_extra_category';
+        }
+
+        rsort($sizes);
+        if ($sizes[0] + $sizes[1] < $this->k) {
+            return 'components.orderedlist.alternate_warn_not_enough_candidates';
+        }
+
+        return null;
+    }
+
+    /**
+     * Worst possible rank of leave-side candidate `$i` among the leave-side
+     * candidates of the top: one plus every other leave-side candidate it
+     * does not beat (any of them could be placed before it).
+     */
+    private function maxLeaveRank(int $i): int
+    {
+        $rank = 1;
+        foreach ($this->leaveSide as $j => $leaves) {
+            if ($leaves && $j !== $i && $this->succ[$i][$j] !== '1') {
+                $rank++;
+            }
+        }
+
+        return $rank;
+    }
+
+    /**
+     * Audit trail (display only): every certainly-seated candidate who is
+     * there because of the quota rather than the votes alone -- entered
+     * from below the cut (`below_cut`) or from a contested cut
+     * (`contested`) -- plus, for alternation, a surely-elected candidate
+     * whose certain seat differs from their natural place
+     * (`natural:<rank>`).
+     *
+     * @param list<string> $seated
+     * @param array<string,int> $positions
+     * @return list<array{candidate:string,from:string,reason:string}>
+     */
+    private function diff(array $seated, array $positions): array
+    {
+        $type = $this->quota['type'];
+        $reason = $type === 'alternate' ? 'alternate' : "{$type}_quota:{$this->quota['category']}";
 
         $diff = [];
-        foreach ($promotionSet as $e) {
-            $order[] = $e['candidate'];
-            $diff[] = ['candidate' => $e['candidate'], 'from' => 'below_cut', 'reason' => $reason];
+        foreach ($seated as $candidate) {
+            $idx = $this->index[$candidate];
+            $status = $this->ranking[$idx]['status'];
+            if ($status === 'excluded') {
+                $diff[] = ['candidate' => $candidate, 'from' => 'below_cut', 'reason' => $reason];
+            } elseif ($status === 'contested') {
+                $diff[] = ['candidate' => $candidate, 'from' => 'contested', 'reason' => $reason];
+            } elseif ($type === 'alternate' && isset($positions[$candidate]) && $positions[$candidate] !== $idx + 1) {
+                $diff[] = ['candidate' => $candidate, 'from' => 'natural:' . ($idx + 1), 'reason' => $reason];
+            }
         }
 
-        return ['order' => $order, 'diff' => $diff, 'infeasible' => false, 'provisional' => false, 'binding' => $binding];
+        return $diff;
+    }
+
+    /**
+     * @param list<string> $order
+     * @param list<array{candidate:string,from:string,reason:string}> $diff
+     * @param list<string> $seated
+     * @param list<string> $contested
+     * @param array<string,int> $positions
+     * @return Result
+     */
+    private function shape(array $order, array $diff, bool $infeasible, bool $partlyInfeasible, bool $provisional, bool $tooComplex, array $seated, array $contested, array $positions): array
+    {
+        return [
+            'order' => $order,
+            'diff' => $diff,
+            'infeasible' => $infeasible,
+            'partly_infeasible' => $partlyInfeasible,
+            'provisional' => $provisional,
+            'binding' => $this->quota['binding'],
+            'too_complex' => $tooComplex,
+            'seated' => $seated,
+            'contested' => $contested,
+            'positions' => $positions,
+        ];
     }
 }

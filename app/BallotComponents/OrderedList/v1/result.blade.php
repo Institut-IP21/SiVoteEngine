@@ -15,35 +15,20 @@
     $accounting = $res['accounting'];
     $corrected = $res['corrected'];
 
-    // A binding quota that is still provisional (surfaced -- a tie needs
-    // resolving per the organization's own rules before it can promote)
-    // must keep the headline from claiming a final result -- even when the
-    // top-K membership/order is otherwise fully settled. An INFEASIBLE
-    // binding quota is terminal, not pending: the natural list is genuinely
-    // final, so it must not block success.
-    $quotaPending = $corrected !== null && ($corrected['binding'] ?? false) && ($corrected['provisional'] ?? false);
+    // Everything below reads the engine's OFFICIAL outcome (the binding
+    // quota slate when official, else the votes-alone slate) -- never a
+    // re-derivation from bands/quota state here (D15).
+    $officialOrder = $res['official_order'];
+    $officialPositions = $res['official_positions'];
+    $officialContested = $res['official_contested'];
+    $success = $hasResult && $res['final'];
 
-    // Finality is the engine's single predicate (OrderedList::calculateResults).
-    $success = $hasResult && ($res['final'] ?? false);
-
-    // When not final, report two INDEPENDENT figures rather than one
-    // conflated count: membership (does this seat have a settled occupant at
-    // all?) and ordering (the occupants are settled, only their relative
-    // order within the top K isn't). A band can only ever contribute to one
-    // of the two -- a straddling band (span[1] > seats) is membership-doubt
-    // and is exactly what cutoff_decision already summarizes; a band wholly
-    // inside the top K (span[1] <= seats) is a pure order-tie among already-
-    // elected candidates.
-    $membershipContested = $cutoffDecision !== null ? $cutoffDecision['remaining_seats'] : null;
-    $orderTiesCount = 0;
-    if ($hasResult && ! $success) {
-        foreach ($bands as $band) {
-            if (($band['span'][1] ?? 0) > $seats) {
-                continue;
-            }
-            $orderTiesCount++;
-        }
-    }
+    // When not final, two INDEPENDENT figures: membership (seats with no
+    // certain occupant yet) and ordering (surely-seated candidates whose
+    // exact seat is still tied).
+    $membershipContested = $officialContested !== [] ? max(1, min($seats, count($ranking)) - count($officialOrder)) : null;
+    $orderTiesCount = count($officialOrder) - count($officialPositions);
+    $quotaPending = $res['official'] === 'corrected' && ($corrected['provisional'] ?? false);
 @endphp
 <div x-data="{ open: false }">
     @if (! $quorumMet)
@@ -56,15 +41,15 @@
         </div>
     @elseif ($success)
         <div class="p-4 text-center mb-4 rounded-xl font-semibold bg-secure-soft text-secure">
-            {{ __('components.orderedlist.elected_headline', ['seats' => $seats]) }}
+            {{ trans_choice('components.orderedlist.elected_headline', $seats, ['seats' => $seats]) }}
         </div>
     @else
         <div class="p-4 text-center mb-4 rounded-xl font-semibold bg-warn-soft text-warn-fg">
             @if ($membershipContested !== null)
-                <p class="m-0">{{ __('components.orderedlist.contested_headline', ['count' => $membershipContested]) }}</p>
+                <p class="m-0">{{ trans_choice('components.orderedlist.contested_headline', $membershipContested, ['count' => $membershipContested]) }}</p>
             @endif
             @if ($orderTiesCount > 0)
-                <p class="m-0">{{ __('components.orderedlist.order_ties_note', ['count' => $orderTiesCount]) }}</p>
+                <p class="m-0">{{ trans_choice('components.orderedlist.order_ties_note', $orderTiesCount, ['count' => $orderTiesCount]) }}</p>
             @endif
             @if ($quotaPending)
                 <p class="m-0">{{ __('components.orderedlist.quota_pending_note') }}</p>

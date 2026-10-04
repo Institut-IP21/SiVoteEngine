@@ -233,18 +233,19 @@ class OrderedListTest extends TestCase
         $this->assertNull($r['cutoff_decision']);
         $this->assertEqualsCanonicalizing(['A', 'B', 'C'], $r['elected']);
 
-        $this->assertSame('natural', $r['official']);
+        // D15: the binding quota slate is official even while pending. C
+        // is surely demoted; D/E genuinely tie for the Sales seat; A/B's
+        // order is tied too -- so nothing has a certain seat yet.
+        $this->assertSame('corrected', $r['official']);
         $this->assertFalse($r['final']);
         $this->assertNotNull($r['corrected']);
         $this->assertTrue($r['corrected']['provisional']);
         $this->assertFalse($r['corrected']['infeasible']);
-        $this->assertSame(['A', 'B', 'C'], $r['corrected']['order']);
-        $this->assertNotContains('D', $r['corrected']['order']);
-        $this->assertNotContains('E', $r['corrected']['order']);
-        $this->assertNotEmpty(array_filter(
-            $r['warnings'],
-            static fn (string $w): bool => str_contains($w, 'surfaced')
-        ));
+        $this->assertSame([], $r['corrected']['order']);
+        $this->assertSame(['A', 'B'], $r['official_order']);
+        $this->assertSame(['D', 'E'], $r['official_contested']);
+        $this->assertSame([], $r['official_positions']);
+        $this->assertContains(__('components.orderedlist.quota_warn_surfaced'), $r['warnings']);
     }
 
     /**
@@ -267,9 +268,11 @@ class OrderedListTest extends TestCase
 
         $r = $this->calc($votes, $c);
 
-        $this->assertSame('natural', $r['official']);
+        $this->assertSame('corrected', $r['official']);
         $this->assertTrue($r['corrected']['provisional']);
-        $this->assertSame(['A', 'B', 'C'], $r['corrected']['order']);
+        $this->assertSame(['A', 'B'], $r['official_order']);
+        $this->assertEqualsCanonicalizing(['D', 'E'], $r['official_contested']);
+        $this->assertSame([], $r['official_positions']);
     }
 
     public function test_seats_clamp_and_malformed_quota_warnings_appear_in_the_dto(): void
@@ -433,8 +436,12 @@ class OrderedListTest extends TestCase
 
         $this->assertTrue($r['corrected']['provisional']);
         $this->assertSame(['F1', 'M1'], $r['corrected']['order']);
-        $this->assertSame('natural', $r['official']);
+        // Zipper F1, M1, F2|F3, M2: seats 1, 2 and 4 are certain.
+        $this->assertSame('corrected', $r['official']);
         $this->assertFalse($r['final']);
+        $this->assertSame(['F1', 'M1', 'M2'], $r['official_order']);
+        $this->assertSame(['F1' => 1, 'M1' => 2, 'M2' => 4], $r['official_positions']);
+        $this->assertSame(['F2', 'F3'], $r['official_contested']);
     }
 
     /**
@@ -487,7 +494,12 @@ class OrderedListTest extends TestCase
 
         $this->assertTrue($r['corrected']['provisional']);
         $this->assertSame([], $r['corrected']['order']);
-        $this->assertSame('natural', $r['official']);
+        // F1,M1 or M1,F1: both surely seated, neither seat certain.
+        $this->assertSame('corrected', $r['official']);
+        $this->assertFalse($r['final']);
+        $this->assertSame(['F1', 'M1'], $r['official_order']);
+        $this->assertSame([], $r['official_positions']);
+        $this->assertSame([], $r['official_contested']);
     }
 
     /**
@@ -516,7 +528,13 @@ class OrderedListTest extends TestCase
         $this->assertNotNull($r['cutoff_decision']);
         $this->assertTrue($r['corrected']['provisional']);
         $this->assertFalse($r['corrected']['infeasible']);
-        $this->assertSame('natural', $r['official']);
+        // F1,M1 (zipper) or F1,X1 (untagged front-runner -> infeasible ->
+        // votes alone): F1 is certain at seat 1; M1/X1 contest seat 2.
+        $this->assertSame('corrected', $r['official']);
+        $this->assertFalse($r['final']);
+        $this->assertSame(['F1'], $r['official_order']);
+        $this->assertSame(['F1' => 1], $r['official_positions']);
+        $this->assertSame(['M1', 'X1'], $r['official_contested']);
     }
 
     /**

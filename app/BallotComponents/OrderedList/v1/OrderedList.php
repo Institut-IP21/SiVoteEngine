@@ -188,11 +188,11 @@ final class OrderedList extends AbstractBallotComponent
         if ($quota !== null) {
             $quotaCorrector = new QuotaCorrector(
                 $positions->ranking(),
-                $positions->cutoffDecision(),
                 $positions->bands(),
                 $categories,
                 $quota,
                 $seats,
+                (int) config('ballot.orderedlist_quota_max_nodes', QuotaCorrector::MAX_NODES),
             );
             $corrected = $quotaCorrector->result();
             $quotaBinding = $quota['binding'];
@@ -201,27 +201,14 @@ final class OrderedList extends AbstractBallotComponent
 
         $warnings = [...$warnings, ...$quotaWarnings];
 
-        $official = ($corrected !== null && $quotaBinding && !$corrected['infeasible'] && !$corrected['provisional'])
+        // A binding quota's slate is the OFFICIAL result whenever it can be
+        // applied at all -- even while a tie it genuinely depends on is still
+        // open (D15): its certain seats are then official and the rest are
+        // contested. Only an advisory or infeasible quota leaves the votes-
+        // alone slate official.
+        $official = ($corrected !== null && $quotaBinding && !$corrected['infeasible'])
             ? 'corrected'
             : 'natural';
-
-        // Finality -- the ONE predicate every consumer reads. An official
-        // alternation slate is fully determined by construction (the
-        // corrector surfaces every tie the zipper depends on; cross-group
-        // ties never matter to it), so natural-order ties -- even a contested
-        // natural cut -- do not keep it from being final. Otherwise any band
-        // that can still touch the K seats, or a binding quota still waiting
-        // on a tie, keeps the result open.
-        $alternationOfficial = $official === 'corrected' && $quota['type'] === 'alternate';
-        $topKBandOpen = false;
-        foreach ($positions->bands() as $band) {
-            if ($band['span'][0] <= $seats) {
-                $topKBandOpen = true;
-                break;
-            }
-        }
-        $quotaPending = $corrected !== null && $quotaBinding && $corrected['provisional'];
-        $final = $alternationOfficial || (!$topKBandOpen && !$quotaPending);
 
         return new OrderedListResult(
             seats: $seats,
@@ -235,7 +222,6 @@ final class OrderedList extends AbstractBallotComponent
             pairwise: ['candidates' => $pairwiseMatrix->candidates(), 'matrix' => $pairwiseMatrix->matrix()],
             accounting: $accounting,
             warnings: $warnings,
-            final: $final,
         );
     }
 

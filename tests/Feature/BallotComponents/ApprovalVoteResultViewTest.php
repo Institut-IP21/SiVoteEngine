@@ -67,7 +67,7 @@ class ApprovalVoteResultViewTest extends TestCase
         $res = $this->fetchResult($ballot);
         $res->assertOk();
         $res->assertSeeText(__('components.approval.winner_is', ['name' => 'Red']));
-        $res->assertDontSeeText(__('components.approval.elected_headline', ['seats' => 1]));
+        $res->assertDontSeeText(trans_choice('components.approval.elected_headline', 1, ['seats' => 1]));
     }
 
     public function test_seats_one_tie_shows_classic_tie_banner(): void
@@ -96,8 +96,8 @@ class ApprovalVoteResultViewTest extends TestCase
 
         $res = $this->fetchResult($ballot);
         $res->assertOk();
-        $res->assertSeeText(__('components.approval.elected_headline', ['seats' => 2]));
-        $res->assertDontSeeText(__('components.approval.contested_headline', ['count' => 1]));
+        $res->assertSeeText(trans_choice('components.approval.elected_headline', 2, ['seats' => 2]));
+        $res->assertDontSeeText(trans_choice('components.approval.contested_headline', 1, ['count' => 1]));
     }
 
     public function test_cutoff_tie_shows_contested_headline_and_no_arbitrary_pick(): void
@@ -113,8 +113,8 @@ class ApprovalVoteResultViewTest extends TestCase
 
         $res = $this->fetchResult($ballot);
         $res->assertOk();
-        $res->assertSeeText(__('components.approval.contested_headline', ['count' => 1]));
-        $res->assertDontSeeText(__('components.approval.elected_headline', ['seats' => 2]));
+        $res->assertSeeText(trans_choice('components.approval.contested_headline', 1, ['count' => 1]));
+        $res->assertDontSeeText(trans_choice('components.approval.elected_headline', 2, ['seats' => 2]));
     }
 
     public function test_no_votes_yet_shows_neutral_notice_without_error(): void

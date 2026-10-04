@@ -67,13 +67,13 @@ class OrderedListResultViewTest extends TestCase
 
         $res = $this->fetchResult($ballot);
         $res->assertOk();
-        $res->assertSeeText(__('components.orderedlist.elected_headline', ['seats' => 2]));
+        $res->assertSeeText(trans_choice('components.orderedlist.elected_headline', 2, ['seats' => 2]));
         $res->assertSeeText('A');
         $res->assertSeeText('B');
         $res->assertSeeText('C');
         $res->assertSeeText('D');
         $res->assertSeeText(__('components.orderedlist.cutoff_note'));
-        $res->assertDontSeeText(__('components.orderedlist.contested_headline', ['count' => 2]));
+        $res->assertDontSeeText(trans_choice('components.orderedlist.contested_headline', 2, ['count' => 2]));
     }
 
     public function test_genuine_tie_at_cutoff_shows_contested_headline_and_tie_band(): void
@@ -82,7 +82,7 @@ class OrderedListResultViewTest extends TestCase
 
         $res = $this->fetchResult($ballot);
         $res->assertOk();
-        $res->assertSeeText(__('components.orderedlist.contested_headline', ['count' => 1]));
+        $res->assertSeeText(trans_choice('components.orderedlist.contested_headline', 1, ['count' => 1]));
         $res->assertSeeText(__('components.orderedlist.tie_awaiting'));
         $res->assertDontSee('runner');
         $res->assertDontSee('Runner');
@@ -117,8 +117,8 @@ class OrderedListResultViewTest extends TestCase
 
         $res = $this->fetchResult($ballot);
         $res->assertOk();
-        $res->assertSeeText(__('components.orderedlist.elected_headline', ['seats' => 2]));
-        $res->assertDontSeeText(__('components.orderedlist.contested_headline', ['count' => 2]));
+        $res->assertSeeText(trans_choice('components.orderedlist.elected_headline', 2, ['seats' => 2]));
+        $res->assertDontSeeText(trans_choice('components.orderedlist.contested_headline', 2, ['count' => 2]));
         // The C/D/E tail is still shown as a tie, just not as a headline contest.
         $res->assertSeeText(__('components.orderedlist.tie_awaiting'));
     }
@@ -150,9 +150,10 @@ class OrderedListResultViewTest extends TestCase
 
         $res = $this->fetchResult($ballot);
         $res->assertOk();
-        $res->assertSeeText(__('components.orderedlist.order_ties_note', ['count' => 1]));
-        $res->assertDontSeeText(__('components.orderedlist.contested_headline', ['count' => 2]));
-        $res->assertDontSeeText(__('components.orderedlist.elected_headline', ['seats' => 2]));
+        // Both surely-elected seats (A, B) still need their order settled.
+        $res->assertSeeText(trans_choice('components.orderedlist.order_ties_note', 2, ['count' => 2]));
+        $res->assertDontSeeText(trans_choice('components.orderedlist.contested_headline', 2, ['count' => 2]));
+        $res->assertDontSeeText(trans_choice('components.orderedlist.elected_headline', 2, ['seats' => 2]));
     }
 
     public function test_no_votes_yet_shows_neutral_notice_without_error(): void
@@ -171,7 +172,7 @@ class OrderedListResultViewTest extends TestCase
         $res = $this->fetchResult($ballot);
         $res->assertOk();
         $res->assertSeeText(__('components.orderedlist.outcome_not_binding'));
-        $res->assertDontSeeText(__('components.orderedlist.elected_headline', ['seats' => 2]));
+        $res->assertDontSeeText(trans_choice('components.orderedlist.elected_headline', 2, ['seats' => 2]));
         // The list still renders as advisory evidence under the notice.
         $res->assertSeeText('A');
     }
@@ -251,10 +252,70 @@ class OrderedListResultViewTest extends TestCase
 
         $res = $this->fetchResult($ballot);
         $res->assertOk();
-        $res->assertDontSeeText(__('components.orderedlist.elected_headline', ['seats' => 3]));
+        $res->assertDontSeeText(trans_choice('components.orderedlist.elected_headline', 3, ['seats' => 3]));
         $res->assertSeeText(__('components.orderedlist.quota_pending_note'));
         $res->assertDontSee('runner');
         $res->assertDontSee('Runner');
+    }
+
+    /**
+     * Whether a binding alternation applies at all can hinge on a tie: D
+     * (no category) is tied with C for seat 3. If C wins, F,M,F alternation
+     * applies; if D wins, the top has an untagged candidate, the quota is
+     * void and the votes-alone slate stands. The page must say so and claim
+     * neither slate.
+     */
+    public function test_alternation_that_only_some_tie_resolutions_can_apply_says_so(): void
+    {
+        [, $ballot] = $this->finishedBallot(
+            ['A', 'B', 'C', 'D', 'E'],
+            [
+                ['A', 'B', 'C', 'D', 'E'],
+                ['A', 'B', 'D', 'C', 'E'],
+            ],
+            [
+                'seats' => 3,
+                'categories' => ['A' => 'F', 'B' => 'F', 'C' => 'M', 'E' => 'M'],
+                'quota' => ['type' => 'alternate', 'binding' => true],
+            ]
+        );
+
+        $res = $this->fetchResult($ballot);
+        $res->assertOk();
+        $res->assertSeeText(__('components.orderedlist.quota_partly_infeasible'));
+        $res->assertDontSeeText(trans_choice('components.orderedlist.elected_headline', 3, ['seats' => 3]));
+        // A keeps seat 1 either way; B is surely seated but its seat differs
+        // ([A, C, B] by alternation vs [A, B, D] by votes alone).
+        $res->assertSeeTextInOrder(['1. A', '2. ' . __('components.orderedlist.seat_undecided')]);
+        $res->assertSeeText(__('components.orderedlist.still_tied_for_open_seats', ['names' => 'B, C, D']));
+    }
+
+    /**
+     * Beyond the corrector's safety cap the page states the ties must be
+     * resolved first and still names the possible seat-holders -- never an
+     * empty "nobody elected" list.
+     */
+    public function test_quota_beyond_the_safety_cap_says_resolve_ties_first_and_names_candidates(): void
+    {
+        config(['ballot.orderedlist_quota_max_nodes' => 1]);
+        [, $ballot] = $this->finishedBallot(
+            ['F1', 'F2', 'M1', 'M2'],
+            [
+                ['F1', 'F2', 'M1', 'M2'],
+                ['M2', 'M1', 'F2', 'F1'],
+            ],
+            [
+                'seats' => 2,
+                'categories' => ['F1' => 'F', 'F2' => 'F', 'M1' => 'M', 'M2' => 'M'],
+                'quota' => ['type' => 'alternate', 'binding' => true],
+            ]
+        );
+
+        $res = $this->fetchResult($ballot);
+        $res->assertOk();
+        $res->assertSeeText(__('components.orderedlist.quota_too_complex'));
+        $res->assertDontSeeText(trans_choice('components.orderedlist.elected_headline', 2, ['seats' => 2]));
+        $res->assertSeeText(__('components.orderedlist.still_tied_for_open_seats', ['names' => 'F1, F2, M1, M2']));
     }
 
     /**
@@ -280,8 +341,8 @@ class OrderedListResultViewTest extends TestCase
 
         $res = $this->fetchResult($ballot);
         $res->assertOk();
-        $res->assertSeeText(__('components.orderedlist.elected_headline', ['seats' => 4]));
-        $res->assertDontSeeText(__('components.orderedlist.contested_headline', ['count' => 1]));
+        $res->assertSeeText(trans_choice('components.orderedlist.elected_headline', 4, ['seats' => 4]));
+        $res->assertDontSeeText(trans_choice('components.orderedlist.contested_headline', 1, ['count' => 1]));
         $res->assertDontSeeText(__('components.orderedlist.quota_pending_note'));
         $res->assertSeeTextInOrder(['1. F1', '2. M1', '3. F2', '4. M2']);
     }

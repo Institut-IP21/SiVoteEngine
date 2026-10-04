@@ -41,7 +41,7 @@ foreach ($result['state'] as $option => $votes) {
     @if ($seats === 1)
         {{ __('components.approval.winner_is', ['name' => $elected[0]]) }}
     @else
-        {{ __('components.approval.elected_headline', ['seats' => $seats]) }}
+        {{ trans_choice('components.approval.elected_headline', $seats, ['seats' => $seats]) }}
     @endif
 </div>
 @else
@@ -49,7 +49,7 @@ foreach ($result['state'] as $option => $votes) {
     @if ($seats === 1)
         {{ __('components.approval.tie') }} {{ implode(', ', $contested) }}
     @else
-        {{ __('components.approval.contested_headline', ['count' => $contestedSeats]) }}
+        {{ trans_choice('components.approval.contested_headline', $contestedSeats, ['count' => $contestedSeats]) }}
     @endif
 </div>
 @endif

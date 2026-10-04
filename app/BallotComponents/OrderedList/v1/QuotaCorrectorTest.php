@@ -33,7 +33,7 @@ class QuotaCorrectorTest extends TestCase
         $categories = ['C' => 'Sales'];
         $quota = ['category' => 'Sales', 'type' => 'min', 'count' => 1, 'binding' => true];
 
-        $qc = new QuotaCorrector($ranking, null, [], $categories, $quota, 2);
+        $qc = new QuotaCorrector($ranking, [], $categories, $quota, 2);
         $result = $qc->result();
 
         $this->assertSame(['A', 'C'], $result['order']);
@@ -57,7 +57,7 @@ class QuotaCorrectorTest extends TestCase
         $categories = ['E' => 'Sales', 'F' => 'Sales'];
         $quota = ['category' => 'Sales', 'type' => 'min', 'count' => 2, 'binding' => true];
 
-        $qc = new QuotaCorrector($ranking, null, [], $categories, $quota, 3);
+        $qc = new QuotaCorrector($ranking, [], $categories, $quota, 3);
         $result = $qc->result();
 
         // Neither promotee (E, F) nor demotee (B, C) is in a band, so the
@@ -88,7 +88,7 @@ class QuotaCorrectorTest extends TestCase
         $categories = ['A' => 'Sales'];
         $quota = ['category' => 'Sales', 'type' => 'min', 'count' => 1, 'binding' => true];
 
-        $qc = new QuotaCorrector($ranking, null, [], $categories, $quota, 2);
+        $qc = new QuotaCorrector($ranking, [], $categories, $quota, 2);
         $result = $qc->result();
 
         $this->assertSame(['A', 'B'], $result['order']);
@@ -109,7 +109,7 @@ class QuotaCorrectorTest extends TestCase
         $categories = ['A' => 'Sales', 'B' => 'Sales', 'C' => 'Sales', 'D' => 'Eng', 'E' => 'Eng'];
         $quota = ['category' => 'Sales', 'type' => 'max', 'count' => 1, 'binding' => true];
 
-        $qc = new QuotaCorrector($ranking, null, [], $categories, $quota, 3);
+        $qc = new QuotaCorrector($ranking, [], $categories, $quota, 3);
         $result = $qc->result();
 
         $this->assertSame(['A', 'D', 'E'], $result['order']);
@@ -136,7 +136,7 @@ class QuotaCorrectorTest extends TestCase
         $categories = ['D' => 'Sales'];
         $quota = ['category' => 'Sales', 'type' => 'min', 'count' => 2, 'binding' => true];
 
-        $qc = new QuotaCorrector($ranking, null, [], $categories, $quota, 2);
+        $qc = new QuotaCorrector($ranking, [], $categories, $quota, 2);
         $result = $qc->result();
 
         $this->assertSame(['A', 'B'], $result['order']);
@@ -158,7 +158,7 @@ class QuotaCorrectorTest extends TestCase
         $categories = ['A' => 'Sales', 'B' => 'Sales', 'D' => 'Sales'];
         $quota = ['category' => 'Sales', 'type' => 'max', 'count' => 1, 'binding' => true];
 
-        $qc = new QuotaCorrector($ranking, null, [], $categories, $quota, 3);
+        $qc = new QuotaCorrector($ranking, [], $categories, $quota, 3);
         $result = $qc->result();
 
         $this->assertSame(['A', 'B', 'C'], $result['order']);
@@ -166,30 +166,78 @@ class QuotaCorrectorTest extends TestCase
         $this->assertNotSame([], $qc->warnings());
     }
 
-    public function test_surfaced_when_cutoff_contested(): void
+    /**
+     * A contested cut the min quota does not depend on: {A = B} genuinely
+     * tied for the single seat, A is the only Sales candidate, min Sales 1.
+     * A first -> [A] already satisfies it; B first -> B is demoted and A
+     * promoted -> [A]. Every resolution agrees, so the slate is final.
+     * (Replaces a fixture with a contested cut but no band, which
+     * PositionResolver can never produce.)
+     */
+    public function test_min_quota_resolves_a_contested_cut_it_does_not_depend_on(): void
     {
         $ranking = [
             $this->entry('A', 1, 2, 'contested'),
-            $this->entry('B', 1, 3, 'contested'),
-            $this->entry('C', 2, 3, 'excluded'),
+            $this->entry('B', 1, 2, 'contested'),
         ];
-        $cutoffDecision = [
-            'remaining_seats' => 1,
-            'candidates' => ['A', 'B', 'C'],
-            'internal_constraints' => [],
-            'head_to_head' => [],
+        $bands = [
+            [
+                'candidates' => ['A', 'B'],
+                'span' => [1, 2],
+                'internal_constraints' => [],
+                'head_to_head' => ['A' => ['B' => 0], 'B' => ['A' => 0]],
+                'affects_cutoff' => true,
+            ],
         ];
         $categories = ['A' => 'Sales'];
         $quota = ['category' => 'Sales', 'type' => 'min', 'count' => 1, 'binding' => true];
 
-        $qc = new QuotaCorrector($ranking, $cutoffDecision, [], $categories, $quota, 1);
+        $qc = new QuotaCorrector($ranking, $bands, $categories, $quota, 1);
+        $result = $qc->result();
+
+        $this->assertSame(['A'], $result['order']);
+        $this->assertSame(['A'], $result['seated']);
+        $this->assertSame([], $result['contested']);
+        $this->assertSame(['A' => 1], $result['positions']);
+        $this->assertSame([['candidate' => 'A', 'from' => 'contested', 'reason' => 'min_quota:Sales']], $result['diff']);
+        $this->assertFalse($result['provisional']);
+        $this->assertFalse($result['infeasible']);
+        $this->assertSame([], $qc->warnings());
+    }
+
+    /**
+     * A contested cut the min quota DOES depend on: {A = B} tied for one
+     * seat, both Sales, min Sales 1 -- whichever wins is seated; nothing
+     * certain.
+     */
+    public function test_min_quota_surfaces_a_contested_cut_it_depends_on(): void
+    {
+        $ranking = [
+            $this->entry('A', 1, 2, 'contested'),
+            $this->entry('B', 1, 2, 'contested'),
+            $this->entry('C', 3, 3, 'excluded'),
+        ];
+        $bands = [
+            [
+                'candidates' => ['A', 'B'],
+                'span' => [1, 2],
+                'internal_constraints' => [],
+                'head_to_head' => ['A' => ['B' => 0], 'B' => ['A' => 0]],
+                'affects_cutoff' => true,
+            ],
+        ];
+        $categories = ['A' => 'Sales', 'B' => 'Sales'];
+        $quota = ['category' => 'Sales', 'type' => 'min', 'count' => 1, 'binding' => true];
+
+        $qc = new QuotaCorrector($ranking, $bands, $categories, $quota, 1);
         $result = $qc->result();
 
         $this->assertSame([], $result['order']);
-        $this->assertSame([], $result['diff']);
-        $this->assertFalse($result['infeasible']);
+        $this->assertSame([], $result['seated']);
+        $this->assertSame(['A', 'B'], $result['contested']);
+        $this->assertSame([], $result['positions']);
         $this->assertTrue($result['provisional']);
-        $this->assertTrue($result['binding']);
+        $this->assertFalse($result['infeasible']);
         $this->assertNotSame([], $qc->warnings());
     }
 
@@ -213,10 +261,14 @@ class QuotaCorrectorTest extends TestCase
         $categories = ['C' => 'Sales', 'D' => 'Sales'];
         $quota = ['category' => 'Sales', 'type' => 'min', 'count' => 1, 'binding' => true];
 
-        $qc = new QuotaCorrector($ranking, null, $bands, $categories, $quota, 2);
+        $qc = new QuotaCorrector($ranking, $bands, $categories, $quota, 2);
         $result = $qc->result();
 
-        $this->assertSame(['A', 'B'], $result['order']);
+        // B is surely demoted; C and D are genuinely tied for the promotion.
+        $this->assertSame(['A'], $result['order']);
+        $this->assertSame(['A'], $result['seated']);
+        $this->assertSame(['C', 'D'], $result['contested']);
+        $this->assertSame(['A' => 1], $result['positions']);
         $this->assertSame([], $result['diff']);
         $this->assertTrue($result['provisional']);
         $this->assertFalse($result['infeasible']);
@@ -232,7 +284,7 @@ class QuotaCorrectorTest extends TestCase
         $categories = ['A' => 'Eng'];
         $quota = ['category' => 'Ghost', 'type' => 'min', 'count' => 1, 'binding' => true];
 
-        $qc = new QuotaCorrector($ranking, null, [], $categories, $quota, 2);
+        $qc = new QuotaCorrector($ranking, [], $categories, $quota, 2);
         $result = $qc->result();
 
         $this->assertSame(['A', 'B'], $result['order']);
@@ -252,7 +304,7 @@ class QuotaCorrectorTest extends TestCase
         $categories = ['C' => 'Sales'];
         $quota = ['category' => 'Sales', 'type' => 'max', 'count' => 1, 'binding' => true];
 
-        $qc = new QuotaCorrector($ranking, null, [], $categories, $quota, 2);
+        $qc = new QuotaCorrector($ranking, [], $categories, $quota, 2);
         $result = $qc->result();
 
         $this->assertSame(['A', 'B'], $result['order']);
@@ -272,7 +324,7 @@ class QuotaCorrectorTest extends TestCase
         $categories = ['A' => 'Sales', 'B' => 'Sales', 'C' => 'Eng', 'D' => 'Eng'];
         $quota = ['category' => 'Sales', 'type' => 'max', 'count' => 0, 'binding' => true];
 
-        $qc = new QuotaCorrector($ranking, null, [], $categories, $quota, 2);
+        $qc = new QuotaCorrector($ranking, [], $categories, $quota, 2);
         $result = $qc->result();
 
         $this->assertSame(['C', 'D'], $result['order']);
@@ -301,7 +353,7 @@ class QuotaCorrectorTest extends TestCase
         $categories = ['A' => 'Sales', 'B' => 'Sales', 'C' => 'Sales', 'D' => 'Eng', 'E' => 'Eng'];
         $quota = ['category' => 'Sales', 'type' => 'max', 'count' => 0, 'binding' => true];
 
-        $qc = new QuotaCorrector($ranking, null, [], $categories, $quota, 3);
+        $qc = new QuotaCorrector($ranking, [], $categories, $quota, 3);
         $result = $qc->result();
 
         $this->assertSame(['A', 'B', 'C'], $result['order']);
@@ -325,7 +377,7 @@ class QuotaCorrectorTest extends TestCase
         $categories = ['C' => 'Sales'];
         $quota = ['category' => 'Sales', 'type' => 'min', 'count' => 1, 'binding' => false];
 
-        $qc = new QuotaCorrector($ranking, null, [], $categories, $quota, 2);
+        $qc = new QuotaCorrector($ranking, [], $categories, $quota, 2);
         $result = $qc->result();
 
         $this->assertFalse($result['binding']);
@@ -356,7 +408,7 @@ class QuotaCorrectorTest extends TestCase
         $categories = ['C' => 'Sales', 'D' => 'Sales', 'E' => 'Sales'];
         $quota = ['category' => 'Sales', 'type' => 'min', 'count' => 3, 'binding' => true];
 
-        $qc = new QuotaCorrector($ranking, null, [], $categories, $quota, 2);
+        $qc = new QuotaCorrector($ranking, [], $categories, $quota, 2);
         $result = $qc->result();
 
         $this->assertSame(['A', 'B'], $result['order']);
@@ -381,7 +433,7 @@ class QuotaCorrectorTest extends TestCase
         $categories = ['A' => 'Sales', 'B' => 'Sales'];
         $quota = ['category' => 'Sales', 'type' => 'max', 'count' => 2, 'binding' => true];
 
-        $qc = new QuotaCorrector($ranking, null, [], $categories, $quota, 2);
+        $qc = new QuotaCorrector($ranking, [], $categories, $quota, 2);
         $result = $qc->result();
 
         $this->assertSame(['A', 'B'], $result['order']);
@@ -404,7 +456,7 @@ class QuotaCorrectorTest extends TestCase
         $categories = ['A' => 'Sales', 'B' => 'Sales'];
         $quota = ['category' => 'Sales', 'type' => 'max', 'count' => 5, 'binding' => true];
 
-        $qc = new QuotaCorrector($ranking, null, [], $categories, $quota, 2);
+        $qc = new QuotaCorrector($ranking, [], $categories, $quota, 2);
         $result = $qc->result();
 
         $this->assertSame(['A', 'B'], $result['order']);
@@ -438,7 +490,7 @@ class QuotaCorrectorTest extends TestCase
         $categories = ['A' => 'M', 'B' => 'M', 'C' => 'F', 'D' => 'M'];
         $quota = $this->alternateQuota($categories);
 
-        $qc = new QuotaCorrector($ranking, null, [], $categories, $quota, 4);
+        $qc = new QuotaCorrector($ranking, [], $categories, $quota, 4);
         $result = $qc->result();
 
         $this->assertSame('M', $categories[$result['order'][0]]);
@@ -470,7 +522,7 @@ class QuotaCorrectorTest extends TestCase
         $categories = ['X' => 'F', 'Y' => 'F', 'Z' => 'M', 'W' => 'M'];
         $quota = $this->alternateQuota($categories);
 
-        $qc = new QuotaCorrector($ranking, null, [], $categories, $quota, 4);
+        $qc = new QuotaCorrector($ranking, [], $categories, $quota, 4);
         $result = $qc->result();
 
         $this->assertSame('F', $categories[$result['order'][0]]);
@@ -501,7 +553,7 @@ class QuotaCorrectorTest extends TestCase
         $categories = ['A' => 'M', 'B' => 'M', 'C' => 'F', 'D' => 'F'];
         $quota = $this->alternateQuota($categories);
 
-        $qc = new QuotaCorrector($ranking, null, [], $categories, $quota, 4);
+        $qc = new QuotaCorrector($ranking, [], $categories, $quota, 4);
         $result = $qc->result();
 
         $this->assertSame(['A', 'C', 'B', 'D'], $result['order']);
@@ -535,7 +587,7 @@ class QuotaCorrectorTest extends TestCase
         $categories = ['A' => 'M', 'B' => 'M', 'C' => 'M', 'D' => 'F'];
         $quota = $this->alternateQuota($categories);
 
-        $qc = new QuotaCorrector($ranking, null, [], $categories, $quota, 4);
+        $qc = new QuotaCorrector($ranking, [], $categories, $quota, 4);
         $result = $qc->result();
 
         $this->assertSame(['A', 'D', 'B', 'C'], $result['order']);
@@ -572,7 +624,7 @@ class QuotaCorrectorTest extends TestCase
         $categories = ['A' => 'M', 'B' => 'M', 'C' => 'M', 'D' => 'F'];
         $quota = $this->alternateQuota($categories);
 
-        $qc = new QuotaCorrector($ranking, null, [], $categories, $quota, 3);
+        $qc = new QuotaCorrector($ranking, [], $categories, $quota, 3);
         $result = $qc->result();
 
         $this->assertSame(['A', 'D', 'B'], $result['order']);
@@ -600,7 +652,7 @@ class QuotaCorrectorTest extends TestCase
         $categories = ['A' => 'M', 'B' => 'M'];
         $quota = $this->alternateQuota($categories);
 
-        $qc = new QuotaCorrector($ranking, null, [], $categories, $quota, 2);
+        $qc = new QuotaCorrector($ranking, [], $categories, $quota, 2);
         $result = $qc->result();
 
         $this->assertSame(['A', 'B'], $result['order']);
@@ -619,7 +671,7 @@ class QuotaCorrectorTest extends TestCase
         $categories = ['A' => 'M', 'B' => 'F', 'C' => 'X'];
         $quota = $this->alternateQuota($categories);
 
-        $qc = new QuotaCorrector($ranking, null, [], $categories, $quota, 3);
+        $qc = new QuotaCorrector($ranking, [], $categories, $quota, 3);
         $result = $qc->result();
 
         $this->assertSame(['A', 'B', 'C'], $result['order']);
@@ -643,7 +695,7 @@ class QuotaCorrectorTest extends TestCase
         $categories = ['A' => 'M', 'C' => 'F'];
         $quota = $this->alternateQuota($categories);
 
-        $qc = new QuotaCorrector($ranking, null, [], $categories, $quota, 2);
+        $qc = new QuotaCorrector($ranking, [], $categories, $quota, 2);
         $result = $qc->result();
 
         $this->assertSame(['A', 'B'], $result['order']);
@@ -669,7 +721,7 @@ class QuotaCorrectorTest extends TestCase
         $categories = ['A' => 'M', 'B' => 'M', 'C' => 'F'];
         $quota = $this->alternateQuota($categories, binding: false);
 
-        $qc = new QuotaCorrector($ranking, null, [], $categories, $quota, 3);
+        $qc = new QuotaCorrector($ranking, [], $categories, $quota, 3);
         $result = $qc->result();
 
         $this->assertFalse($result['binding']);
@@ -713,13 +765,18 @@ class QuotaCorrectorTest extends TestCase
         $categories = ['A' => 'M', 'B' => 'M', 'C' => 'M', 'D' => 'F', 'E' => 'F'];
         $quota = $this->alternateQuota($categories);
 
-        $qc = new QuotaCorrector($ranking, null, $bands, $categories, $quota, 3);
+        $qc = new QuotaCorrector($ranking, $bands, $categories, $quota, 3);
         $result = $qc->result();
 
         // Only the determined prefix is reported (D14): seat 1 is A; seat 2
         // needs an F and D/E are tied for it.
         $this->assertSame(['A'], $result['order']);
-        $this->assertSame([], $result['diff']);
+        // A (seat 1) and B (seat 3, moved from natural 2) are certain; D/E are
+        // tied for seat 2.
+        $this->assertSame(['A', 'B'], $result['seated']);
+        $this->assertSame(['D', 'E'], $result['contested']);
+        $this->assertSame(['A' => 1, 'B' => 3], $result['positions']);
+        $this->assertSame([['candidate' => 'B', 'from' => 'natural:2', 'reason' => 'alternate']], $result['diff']);
         $this->assertFalse($result['infeasible']);
         $this->assertTrue($result['provisional']);
         $this->assertNotSame([], $qc->warnings());
@@ -734,7 +791,7 @@ class QuotaCorrectorTest extends TestCase
         $categories = ['A' => 'M', 'B' => 'F'];
         $quota = $this->alternateQuota($categories);
 
-        $qc = new QuotaCorrector($ranking, null, [], $categories, $quota, 1);
+        $qc = new QuotaCorrector($ranking, [], $categories, $quota, 1);
         $result = $qc->result();
 
         $this->assertSame(['A'], $result['order']);
@@ -764,7 +821,7 @@ class QuotaCorrectorTest extends TestCase
         $categories = ['A' => 'M', 'B' => 'F', 'C' => 'M'];
         $quota = $this->alternateQuota($categories);
 
-        $qc = new QuotaCorrector($ranking, null, [], $categories, $quota, 2);
+        $qc = new QuotaCorrector($ranking, [], $categories, $quota, 2);
         $result = $qc->result();
 
         $this->assertFalse($result['infeasible']);
@@ -790,7 +847,7 @@ class QuotaCorrectorTest extends TestCase
         $categories = ['A' => 'M', 'B' => 'F', 'C' => 'M', 'D' => 'X'];
         $quota = $this->alternateQuota($categories);
 
-        $qc = new QuotaCorrector($ranking, null, [], $categories, $quota, 2);
+        $qc = new QuotaCorrector($ranking, [], $categories, $quota, 2);
         $result = $qc->result();
 
         $this->assertFalse($result['infeasible']);
@@ -821,7 +878,7 @@ class QuotaCorrectorTest extends TestCase
         $categories = ['A' => 'M', 'B' => 'F', 'D' => 'X', 'E' => 'M', 'G' => 'F'];
         $quota = $this->alternateQuota($categories);
 
-        $qc = new QuotaCorrector($ranking, null, [], $categories, $quota, 3);
+        $qc = new QuotaCorrector($ranking, [], $categories, $quota, 3);
         $result = $qc->result();
 
         $this->assertTrue($result['infeasible']);
@@ -846,7 +903,7 @@ class QuotaCorrectorTest extends TestCase
         $categories = ['B' => 'F'];
         $quota = $this->alternateQuota($categories);
 
-        $qc = new QuotaCorrector($ranking, null, [], $categories, $quota, 2);
+        $qc = new QuotaCorrector($ranking, [], $categories, $quota, 2);
         $result = $qc->result();
 
         $this->assertTrue($result['infeasible']);
@@ -871,7 +928,7 @@ class QuotaCorrectorTest extends TestCase
         $categories = ['A' => 'M', 'B' => 'F', 'C' => 'M'];
         $quota = $this->alternateQuota($categories);
 
-        $qc = new QuotaCorrector($ranking, null, [], $categories, $quota, 4);
+        $qc = new QuotaCorrector($ranking, [], $categories, $quota, 4);
         $result = $qc->result();
 
         $this->assertTrue($result['infeasible']);
@@ -911,7 +968,7 @@ class QuotaCorrectorTest extends TestCase
         $categories = ['A' => 'M', 'B' => 'M', 'C' => 'M', 'E' => 'X', 'D' => 'F'];
         $quota = $this->alternateQuota($categories);
 
-        $qc = new QuotaCorrector($ranking, null, [], $categories, $quota, 3);
+        $qc = new QuotaCorrector($ranking, [], $categories, $quota, 3);
         $result = $qc->result();
 
         $this->assertTrue($result['infeasible']);
@@ -945,7 +1002,7 @@ class QuotaCorrectorTest extends TestCase
         $categories = ['A' => 'M', 'B' => 'M', 'C' => 'M', 'D' => 'M', 'E' => 'F', 'F' => 'F'];
         $quota = $this->alternateQuota($categories);
 
-        $qc = new QuotaCorrector($ranking, null, [], $categories, $quota, 4);
+        $qc = new QuotaCorrector($ranking, [], $categories, $quota, 4);
         $result = $qc->result();
 
         $this->assertFalse($result['infeasible']);
@@ -975,7 +1032,7 @@ class QuotaCorrectorTest extends TestCase
         $categories = ['A' => 'M', 'B' => 'F'];
         $quota = $this->alternateQuota($categories);
 
-        $qc = new QuotaCorrector($ranking, null, $bands, $categories, $quota, 2);
+        $qc = new QuotaCorrector($ranking, $bands, $categories, $quota, 2);
         $result = $qc->result();
 
         // Start group itself undecided (A:M vs B:F tied for #1) -> nothing determined.

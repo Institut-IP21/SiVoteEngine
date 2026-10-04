@@ -550,8 +550,9 @@ final readonly class BallotService
 
     /**
      * OrderedList: no per-candidate vote count in a Schulze tally — `ranking`
-     * lists every candidate, `elected` is the seated slate, and a non-null
-     * `cutoff_decision` names the candidates still contesting the last seat(s).
+     * lists every candidate; `official_order` / `official_positions` /
+     * `official_contested` are the engine's official outcome (see
+     * OrderedListResult).
      *
      * @param array<string, mixed> $results
      * @return list<array{option:string, count:string, rate:string, elected:string, rank:int|string}>
@@ -559,20 +560,14 @@ final readonly class BallotService
     private function orderedListTallyRows(array $results): array
     {
         $ranking = is_array($results['ranking'] ?? null) ? $results['ranking'] : [];
-        // The OFFICIAL slate -- a binding quota's corrected order when that is
-        // the official result, else the natural elected list.
-        $officialOrder = $results['official_order'] ?? $results['elected'] ?? null;
-        $elected = array_map('strval', is_array($officialOrder) ? $officialOrder : []);
-        $cutoffDecision = is_array($results['cutoff_decision'] ?? null) ? $results['cutoff_decision'] : null;
-        // A natural-cut tie is moot once a binding quota slate is official.
-        $contested = $cutoffDecision !== null && ($results['official'] ?? 'natural') !== 'corrected'
-            ? array_map('strval', is_array($cutoffDecision['candidates'] ?? null) ? $cutoffDecision['candidates'] : [])
-            : [];
-
-        $seatRank = [];
-        foreach ($elected as $i => $candidate) {
-            $seatRank[$candidate] = $i + 1;
-        }
+        // The engine's OFFICIAL outcome (binding quota slate when official,
+        // else votes alone): surely seated, certain seats, still contested.
+        // A rank is only printed for a seat whose occupant is certain -- an
+        // order tie is never resolved by roster order here.
+        $elected = array_map('strval', is_array($results['official_order'] ?? null) ? $results['official_order'] : []);
+        $contested = array_map('strval', is_array($results['official_contested'] ?? null) ? $results['official_contested'] : []);
+        /** @var array<string, int> $seatRank */
+        $seatRank = is_array($results['official_positions'] ?? null) ? $results['official_positions'] : [];
 
         $rows = [];
         foreach ($ranking as $entry) {

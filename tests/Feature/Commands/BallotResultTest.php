@@ -139,4 +139,40 @@ class BallotResultTest extends TestCase
             ->expectsOutputToContain('Results are only available for finished ballots')
             ->assertExitCode(1);
     }
+
+    /**
+     * An OrderedList prints its official slate (here a binding alternation
+     * over a natural cut tied across groups), not a dump of the raw arrays.
+     */
+    public function test_displays_official_slate_for_ordered_list_result(): void
+    {
+        $election = Election::factory()->create();
+        $ballot = Ballot::factory()->create([
+            'election_id' => $election->id,
+            'active' => false,
+            'finished' => true,
+        ]);
+        $component = BallotComponent::factory()->create([
+            'ballot_id' => $ballot->id,
+            'title' => 'Board list',
+            'type' => 'OrderedList',
+            'version' => 'v1',
+            'options' => ['F1', 'M1', 'M2', 'M3', 'F2', 'F3'],
+            'settings' => [
+                'seats' => 3,
+                'categories' => ['F1' => 'F', 'F2' => 'F', 'F3' => 'F', 'M1' => 'M', 'M2' => 'M', 'M3' => 'M'],
+                'quota' => ['type' => 'alternate', 'binding' => true],
+            ],
+        ]);
+        foreach ([['F1', 'M1', 'F2', 'F3', 'M2', 'M3'], ['F1', 'M1', 'F3', 'F2', 'M2', 'M3']] as $ranking) {
+            Vote::factory()->forBallot($ballot)->withValues([$component->id => $ranking])->create();
+        }
+
+        $this->artisan('evote:result:ballot', ['--ballot' => $ballot->id])
+            ->expectsOutputToContain('Board list')
+            ->expectsTable(['Seat', 'Elected'], [[1, 'F1'], [2, 'M1']])
+            ->expectsOutputToContain('Still tied for the open seats:')
+            ->expectsOutputToContain('Final: no')
+            ->assertExitCode(0);
+    }
 }

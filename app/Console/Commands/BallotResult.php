@@ -63,8 +63,27 @@ class BallotResult extends Command
             /** @var array<array-key, mixed> $resultData */
             $resultData = $componentResult['results'];
 
-            // Handle state-based results (SimpleVoteResult format)
-            if (isset($resultData['state']) && is_array($resultData['state'])) {
+            // OrderedList: print the OFFICIAL slate (a binding quota's slate
+            // when that is official), its known positions, and any open tie.
+            if (array_key_exists('official_order', $resultData)) {
+                /** @var list<string> $order */
+                $order = $resultData['official_order'];
+                /** @var array<string, int> $positions */
+                $positions = $resultData['official_positions'] ?? [];
+                /** @var list<string> $contested */
+                $contested = $resultData['official_contested'] ?? [];
+
+                $rows = [];
+                foreach ($order as $candidate) {
+                    $rows[] = [$positions[$candidate] ?? '?', $candidate];
+                }
+                $this->table(['Seat', 'Elected'], $rows);
+                if ($contested !== []) {
+                    $this->line('Still tied for the open seats: ' . implode(', ', $contested));
+                }
+                $this->line('Final: ' . (($resultData['final'] ?? false) === true ? 'yes' : 'no'));
+            } elseif (isset($resultData['state']) && is_array($resultData['state'])) {
+                // State-based results (SimpleVoteResult format)
                 $rows = [];
                 foreach ($resultData['state'] as $option => $votes) {
                     $rows[] = [$option, $votes];

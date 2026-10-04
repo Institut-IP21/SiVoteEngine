@@ -28,6 +28,8 @@ class OrderedListResultTest extends TestCase
         $this->assertSame(['candidates' => [], 'matrix' => []], $r['pairwise']);
         $this->assertSame([], $r['warnings']);
         $this->assertSame([], $r['official_order']);
+        $this->assertSame([], $r['official_positions']);
+        $this->assertSame([], $r['official_contested']);
         $this->assertFalse($r['final']);
     }
 
@@ -57,8 +59,13 @@ class OrderedListResultTest extends TestCase
                 ['candidate' => 'C', 'from' => 'below_cut', 'reason' => 'min_quota:Sales'],
             ],
             'infeasible' => false,
+            'partly_infeasible' => false,
             'provisional' => false,
             'binding' => true,
+            'too_complex' => false,
+            'seated' => ['A', 'C'],
+            'contested' => [],
+            'positions' => ['A' => 1, 'C' => 2],
         ];
         $beatpath = [
             'strength' => ['A' => ['B' => 3, 'C' => 3], 'B' => ['A' => null, 'C' => 2], 'C' => ['A' => null, 'B' => null]],
@@ -87,7 +94,6 @@ class OrderedListResultTest extends TestCase
             pairwise: $pairwise,
             accounting: $accounting,
             warnings: $warnings,
-            final: true,
         );
 
         $this->assertInstanceOf(ComponentResult::class, $dto);
@@ -104,13 +110,15 @@ class OrderedListResultTest extends TestCase
         $this->assertSame('corrected', $arr['official']);
         // official_order follows the corrected slate when that is official.
         $this->assertSame(['A', 'C'], $arr['official_order']);
-        $this->assertTrue($arr['final']);
+        $this->assertSame(['A' => 1, 'C' => 2], $arr['official_positions']);
+        $this->assertSame([], $arr['official_contested']);
+        $this->assertFalse($arr['final']); // seats 3 > 2 certain seats
         $this->assertSame($beatpath, $arr['beatpath']);
         $this->assertSame($pairwise, $arr['pairwise']);
         $this->assertSame($accounting, $arr['accounting']);
         $this->assertSame($warnings, $arr['warnings']);
         $this->assertSame(
-            ['seats', 'strength_measure', 'ranking', 'elected', 'bands', 'cutoff_decision', 'corrected', 'official', 'official_order', 'final', 'beatpath', 'pairwise', 'accounting', 'warnings'],
+            ['seats', 'strength_measure', 'ranking', 'elected', 'bands', 'cutoff_decision', 'corrected', 'official', 'official_order', 'official_positions', 'official_contested', 'final', 'beatpath', 'pairwise', 'accounting', 'warnings'],
             array_keys($arr)
         );
     }
