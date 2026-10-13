@@ -14,6 +14,7 @@ use App\Models\Personalization;
 use App\Models\Vote;
 use App\Services\BallotService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class BallotController extends Controller
@@ -122,10 +123,10 @@ class BallotController extends Controller
 
         $code = $request->input('code');
         $values = $request->except(['code', '_token']); // Could get the component slugs and say ->only
-        /** @var Vote $vote */
-        $vote = Vote::find(['code' => $code, 'ballot_id' => $ballot->id])->first();
-        $vote->values = $values;
-        $vote->save();
+        $vote = $this->writeVote($ballot, (string) $code, fn (Vote $v) => $values);
+        if ($vote === null) {
+            return view('ballot-expired', ['code' => 404]);
+        }
 
         $pers = Personalization::where('owner', $election->owner)->first();
         return view('voted', ['election' => $election, 'ballot' => $ballot, 'vote' => $vote, 'pers' => $pers]);
@@ -163,22 +164,49 @@ class BallotController extends Controller
         }
 
         $code = $request->input('code');
-        /** @var Vote $vote */
-        $vote = Vote::find(['code' => $code, 'ballot_id' => $ballot->id])->first();
-
         $values = $request->except(['code', '_token']); // Could get the component slugs and say ->only
-        $oldValues = $vote->values;
-        if (!is_array($oldValues)) {
-            $oldValues = [];
-        }
 
         // Newly submitted values take precedence so a voter can change a
         // component answer (last-write-wins), matching basic-mode behaviour.
-        $vote->values = array_merge($oldValues, $values);
+        $vote = $this->writeVote($ballot, (string) $code, function (Vote $v) use ($values): array {
+            $oldValues = is_array($v->values) ? $v->values : [];
 
-        $vote->save();
+            return array_merge($oldValues, $values);
+        });
+        if ($vote === null) {
+            return view('ballot-expired', ['code' => 404]);
+        }
 
         return redirect()->back()->with('success', __('ballot.vote.registered'));
+    }
+
+    /**
+     * Write a vote's values under a shared lock on the ballot row, re-checking the
+     * ballot is still open and the code still exists. This serializes casting with
+     * rollback-launch / generate (which take the same row lock, ballot first), so a
+     * vote can never be silently destroyed by a concurrent rollback. Returns null
+     * when the ballot closed or the code vanished meanwhile (nothing written).
+     *
+     * @param \Closure(Vote): array<mixed> $values
+     */
+    private function writeVote(Ballot $ballot, string $code, \Closure $values): ?Vote
+    {
+        return DB::transaction(function () use ($ballot, $code, $values): ?Vote {
+            $locked = Ballot::whereKey($ballot->id)->sharedLock()->first();
+            if ($locked === null || !$locked->active || $locked->finished) {
+                return null;
+            }
+
+            $vote = Vote::where('id', $code)->where('ballot_id', $ballot->id)->first();
+            if ($vote === null) {
+                return null;
+            }
+
+            $vote->values = $values($vote);
+            $vote->save();
+
+            return $vote;
+        });
     }
 
     public function result(Election $election, Ballot $ballot, Request $request): ResponseFactory|Response|Factory|View

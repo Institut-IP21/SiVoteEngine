@@ -118,4 +118,26 @@ class BallotRollbackLaunchTest extends TestCase
         $this->withHeaders($h)->postJson("/api/election/$ballot->election_id/ballot/$ballot->id/vote/generate", ['quantity' => 2])->assertOk();
         $this->withHeaders($h)->postJson("/api/election/$ballot->election_id/ballot/$ballot->id/activate")->assertOk();
     }
+
+    public function test_casting_with_a_rolled_back_code_is_refused(): void
+    {
+        $ballot = $this->ballot(['active' => true]);
+        $component = BallotComponent::factory()->create(['ballot_id' => $ballot->id, 'type' => 'YesNo', 'version' => 'v1', 'options' => ['yes', 'no']]);
+        $vote = Vote::factory()->create(['ballot_id' => $ballot->id]);
+        $other = Vote::factory()->create(['ballot_id' => $ballot->id]);
+
+        // Control: casting works while the ballot is open.
+        $this->post("/election/$ballot->election_id/ballot/$ballot->id", ['code' => $other->id, $component->id => 'yes']);
+        $this->assertNotNull($other->fresh()?->values);
+
+        \DB::table('votes')->where('id', $other->id)->update(['values' => null]);
+        $this->rollback($ballot)->assertOk();
+
+        $this->post("/election/$ballot->election_id/ballot/$ballot->id", [
+            'code' => $vote->id,
+            $component->id => 'yes',
+        ]);
+
+        $this->assertSame(0, Vote::withTrashed()->where('ballot_id', $ballot->id)->count());
+    }
 }
