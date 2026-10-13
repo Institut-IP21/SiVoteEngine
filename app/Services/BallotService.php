@@ -404,21 +404,23 @@ final readonly class BallotService
         $votes = $ballot->castVotes();
         $components = $ballot->components()->get();
 
-        $header = $components->pluck('title')->prepend(__('ballot.voteId'))->toArray();
+        // Secret ballot: no voting code (vote id) is exported, and rows are sorted
+        // by their content so neither code order nor cast order can be recovered.
+        $header = $components->pluck('title')->toArray();
 
-        $resultsPerComponent = $components->map(function (BallotComponent $componentModel) use ($votes) {
-            $component = $this->registry->resolve($componentModel->type, $componentModel->version);
+        $rows = $votes->map(fn (Vote $vote): array =>
+            $components->map(function (BallotComponent $componentModel) use ($vote): string {
+                $component = $this->registry->resolve($componentModel->type, $componentModel->version);
 
-            return $votes->map(fn (Vote $vote): string =>
-                $component->valuesToCsv($vote->values ?? [], $componentModel->id)
-            );
-        });
+                return $component->valuesToCsv($vote->values ?? [], $componentModel->id);
+            })->all()
+        )->all();
 
-        $finalValues = $votes->pluck('id')->zip(...$resultsPerComponent);
+        usort($rows, fn (array $a, array $b): int => implode("\x1f", $a) <=> implode("\x1f", $b));
 
         $csv = Writer::createFromString();
         $csv->insertOne($header);
-        $csv->insertAll($finalValues->toArray());
+        $csv->insertAll($rows);
 
         return $csv->getContent();
     }

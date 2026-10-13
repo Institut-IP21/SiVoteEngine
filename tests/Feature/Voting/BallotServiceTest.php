@@ -101,6 +101,27 @@ class BallotServiceTest extends TestCase
         $this->assertCount(3, array_filter(explode("\n", trim($csv))));
     }
 
+    public function test_results_csv_does_not_reveal_which_code_cast_which_vote(): void
+    {
+        [, $ballot, $components] = $this->make([
+            ['type' => 'FirstPastThePost', 'version' => 'v1', 'title' => 'President', 'options' => ['Ana', 'Bob', 'Cene']],
+        ]);
+
+        $votes = [];
+        foreach (['Cene', 'Ana', 'Bob', 'Ana'] as $choice) {
+            $votes[] = Vote::factory()->forBallot($ballot)->withValues([$components[0]->id => $choice])->create();
+        }
+
+        $csv = $this->service->resultsCsv($ballot);
+
+        // No voting code (vote id) appears anywhere in the export.
+        foreach ($votes as $vote) {
+            $this->assertStringNotContainsString($vote->id, $csv);
+        }
+        // Header is only the question titles; rows are sorted by content, not by code or cast order.
+        $this->assertSame(['President', 'Ana', 'Ana', 'Bob', 'Cene'], array_values(array_filter(array_map('trim', explode("\n", $csv)))));
+    }
+
     public function test_results_csv_joins_array_component_values(): void
     {
         [, $ballot, $components] = $this->make([
