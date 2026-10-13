@@ -12,6 +12,7 @@ use App\Models\BallotComponent;
 use App\Models\Election;
 use App\Services\BallotService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class BallotApiController extends Controller
 {
@@ -181,6 +182,44 @@ class BallotApiController extends Controller
         }
 
         return new BallotResource($ballot);
+    }
+
+    /**
+     * Undo a failed launch (activate + generate codes): put an open ballot with
+     * no cast votes back to a never-opened draft. Atomic under a row lock so a
+     * vote cannot slip in between the check and the delete.
+     */
+    public function rollbackLaunch(Election $election, Ballot $ballot, Request $request): JsonResponse|BallotResource
+    {
+        $refused = DB::transaction(function () use ($ballot): ?JsonResponse {
+            $locked = Ballot::whereKey($ballot->id)->lockForUpdate()->firstOrFail();
+
+            if ($locked->finished) {
+                return $this->basicResponse(409, ['error' => __('This ballot is already finished. Its launch cannot be rolled back.')]);
+            }
+
+            if (!$locked->active) {
+                return $this->basicResponse(409, ['error' => __('This ballot is not open, so there is no launch to roll back.')]);
+            }
+
+            if ($locked->votes()->whereNotNull('values')->exists()) {
+                return $this->basicResponse(409, ['error' => __('A vote has already been cast. The launch cannot be rolled back.')]);
+            }
+
+            // Hard-delete (not soft): leftover codes must not stay valid anywhere.
+            $locked->votes()->withTrashed()->forceDelete();
+            $locked->active = false;
+            $locked->opened_at = null;
+            $locked->save();
+
+            return null;
+        });
+
+        if ($refused !== null) {
+            return $refused;
+        }
+
+        return new BallotResource($ballot->refresh());
     }
 
     public function delete(Election $election, Ballot $ballot, Request $request): Response|bool|null

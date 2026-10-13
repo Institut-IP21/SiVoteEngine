@@ -44,6 +44,7 @@ Route::middleware(['api', 'scope.bindings'])->prefix('election/{election}/ballot
     Route::get('/{ballot}/result-tally.csv', [BallotApiController::class, 'resultTallyCsv'])->name('ballot.api.result-tally.csv')->middleware('can:view,election');
     Route::post('/{ballot}/activate', [BallotApiController::class, 'activate'])->name('ballot.api.activate')->middleware('can:update,election');
     Route::post('/{ballot}/deactivate', [BallotApiController::class, 'deactivate'])->name('ballot.api.deactivate')->middleware('can:update,election');
+    Route::post('/{ballot}/rollback-launch', [BallotApiController::class, 'rollbackLaunch'])->name('ballot.api.rollback-launch')->middleware('can:update,election');
     Route::post('/{ballot}/switch-order', [BallotApiController::class, 'switchOrder'])->name('ballot.api.switch-order')->middleware('can:update,election');
 });
 
