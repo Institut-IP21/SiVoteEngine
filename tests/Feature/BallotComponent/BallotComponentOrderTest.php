@@ -86,9 +86,23 @@ class BallotComponentOrderTest extends TestCase
         $this->asOwner($owner)->postJson("/api/election/{$e->id}/ballot/{$b->id}/switch-order", [
             'component1' => $first->id,
             'component2' => $second->id,
-        ])->assertStatus(403);
+        ])->assertStatus(409);
 
         // Order is untouched.
+        $first->refresh();
+        $this->assertSame(0, $first->order);
+    }
+
+    public function test_switch_order_rejected_on_active_ballot(): void
+    {
+        [$e, $b, $first, $second, $owner] = $this->ownedBallotWithTwoComponents();
+        $b->update(['active' => true]);
+
+        $this->asOwner($owner)->postJson("/api/election/{$e->id}/ballot/{$b->id}/switch-order", [
+            'component1' => $first->id,
+            'component2' => $second->id,
+        ])->assertStatus(409)->assertJsonStructure(['error']);
+
         $first->refresh();
         $this->assertSame(0, $first->order);
     }

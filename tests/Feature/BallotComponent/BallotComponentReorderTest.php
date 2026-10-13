@@ -125,7 +125,20 @@ class BallotComponentReorderTest extends TestCase
 
         $this->asOwner($owner)->postJson("/api/election/{$e->id}/ballot/{$b->id}/component/order", [
             'order' => [$c->id, $bb->id, $a->id],
-        ])->assertStatus(403);
+        ])->assertStatus(409);
+
+        $a->refresh();
+        $this->assertSame(0, $a->order);
+    }
+
+    public function test_order_rejected_on_active_ballot(): void
+    {
+        [$e, $b, $a, $bb, $c, $owner] = $this->ownedBallotWithThreeComponents();
+        $b->update(['active' => true]);
+
+        $this->asOwner($owner)->postJson("/api/election/{$e->id}/ballot/{$b->id}/component/order", [
+            'order' => [$c->id, $bb->id, $a->id],
+        ])->assertStatus(409)->assertJsonStructure(['error']);
 
         $a->refresh();
         $this->assertSame(0, $a->order);

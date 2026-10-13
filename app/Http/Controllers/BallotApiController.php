@@ -233,8 +233,8 @@ class BallotApiController extends Controller
 
     public function switchOrder(Election $election, Ballot $ballot, Request $request): ResponseFactory|Response|JsonResponse|BallotResource
     {
-        if ($ballot->finished) {
-            return response('Finished ballots can not be reordered', 403);
+        if ($ballot->locked) {
+            return response(['error' => __('This Ballot is locked and cannot be edited.')], 409);
         }
 
         $params = $request->all();

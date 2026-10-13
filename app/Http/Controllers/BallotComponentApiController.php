@@ -130,8 +130,8 @@ class BallotComponentApiController extends Controller
      */
     public function order(Election $election, Ballot $ballot, Request $request): ResponseFactory|Response|JsonResponse|BallotResource
     {
-        if ($ballot->finished) {
-            return response('Finished ballots can not be reordered', 403);
+        if ($locked = $this->lockedResponse($ballot)) {
+            return $locked;
         }
 
         $params = $request->all();
