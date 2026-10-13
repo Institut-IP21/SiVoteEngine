@@ -10,6 +10,7 @@ use App\Services\BallotService;
 use App\Services\VoteService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class VoteApiController extends Controller
 {
@@ -56,12 +57,25 @@ class VoteApiController extends Controller
             return $errors;
         }
 
-        if ($ballot->is_secret) {
-            $codes = $voteService->generateSecretVotes($ballot, $params['quantity']);
-        } else {
-            $codes = $voteService->generatePublicVotes($election, $ballot, $params['voters']);
-        }
+        // Codes are minted exactly once per ballot. The check and the inserts run in
+        // one transaction under a row lock on the ballot, so two concurrent calls
+        // cannot both pass the guard. (No `active` requirement: codes may be minted
+        // before or after activation, as before.)
+        return DB::transaction(function () use ($ballot, $election, $params, $voteService): array|JsonResponse {
+            $locked = Ballot::whereKey($ballot->id)->lockForUpdate()->firstOrFail();
 
-        return $codes;
+            if ($locked->finished || $locked->votes()->exists()) {
+                return $this->basicResponse(409, [
+                    'error' => __('Voting codes have already been generated for this ballot.'),
+                ]);
+            }
+
+            if ($locked->is_secret) {
+                return $voteService->generateSecretVotes($locked, $params['quantity']);
+            }
+
+            return $voteService->generatePublicVotes($election, $locked, $params['voters']);
+        });
+
     }
 }
