@@ -40,7 +40,7 @@ class GenerateCodesOnceTest extends TestCase
 
     public function test_second_generate_is_refused_with_409_and_mints_nothing(): void
     {
-        $ballot = $this->ballot();
+        $ballot = $this->ballot(['active' => true]);
 
         $this->generate($ballot, ['quantity' => 3])->assertOk();
         $this->generate($ballot, ['quantity' => 3])
@@ -53,7 +53,7 @@ class GenerateCodesOnceTest extends TestCase
 
     public function test_generate_on_a_ballot_that_already_has_codes_is_refused(): void
     {
-        $ballot = $this->ballot();
+        $ballot = $this->ballot(['active' => true]);
         Vote::factory()->create(['ballot_id' => $ballot->id]);
 
         $this->generate($ballot, ['quantity' => 2])->assertStatus(409);
@@ -62,7 +62,7 @@ class GenerateCodesOnceTest extends TestCase
 
     public function test_generate_on_a_finished_ballot_is_refused(): void
     {
-        $ballot = $this->ballot(['finished' => true]);
+        $ballot = $this->ballot(['active' => true, 'finished' => true]);
 
         $this->generate($ballot, ['quantity' => 2])->assertStatus(409);
         $this->assertSame(0, Vote::where('ballot_id', $ballot->id)->count());
@@ -77,16 +77,27 @@ class GenerateCodesOnceTest extends TestCase
 
     public function test_public_generate_is_also_once_only(): void
     {
-        $ballot = $this->ballot(['is_secret' => false, 'mode' => Ballot::MODE_SESSION]);
+        $ballot = $this->ballot(['active' => true, 'is_secret' => false, 'mode' => Ballot::MODE_SESSION]);
 
         $this->generate($ballot, ['voters' => ['a@example.com']])->assertOk();
         $this->generate($ballot, ['voters' => ['b@example.com']])->assertStatus(409);
         $this->assertSame(1, Vote::where('ballot_id', $ballot->id)->count());
     }
 
+    public function test_generate_on_an_inactive_ballot_is_refused_with_409_and_mints_nothing(): void
+    {
+        $ballot = $this->ballot(['active' => false]);
+
+        $this->generate($ballot, ['quantity' => 2])
+            ->assertStatus(409)
+            ->assertJsonPath('success', false)
+            ->assertJsonStructure(['error']);
+        $this->assertSame(0, Vote::where('ballot_id', $ballot->id)->count());
+    }
+
     public function test_validation_errors_still_return_400(): void
     {
-        $ballot = $this->ballot();
+        $ballot = $this->ballot(['active' => true]);
 
         $this->generate($ballot, [])->assertStatus(400);
     }

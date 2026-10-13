@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Middleware\ApiAuth;
+use App\Exceptions\BallotNotActiveException;
 use App\Models\Ballot;
 use App\Models\Election;
 use App\Models\Vote;
@@ -58,11 +59,17 @@ class VoteApiController extends Controller
 
         // Codes are minted exactly once per ballot. The check and the inserts run in
         // one transaction under a row lock on the ballot, so two concurrent calls
-        // cannot both pass the guard. (No `active` requirement: codes may be minted
-        // before or after activation, as before.)
-        $codes = $voteService->mintOnce($ballot, fn (Ballot $locked): array => $locked->is_secret
-            ? $voteService->generateSecretVotes($locked, $params['quantity'])
-            : $voteService->generatePublicVotes($election, $locked, $params['voters']));
+        // cannot both pass the guard. The ballot must be active (re-checked under the
+        // lock) so a racing rollback-launch cannot leave codes on a draft.
+        try {
+            $codes = $voteService->mintOnce($ballot, fn (Ballot $locked): array => $locked->is_secret
+                ? $voteService->generateSecretVotes($locked, $params['quantity'])
+                : $voteService->generatePublicVotes($election, $locked, $params['voters']));
+        } catch (BallotNotActiveException) {
+            return $this->basicResponse(409, [
+                'error' => __('The ballot must be active before voting codes can be generated.'),
+            ]);
+        }
 
         if ($codes === null) {
             return $this->basicResponse(409, [

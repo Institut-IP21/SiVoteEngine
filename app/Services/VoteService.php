@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\BallotNotActiveException;
 use App\Models\Ballot;
 use App\Models\Election;
 use App\Models\Vote;
@@ -19,11 +20,18 @@ class VoteService
      * @template T
      * @param \Closure(Ballot): T $mint receives the freshly locked ballot
      * @return T|null null when codes already exist or the ballot is finished
+     * @throws BallotNotActiveException when the ballot is not active (checked under the lock)
      */
     public function mintOnce(Ballot $ballot, \Closure $mint): mixed
     {
         return DB::transaction(function () use ($ballot, $mint) {
             $locked = Ballot::whereKey($ballot->id)->lockForUpdate()->firstOrFail();
+
+            // Re-checked under the lock: a rollback-launch that won the race leaves a
+            // draft, and codes must never be minted (or returned) for it.
+            if (!$locked->active) {
+                throw new BallotNotActiveException();
+            }
 
             if ($locked->finished || $locked->votes()->exists()) {
                 return null;

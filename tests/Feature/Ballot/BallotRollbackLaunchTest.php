@@ -90,7 +90,9 @@ class BallotRollbackLaunchTest extends TestCase
         $this->rollback($ballot)->assertOk()->assertJsonPath('data.active', false);
         $this->assertSame(0, Vote::withTrashed()->where('ballot_id', $ballot->id)->count());
 
-        $this->withHeaders(['Authorization' => 'tenant-token', 'Owner' => $this->owner])
+        $h = ['Authorization' => 'tenant-token', 'Owner' => $this->owner];
+        $this->withHeaders($h)->postJson("/api/election/$ballot->election_id/ballot/$ballot->id/activate")->assertOk();
+        $this->withHeaders($h)
             ->postJson("/api/election/$ballot->election_id/ballot/$ballot->id/vote/generate", ['quantity' => 2])
             ->assertOk();
     }
@@ -131,8 +133,8 @@ class BallotRollbackLaunchTest extends TestCase
         $this->rollback($ballot)->assertOk();
 
         $h = ['Authorization' => 'tenant-token', 'Owner' => $this->owner];
-        $this->withHeaders($h)->postJson("/api/election/$ballot->election_id/ballot/$ballot->id/vote/generate", ['quantity' => 2])->assertOk();
         $this->withHeaders($h)->postJson("/api/election/$ballot->election_id/ballot/$ballot->id/activate")->assertOk();
+        $this->withHeaders($h)->postJson("/api/election/$ballot->election_id/ballot/$ballot->id/vote/generate", ['quantity' => 2])->assertOk();
     }
 
     public function test_casting_with_a_rolled_back_code_is_refused(): void

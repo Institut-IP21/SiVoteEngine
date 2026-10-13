@@ -110,7 +110,7 @@ class VoteCodeExposureTest extends TestCase
         $ballot = Ballot::factory()->create([
             'election_id' => $election->id,
             'is_secret' => true,
-            'active' => false,
+            'active' => true,
         ]);
 
         $res = $this->withHeaders($this->tenant())

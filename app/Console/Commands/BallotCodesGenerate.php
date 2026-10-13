@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Exceptions\BallotNotActiveException;
 use App\Models\Ballot;
 use App\Services\VoteService;
 use Illuminate\Console\Command;
@@ -58,10 +59,15 @@ class BallotCodesGenerate extends Command
 
         /** @var Ballot $ballot */
         $ballot = Ballot::findOrFail($ballotId);
-        $codes = app(VoteService::class)->mintOnce(
-            $ballot,
-            fn (Ballot $locked): array => app(VoteService::class)->generateSecretVotes($locked, $quantity)
-        );
+        try {
+            $codes = app(VoteService::class)->mintOnce(
+                $ballot,
+                fn (Ballot $locked): array => app(VoteService::class)->generateSecretVotes($locked, $quantity)
+            );
+        } catch (BallotNotActiveException) {
+            $this->error("Ballot $ballotId is not active; activate it before generating codes.");
+            return 1;
+        }
 
         if ($codes === null) {
             $this->error("Codes already exist for ballot $ballotId (or it is finished); refusing to generate more.");

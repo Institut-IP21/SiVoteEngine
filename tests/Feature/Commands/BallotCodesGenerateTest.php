@@ -15,7 +15,7 @@ class BallotCodesGenerateTest extends TestCase
     public function test_generate_codes_with_valid_options(): void
     {
         $election = Election::factory()->create();
-        $ballot = Ballot::factory()->create(['election_id' => $election->id]);
+        $ballot = Ballot::factory()->create(['election_id' => $election->id, 'active' => true]);
 
         $this->artisan('evote:make:ballot:codes', [
             '--ballot' => $ballot->id,
@@ -28,7 +28,7 @@ class BallotCodesGenerateTest extends TestCase
     public function test_interactive_fallback(): void
     {
         $election = Election::factory()->create();
-        $ballot = Ballot::factory()->create(['election_id' => $election->id]);
+        $ballot = Ballot::factory()->create(['election_id' => $election->id, 'active' => true]);
 
         $this->artisan('evote:make:ballot:codes')
             ->expectsQuestion('Please enter the ID of an existing ballot', $ballot->id)
@@ -41,7 +41,7 @@ class BallotCodesGenerateTest extends TestCase
     public function test_creates_correct_count_of_vote_records(): void
     {
         $election = Election::factory()->create();
-        $ballot = Ballot::factory()->create(['election_id' => $election->id]);
+        $ballot = Ballot::factory()->create(['election_id' => $election->id, 'active' => true]);
 
         $this->artisan('evote:make:ballot:codes', [
             '--ballot' => $ballot->id,
@@ -60,12 +60,23 @@ class BallotCodesGenerateTest extends TestCase
     public function test_refuses_when_codes_already_exist(): void
     {
         $election = Election::factory()->create();
-        $ballot = Ballot::factory()->create(['election_id' => $election->id]);
+        $ballot = Ballot::factory()->create(['election_id' => $election->id, 'active' => true]);
         Vote::factory()->create(['ballot_id' => $ballot->id]);
 
         $this->artisan('evote:make:ballot:codes', ['--ballot' => $ballot->id, '--quantity' => 5])
             ->assertExitCode(1);
 
         $this->assertSame(1, Vote::where('ballot_id', $ballot->id)->count());
+    }
+
+    public function test_refuses_on_an_inactive_ballot(): void
+    {
+        $election = Election::factory()->create();
+        $ballot = Ballot::factory()->create(['election_id' => $election->id, 'active' => false]);
+
+        $this->artisan('evote:make:ballot:codes', ['--ballot' => $ballot->id, '--quantity' => 5])
+            ->assertExitCode(1);
+
+        $this->assertSame(0, Vote::where('ballot_id', $ballot->id)->count());
     }
 }
