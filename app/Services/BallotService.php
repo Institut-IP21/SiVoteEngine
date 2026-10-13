@@ -416,7 +416,7 @@ final readonly class BallotService
             })->all()
         )->all();
 
-        usort($rows, fn (array $a, array $b): int => implode("\x1f", $a) <=> implode("\x1f", $b));
+        usort($rows, fn (array $a, array $b): int => strcmp(implode("\x1f", $a), implode("\x1f", $b)));
 
         $csv = Writer::createFromString();
         $csv->insertOne($header);

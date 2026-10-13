@@ -175,18 +175,34 @@ class BallotApiController extends Controller
         return new BallotResource($ballot);
     }
 
-    public function deactivate(Election $election, Ballot $ballot, Request $request): BallotResource
+    public function deactivate(Election $election, Ballot $ballot, Request $request): JsonResponse|BallotResource
     {
-        if ($ballot->active) {
+        // Lock + re-check so a deactivate racing a rollback cannot finish a ballot
+        // whose codes were just deleted.
+        $refused = DB::transaction(function () use ($ballot): ?JsonResponse {
+            $locked = Ballot::whereKey($ballot->id)->lockForUpdate()->firstOrFail();
+
+            if (!$locked->active || $locked->finished) {
+                return $this->basicResponse(409, ['error' => __('This ballot is not open, so it cannot be closed.')]);
+            }
+
+            // State verified under the lock; apply to the bound instance so the
+            // response reflects it.
             $ballot->deactivate();
+
+            return null;
+        });
+
+        if ($refused !== null) {
+            return $refused;
         }
 
         return new BallotResource($ballot);
     }
 
     /**
-     * Undo a failed launch (activate + generate codes): put an open ballot with
-     * no cast votes back to a never-opened draft. Atomic under a row lock so a
+     * Undo a failed launch (activate and/or generate codes): put a ballot with
+     * no cast votes (open or still a draft) back to a never-opened draft. Atomic under a row lock so a
      * vote cannot slip in between the check and the delete.
      */
     public function rollbackLaunch(Election $election, Ballot $ballot, Request $request): JsonResponse|BallotResource
@@ -196,10 +212,6 @@ class BallotApiController extends Controller
 
             if ($locked->finished) {
                 return $this->basicResponse(409, ['error' => __('This ballot is already finished. Its launch cannot be rolled back.')]);
-            }
-
-            if (!$locked->active) {
-                return $this->basicResponse(409, ['error' => __('This ballot is not open, so there is no launch to roll back.')]);
             }
 
             if ($locked->votes()->whereNotNull('values')->exists()) {
@@ -213,7 +225,7 @@ class BallotApiController extends Controller
             $locked->save();
 
             return null;
-        });
+        }, attempts: 3);
 
         if ($refused !== null) {
             return $refused;
@@ -248,9 +260,9 @@ class BallotApiController extends Controller
         }
 
         /** @var BallotComponent $component1 */
-        $component1 = BallotComponent::find($params['component1']);
+        $component1 = BallotComponent::where('ballot_id', $ballot->id)->findOrFail($params['component1']);
         /** @var BallotComponent $component2 */
-        $component2 = BallotComponent::find($params['component2']);
+        $component2 = BallotComponent::where('ballot_id', $ballot->id)->findOrFail($params['component2']);
 
         $temp = $component1->order;
 

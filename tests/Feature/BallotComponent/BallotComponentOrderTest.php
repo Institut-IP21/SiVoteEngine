@@ -126,4 +126,19 @@ class BallotComponentOrderTest extends TestCase
         $first->refresh();
         $this->assertSame(0, $first->order);
     }
+
+    public function test_switch_order_with_a_foreign_component_is_404(): void
+    {
+        [$e, $b, $first, , $owner] = $this->ownedBallotWithTwoComponents();
+        $otherBallot = Ballot::factory()->create(['election_id' => Election::factory()->create()->id]);
+        $foreign = BallotComponent::factory()->create(['ballot_id' => $otherBallot->id, 'order' => 9]);
+
+        $this->asOwner($owner)->postJson("/api/election/{$e->id}/ballot/{$b->id}/switch-order", [
+            'component1' => $first->id,
+            'component2' => $foreign->id,
+        ])->assertNotFound();
+
+        $this->assertSame(9, $foreign->fresh()?->order);
+        $this->assertSame(0, $first->fresh()?->order);
+    }
 }

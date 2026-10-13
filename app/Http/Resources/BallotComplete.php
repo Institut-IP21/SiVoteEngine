@@ -46,7 +46,7 @@ class BallotComplete extends JsonResource
     private function anonymousCastVotes(): array
     {
         $rows = array_map(fn ($vote): array => $vote->values ?? [], $this->cast_votes);
-        usort($rows, fn (array $a, array $b): int => json_encode($a) <=> json_encode($b));
+        usort($rows, fn (array $a, array $b): int => strcmp((string) json_encode($a), (string) json_encode($b)));
 
         return $rows;
     }

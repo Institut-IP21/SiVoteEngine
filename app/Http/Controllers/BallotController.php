@@ -197,7 +197,7 @@ class BallotController extends Controller
                 return null;
             }
 
-            $vote = Vote::where('id', $code)->where('ballot_id', $ballot->id)->first();
+            $vote = Vote::where('id', $code)->where('ballot_id', $ballot->id)->lockForUpdate()->first();
             if ($vote === null) {
                 return null;
             }

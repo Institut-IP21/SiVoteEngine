@@ -56,4 +56,16 @@ class BallotCodesGenerateTest extends TestCase
             $this->assertNull($vote->values);
         }
     }
+
+    public function test_refuses_when_codes_already_exist(): void
+    {
+        $election = Election::factory()->create();
+        $ballot = Ballot::factory()->create(['election_id' => $election->id]);
+        Vote::factory()->create(['ballot_id' => $ballot->id]);
+
+        $this->artisan('evote:make:ballot:codes', ['--ballot' => $ballot->id, '--quantity' => 5])
+            ->assertExitCode(1);
+
+        $this->assertSame(1, Vote::where('ballot_id', $ballot->id)->count());
+    }
 }

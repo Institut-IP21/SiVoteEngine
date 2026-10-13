@@ -82,11 +82,27 @@ class BallotRollbackLaunchTest extends TestCase
         $this->assertSame(1, Vote::where('ballot_id', $ballot->id)->count());
     }
 
-    public function test_rollback_refused_when_not_active(): void
+    public function test_rollback_of_a_draft_with_codes_deletes_them_and_generate_works_again(): void
+    {
+        $ballot = $this->ballot(['active' => false]);
+        Vote::factory()->count(2)->create(['ballot_id' => $ballot->id]);
+
+        $this->rollback($ballot)->assertOk()->assertJsonPath('data.active', false);
+        $this->assertSame(0, Vote::withTrashed()->where('ballot_id', $ballot->id)->count());
+
+        $this->withHeaders(['Authorization' => 'tenant-token', 'Owner' => $this->owner])
+            ->postJson("/api/election/$ballot->election_id/ballot/$ballot->id/vote/generate", ['quantity' => 2])
+            ->assertOk();
+    }
+
+    public function test_deactivate_of_a_ballot_that_is_no_longer_active_is_409(): void
     {
         $ballot = $this->ballot(['active' => false]);
 
-        $this->rollback($ballot)->assertStatus(409);
+        $this->withHeaders(['Authorization' => 'tenant-token', 'Owner' => $this->owner])
+            ->postJson("/api/election/$ballot->election_id/ballot/$ballot->id/deactivate")
+            ->assertStatus(409);
+        $this->assertFalse((bool) $ballot->fresh()?->finished);
     }
 
     public function test_rollback_wrong_owner_is_forbidden(): void

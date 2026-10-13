@@ -3,7 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Ballot;
-use App\Models\Vote;
+use App\Services\VoteService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;
 
@@ -56,11 +56,16 @@ class BallotCodesGenerate extends Command
             $quantity = (int) $this->ask('Please enter the number of codes to generate');
         }
 
-        $codes = [];
-        $now = date('Y-m-d H:i:s');
-        for ($i = 0; $i < $quantity; $i++) {
-            $vote = Vote::create(['ballot_id' => $ballotId, 'created_at' => $now]);
-            $codes[] = $vote->id;
+        /** @var Ballot $ballot */
+        $ballot = Ballot::findOrFail($ballotId);
+        $codes = app(VoteService::class)->mintOnce(
+            $ballot,
+            fn (Ballot $locked): array => app(VoteService::class)->generateSecretVotes($locked, $quantity)
+        );
+
+        if ($codes === null) {
+            $this->error("Codes already exist for ballot $ballotId (or it is finished); refusing to generate more.");
+            return 1;
         }
 
         $this->info(print_r($codes, true));

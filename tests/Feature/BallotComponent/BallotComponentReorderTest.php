@@ -79,30 +79,22 @@ class BallotComponentReorderTest extends TestCase
         $response->assertJsonPath("data.components.{$bb->id}.order", 2);
     }
 
-    public function test_order_ignores_ids_not_on_this_ballot(): void
+    public function test_order_with_an_id_not_on_this_ballot_is_404_and_changes_nothing(): void
     {
         [$e, $b, $a, $bb, $c, $owner] = $this->ownedBallotWithThreeComponents();
 
-        // A component on a DIFFERENT ballot of the same owner.
-        $otherBallot = Ballot::factory()->create(['election_id' => $e->id, 'finished' => false]);
+        // A component on another organisation's ballot.
+        $otherElection = Election::factory()->create();
+        $otherBallot = Ballot::factory()->create(['election_id' => $otherElection->id]);
         $foreign = BallotComponent::factory()->create(['ballot_id' => $otherBallot->id, 'order' => 7]);
 
         $this->asOwner($owner)->postJson("/api/election/{$e->id}/ballot/{$b->id}/component/order", [
             'order' => [$foreign->id, $c->id, $a->id, $bb->id],
-        ])->assertOk();
+        ])->assertNotFound();
 
-        // Foreign component is untouched...
-        $foreign->refresh();
-        $this->assertSame(7, $foreign->order);
-
-        // ...and the foreign id did NOT consume index 0: our components are
-        // packed from 0 in the order they appear among owned ids.
-        $a->refresh();
-        $bb->refresh();
-        $c->refresh();
-        $this->assertSame(0, $c->order);
-        $this->assertSame(1, $a->order);
-        $this->assertSame(2, $bb->order);
+        $this->assertSame(7, $foreign->fresh()?->order);
+        $this->assertSame(0, $a->fresh()?->order);
+        $this->assertSame(2, $c->fresh()?->order);
     }
 
     public function test_order_requires_an_array_of_uuids(): void

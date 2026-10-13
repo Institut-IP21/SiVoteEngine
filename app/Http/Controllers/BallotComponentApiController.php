@@ -147,6 +147,12 @@ class BallotComponentApiController extends Controller
         /** @var array<int, string> $orderedIds */
         $orderedIds = array_values($params['order']);
 
+        // Every id must be a component of THIS ballot (else 404, nothing changed).
+        $ownedCount = BallotComponent::where('ballot_id', $ballot->id)->whereIn('id', $orderedIds)->count();
+        if ($ownedCount !== count(array_unique($orderedIds))) {
+            abort(404);
+        }
+
         $this->ballotService->reorderComponents($ballot, $orderedIds);
 
         return new BallotResource($ballot->refresh());
