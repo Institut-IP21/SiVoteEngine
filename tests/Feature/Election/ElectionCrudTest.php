@@ -142,6 +142,72 @@ class ElectionCrudTest extends TestCase
             ]);
     }
 
+    private function lockedElection(): Election
+    {
+        $el = Election::factory()->hasBallots(1, ['active' => true])->create(['abstainable' => true, 'level' => 1]);
+        $this->assertTrue($el->locked);
+
+        return $el;
+    }
+
+    public function test_update_locked_election_with_unchanged_level_succeeds(): void
+    {
+        $el = $this->lockedElection();
+
+        $this->withHeaders(['Authorization' => '123123123', 'Owner' => $el->owner])
+            ->postJson("/api/election/$el->id", ['title' => 'Renamed election', 'level' => $el->level])
+            ->assertStatus(200)
+            ->assertJsonPath('data.title', 'Renamed election');
+    }
+
+    public function test_update_locked_election_with_changed_level_is_rejected(): void
+    {
+        $el = $this->lockedElection();
+
+        $this->withHeaders(['Authorization' => '123123123', 'Owner' => $el->owner])
+            ->postJson("/api/election/$el->id", ['level' => $el->level + 1])
+            ->assertStatus(400)
+            ->assertJson(['error' => 'Cannot change level of a locked election.']);
+
+        $this->assertSame(1, $el->fresh()?->level);
+    }
+
+    public function test_update_locked_election_with_unchanged_abstainable_succeeds(): void
+    {
+        $el = $this->lockedElection();
+
+        $this->withHeaders(['Authorization' => '123123123', 'Owner' => $el->owner])
+            ->postJson("/api/election/$el->id", ['abstainable' => true, 'title' => 'Renamed election'])
+            ->assertStatus(200);
+
+        $this->assertTrue((bool) $el->fresh()?->abstainable);
+    }
+
+    public function test_update_locked_election_with_changed_abstainable_is_rejected(): void
+    {
+        $el = $this->lockedElection();
+
+        $this->withHeaders(['Authorization' => '123123123', 'Owner' => $el->owner])
+            ->postJson("/api/election/$el->id", ['abstainable' => false])
+            ->assertStatus(400)
+            ->assertJson(['error' => 'Cannot change abstainable of a locked election.']);
+
+        $this->assertTrue((bool) $el->fresh()?->abstainable);
+    }
+
+    public function test_update_unlocked_election_can_change_level_and_abstainable(): void
+    {
+        $el = Election::factory()->create(['abstainable' => true, 'level' => 1]);
+
+        $this->withHeaders(['Authorization' => '123123123', 'Owner' => $el->owner])
+            ->postJson("/api/election/$el->id", ['abstainable' => false, 'level' => 2])
+            ->assertStatus(200);
+
+        $fresh = $el->fresh();
+        $this->assertFalse((bool) $fresh?->abstainable);
+        $this->assertSame(2, $fresh?->level);
+    }
+
     public function test_delete_election(): void
     {
         $el = Election::factory()->create();

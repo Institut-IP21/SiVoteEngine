@@ -98,8 +98,16 @@ class ElectionApiController extends Controller
             return $errors;
         }
 
-        if (array_key_exists('abstainable', $params) && !$election->locked) {
-            $election->abstainable = $params['abstainable'];
+        if (array_key_exists('abstainable', $params)) {
+            $abstainable = (bool) $params['abstainable'];
+            if ($abstainable !== (bool) $election->abstainable) {
+                if ($election->locked) {
+                    return response()->json([
+                        'error' => 'Cannot change abstainable of a locked election.'
+                    ], 400);
+                }
+                $election->abstainable = $abstainable;
+            }
         }
 
         if (array_key_exists('title', $params)) {
@@ -111,12 +119,14 @@ class ElectionApiController extends Controller
         }
 
         if (array_key_exists('level', $params)) {
-            if ($election->locked) {
-                return response()->json([
-                    'error' => 'Cannot change level of a locked election.'
-                ], 400);
+            if ((int) $params['level'] !== (int) $election->level) {
+                if ($election->locked) {
+                    return response()->json([
+                        'error' => 'Cannot change level of a locked election.'
+                    ], 400);
+                }
+                $election->level = $params['level'];
             }
-            $election->level = $params['level'];
         }
 
         $election->save();
