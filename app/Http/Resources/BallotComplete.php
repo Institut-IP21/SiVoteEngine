@@ -27,7 +27,7 @@ class BallotComplete extends JsonResource
             'votes_count' => $this->votes_count,
             'electorate_size' => $this->electorate_size,
             'quorum_met' => $this->quorum_met,
-            'cast_votes' => $this->cast_votes,
+            'cast_votes' => $this->anonymousCastVotes(),
             'finished' => $this->finished,
             'description' => $this->description,
             'email_subject' => $this->email_subject,
@@ -35,5 +35,19 @@ class BallotComplete extends JsonResource
             'quorum' => $this->quorum,
             'components' => BallotComponent::collection($this->components)->keyBy('id')
         ];
+    }
+
+    /**
+     * Secret ballot: only the submitted values, no id/code, ballot_id or
+     * timestamps, sorted by content so order carries no information.
+     *
+     * @return array<int, array<mixed>>
+     */
+    private function anonymousCastVotes(): array
+    {
+        $rows = array_map(fn ($vote): array => $vote->values ?? [], $this->cast_votes);
+        usort($rows, fn (array $a, array $b): int => json_encode($a) <=> json_encode($b));
+
+        return $rows;
     }
 }
