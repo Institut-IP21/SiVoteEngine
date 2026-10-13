@@ -240,8 +240,10 @@ class BallotComponentApiController extends Controller
             $component->description = $params['description'];
         }
 
-        if (($settingsPayload = $this->buildSettings($params)) !== null) {
-            $component->settings = $settingsPayload;
+        // Key present: assign it (an empty/null payload clears the settings).
+        // Key absent: leave the existing settings untouched.
+        if (array_key_exists('settings', $params)) {
+            $component->settings = $this->buildSettings($params);
         }
 
         $component->save();
