@@ -437,9 +437,9 @@ final class RankedChoice extends AbstractBallotComponent
             }
 
             $values = $vote->values[$component->id] ?? [];
-            if (!is_array($values)) {
-                $values = [];
-            }
+            // Positions follow the ranking's ORDER (as the round count reads it), never
+            // its keys: a crafted {"x":"A"} must not land at a position by key casting.
+            $values = is_array($values) ? array_values($values) : [];
 
             foreach ($options as $option) {
                 if (!isset($totals[$option])) {
@@ -448,7 +448,6 @@ final class RankedChoice extends AbstractBallotComponent
 
                 $pos = array_search($option, $values, true);
                 if ($pos !== false) {
-                    $pos = (int) $pos;
                     $totals[$option][$pos] = ($totals[$option][$pos] ?? 0) + 1;
                 }
             }
@@ -463,9 +462,10 @@ final class RankedChoice extends AbstractBallotComponent
         // The submission must be an array (a ranking). Without the explicit
         // `array` rule a crafted scalar value bypasses the `.*` option
         // whitelist entirely and is stored verbatim. `distinct` rejects a
-        // ranking that lists the same option more than once.
+        // ranking that lists the same option more than once. `list` rejects
+        // keyed rankings: the order of a plain list is the preference order.
         return new ValidationRules([
-            $component->id => [$election->abstainable ? 'nullable' : 'required', 'array'],
+            $component->id => [$election->abstainable ? 'nullable' : 'required', 'array', 'list'],
             "{$component->id}.*" => ['distinct', Rule::in($component->options)],
         ]);
     }

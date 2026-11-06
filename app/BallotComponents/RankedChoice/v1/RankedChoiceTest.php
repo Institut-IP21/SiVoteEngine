@@ -40,7 +40,7 @@ class RankedChoiceTest extends TestCase
     }
 
     /**
-     * @param list<list<string>|null> $rankings null => unanswered ballot
+     * @param list<array<array-key, string>|null> $rankings null => unanswered ballot
      * @return array<int, Vote>
      */
     private function votes(BallotComponent $component, array $rankings): array
@@ -75,7 +75,7 @@ class RankedChoiceTest extends TestCase
 
         $validator = $this->component->getSubmissionValidator($component, $election)->toArray();
         $this->assertEquals([
-            $component->id => ['required', 'array'],
+            $component->id => ['required', 'array', 'list'],
             "$component->id.*" => ['distinct', Rule::in(['Ana', 'Betty', 'Charles', 'David', 'Ernest'])],
         ], $validator);
     }
@@ -473,6 +473,30 @@ class RankedChoiceTest extends TestCase
         $this->assertSame($r['rounds'][0]['continuing'], $acc['counted']);
         // and the parts reconcile to the whole.
         $this->assertSame($acc['cast'], $acc['blank'] + $acc['invalid_only'] + $acc['counted']);
+    }
+
+    public function test_validator_rejects_a_keyed_ranking(): void
+    {
+        $election = Election::factory()->make();
+        $c = $this->makeComponent(['A', 'B']);
+        $rules = $this->component->getSubmissionValidator($c, $election)->toArray();
+
+        $this->assertTrue(validator([$c->id => ['B', 'A']], $rules)->passes());
+        $this->assertTrue(validator([$c->id => ['x' => 'B', 'y' => 'A']], $rules)->fails());
+        $this->assertTrue(validator([$c->id => [1 => 'B', 0 => 'A']], $rules)->fails());
+    }
+
+    public function test_preference_matrix_follows_ranking_order_not_keys(): void
+    {
+        // A stored keyed ranking (pre-`list` rule) counts by order, as the rounds do.
+        $c = $this->makeComponent(['A', 'B']);
+        $totals = $this->component->getTotals(
+            new Collection($this->votes($c, [['x' => 'B', 'y' => 'A'], [5 => 'A', 2 => 'B']])),
+            $c,
+        );
+
+        $this->assertSame([1, 1], $totals['A']);
+        $this->assertSame([1, 1], $totals['B']);
     }
 
     public function test_first_preference_matrix_is_surfaced(): void
