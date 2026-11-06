@@ -96,7 +96,7 @@
     "src": "node_modules/@fontsource/poppins/files/poppins-latin-ext-800-normal.woff2"
   },
   "resources/js/app.js": {
-    "file": "assets/app-BPKWv2jD.js",
+    "file": "assets/app-BhdykDaU.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
@@ -134,13 +134,13 @@
     ]
   },
   "resources/js/ranked-choice.js": {
-    "file": "assets/ranked-choice-BXZ6ozMa.js",
+    "file": "assets/ranked-choice-BzJ7_kBV.js",
     "name": "ranked-choice",
     "src": "resources/js/ranked-choice.js",
     "isDynamicEntry": true
   },
   "resources/sass/app.scss": {
-    "file": "assets/app-BWwamhZ-.css",
+    "file": "assets/app-Bd8Vj4MD.css",
     "name": "app",
     "names": [
       "app.css"
