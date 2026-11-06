@@ -48,8 +48,39 @@ return Application::configure(basePath: dirname(__DIR__))
     ->booted(function () {
         RateLimiter::for('votes', fn (Request $request) => Limit::perMinute(60)->by($request->ip() ?? 'unknown'));
 
-        RateLimiter::for('api', fn (Request $request) => Limit::perMinute(120)
-            ->by(((string) $request->header('Authorization', '')) . '|' . ($request->ip() ?? 'unknown')));
+        // The throttle runs before ApiAuth, so it checks the token itself:
+        // - failed logins (401) are counted per client network (IPv4 address, IPv6
+        //   /64) at 120/min; once that bucket is full EVERY request from there gets
+        //   429, a correct token included, so guessing can't outrun the limit;
+        // - a known token gets 300/min per organisation, so one busy organisation
+        //   can't exhaust a budget the others share (web_app calls with one token
+        //   from one IP), plus an overall ceiling per token as a safety net.
+        RateLimiter::for('api', function (Request $request) {
+            $auth = (string) $request->header('Authorization', '');
+            $ip = (string) ($request->ip() ?? 'unknown');
+            if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) !== false) {
+                $ip = substr(bin2hex((string) inet_pton($ip)), 0, 16) . '::/64';
+            }
+
+            $authFailures = Limit::perMinute(120)
+                ->by('api-authfail|' . $ip)
+                ->after(fn ($response): bool => $response->getStatusCode() === 401);
+
+            if (! \App\Http\Middleware\ApiAuth::isKnownToken($auth)) {
+                return $authFailures;
+            }
+
+            $token = hash('sha256', $auth);
+            $owner = (string) $request->header('Owner', '');
+            // ApiAuth refuses a non-uuid Owner anyway; don't mint a bucket per junk value.
+            $owner = \Ramsey\Uuid\Uuid::isValid($owner) ? strtolower($owner) : 'invalid';
+
+            return [
+                $authFailures,
+                Limit::perMinute(300)->by('api-owner|' . $token . '|' . $owner),
+                Limit::perMinute(3000)->by('api-token|' . $token),
+            ];
+        });
 
         // Explicit bindings so ScopeRouteBindings sees hydrated Election/Ballot/Component instances.
         Route::bind('election', fn ($value) => Election::findOrFail($value));

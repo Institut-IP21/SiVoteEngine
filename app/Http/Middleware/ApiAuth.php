@@ -23,8 +23,8 @@ class ApiAuth
     {
         $auth = (string) $request->header('Authorization');
 
-        $isTenant = $this->matchesAny($auth, (array) config('app.api.authlist'));
-        $isAdmin = $this->matchesAny($auth, $this->adminList());
+        $isTenant = self::matchesAny($auth, (array) config('app.api.authlist'));
+        $isAdmin = self::matchesAny($auth, self::adminList());
 
         if ($auth === '' || (!$isTenant && !$isAdmin)) {
             return response(['error' => 'No authorization or invalid.'], 401);
@@ -50,12 +50,22 @@ class ApiAuth
         return $next($request);
     }
 
+    /** Whether the Authorization value is a configured tenant or admin token. */
+    public static function isKnownToken(string $auth): bool
+    {
+        // Evaluate both (no short-circuit), as handle() does.
+        $isTenant = self::matchesAny($auth, (array) config('app.api.authlist'));
+        $isAdmin = self::matchesAny($auth, self::adminList());
+
+        return $auth !== '' && ($isTenant || $isAdmin);
+    }
+
     /**
      * No early return, so timing doesn't reveal which/how-many tokens matched.
      *
      * @param array<int, string> $list
      */
-    private function matchesAny(string $value, array $list): bool
+    private static function matchesAny(string $value, array $list): bool
     {
         $match = false;
         foreach ($list as $candidate) {
@@ -67,7 +77,7 @@ class ApiAuth
     }
 
     /** @return array<int, string> */
-    private function adminList(): array
+    private static function adminList(): array
     {
         /** @var array<int, string> $admin */
         $admin = array_values(array_filter((array) config('app.api.admin_authlist')));
