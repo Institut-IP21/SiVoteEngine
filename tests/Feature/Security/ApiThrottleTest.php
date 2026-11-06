@@ -69,6 +69,7 @@ class ApiThrottleTest extends TestCase
 
         $this->assertCount(1, $a);
         $this->assertSame(120, $a[0]->maxAttempts);
+        $this->assertNull($a[0]->afterCallback, 'unknown tokens are counted before handling');
         // Rotating the token or the Owner header doesn't open a fresh bucket.
         $this->assertSame($a[0]->key, $b[0]->key);
         $this->assertNotSame($a[0]->key, $other[0]->key);

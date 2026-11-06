@@ -62,13 +62,16 @@ return Application::configure(basePath: dirname(__DIR__))
                 $ip = substr(bin2hex((string) inet_pton($ip)), 0, 16) . '::/64';
             }
 
+            if (! \App\Http\Middleware\ApiAuth::isKnownToken($auth)) {
+                // Certain to 401, so count it BEFORE handling: concurrent guesses
+                // can't slip past a check that only counts after the response.
+                return Limit::perMinute(120)->by('api-authfail|' . $ip);
+            }
+
+            // Same bucket, checked but not counted for a valid token (it never 401s).
             $authFailures = Limit::perMinute(120)
                 ->by('api-authfail|' . $ip)
                 ->after(fn ($response): bool => $response->getStatusCode() === 401);
-
-            if (! \App\Http\Middleware\ApiAuth::isKnownToken($auth)) {
-                return $authFailures;
-            }
 
             $token = hash('sha256', $auth);
             $owner = (string) $request->header('Owner', '');
