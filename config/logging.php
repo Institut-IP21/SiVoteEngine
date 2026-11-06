@@ -37,7 +37,8 @@ return [
     'channels' => [
         'stack' => [
             'driver' => 'stack',
-            'channels' => ['single'],
+            // Daily files (kept 14 days) instead of one ever-growing laravel.log.
+            'channels' => explode(',', (string) env('LOG_STACK', 'daily')),
             'ignore_exceptions' => false,
         ],
 
