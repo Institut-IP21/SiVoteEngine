@@ -448,6 +448,7 @@ final class RankedChoice extends AbstractBallotComponent
 
                 $pos = array_search($option, $values, true);
                 if ($pos !== false) {
+                    $pos = (int) $pos;
                     $totals[$option][$pos] = ($totals[$option][$pos] ?? 0) + 1;
                 }
             }
